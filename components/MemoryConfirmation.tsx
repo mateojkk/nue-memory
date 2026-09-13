@@ -92,7 +92,7 @@ export const MemoryConfirmation: React.FC<MemoryConfirmationProps> = ({
           <button
             onClick={handleRemember}
             disabled={isSaving}
-            className="px-4 py-1.5 rounded-xl bg-[#1a120c] hover:bg-[#281c15] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
+            className="px-4 py-1.5 rounded-md bg-[#1a120c] hover:bg-[#281c15] text-white text-xs font-medium flex items-center gap-1.5 shadow-sm transition disabled:opacity-50"
           >
             <Check className="w-3.5 h-3.5 text-[#dda15e]" />
             <span>{isSaving ? 'Saving...' : 'Remember in Walrus Memory'}</span>

@@ -131,10 +131,10 @@ export function NueHero({
 
   return (
     <section className="pt-16 pb-20 px-4 max-w-7xl mx-auto text-center relative z-10 font-light">
-      {/* Backed by NextMathLabs Badge (Exact mem0 Image 1 pill layout) */}
-      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#e5e5e5] text-xs font-medium text-[#18120e] mb-10 shadow-2xs">
+      {/* Backed by NextMathLabs Badge (Rectangular) */}
+      <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md bg-white border border-[#e5e5e5] text-xs font-medium text-[#18120e] mb-10 shadow-2xs">
         <span>Backed by</span>
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#fbf2e9] text-[#9c4e1f] font-medium text-[11px] border border-[#f0e2d3]">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#fbf2e9] text-[#9c4e1f] font-medium text-[11px] border border-[#f0e2d3]">
           <span className="w-2 h-2 rounded-full bg-[#c88d51]" />
           NextMathLabs
         </span>
@@ -152,21 +152,19 @@ export function NueHero({
         apps. Context that persists. Built for production.
       </p>
 
-      {/* Dual CTA Buttons (Exact Mem0 layout with Circle Arrow & Copy icon) */}
+      {/* Dual CTA Buttons (Rectangular Buttons) */}
       <div className="flex flex-wrap items-center justify-center gap-3.5 mb-12">
         <button
           onClick={() => setActiveTab('studio')}
-          className="inline-flex items-center gap-2.5 pl-5 pr-2 py-2 rounded-full bg-[#e8d5c4] hover:bg-[#dec2aa] text-[#1a120c] text-sm font-medium transition shadow-sm border border-[#d6beaa]"
+          className="inline-flex items-center gap-2.5 px-6 py-3 rounded-md bg-[#e8d5c4] hover:bg-[#dec2aa] text-[#1a120c] text-sm font-medium transition shadow-sm border border-[#d6beaa]"
         >
           <span>Get Started</span>
-          <span className="w-7 h-7 rounded-full bg-[#1a120c] flex items-center justify-center">
-            <ArrowRight className="w-4 h-4 text-white" />
-          </span>
+          <ArrowRight className="w-4 h-4 text-[#1a120c]" />
         </button>
 
         <button
           onClick={handleCopySetup}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white hover:bg-[#faf8f5] text-[#18120e] text-sm font-medium border border-[#e5e5e5] transition shadow-2xs"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-white hover:bg-[#faf8f5] text-[#18120e] text-sm font-medium border border-[#e5e5e5] transition shadow-2xs"
         >
           <span>Setup for Agent</span>
           {copiedSetup ? (
@@ -177,11 +175,11 @@ export function NueHero({
         </button>
       </div>
 
-      {/* Floating Pill Tab Switcher (Exact Image 1 Tabs: [ ▣ SDK Integration ] | [ ♙ Agent Harness ] | [ ⎇ Plugin ]) */}
-      <div className="inline-flex items-center bg-[#f2eae1] p-1 rounded-full border border-[#e4d7c8] mb-8 text-xs font-medium shadow-2xs">
+      {/* Rectangular Tab Switcher */}
+      <div className="inline-flex items-center bg-[#f2eae1] p-1 rounded-lg border border-[#e4d7c8] mb-8 text-xs font-medium shadow-2xs">
         <button
           onClick={() => setActiveTab('sdk')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full transition ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md transition ${
             activeTab === 'sdk'
               ? 'bg-white text-[#18120e] shadow-sm font-medium'
               : 'text-[#736357] hover:text-[#18120e] font-light'
@@ -193,7 +191,7 @@ export function NueHero({
 
         <button
           onClick={() => setActiveTab('studio')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full transition ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md transition ${
             activeTab === 'studio'
               ? 'bg-white text-[#18120e] shadow-sm font-medium'
               : 'text-[#736357] hover:text-[#18120e] font-light'
@@ -205,7 +203,7 @@ export function NueHero({
 
         <button
           onClick={() => setActiveTab('pipeline')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full transition ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-md transition ${
             activeTab === 'pipeline'
               ? 'bg-white text-[#18120e] shadow-sm font-medium'
               : 'text-[#736357] hover:text-[#18120e] font-light'
@@ -215,6 +213,7 @@ export function NueHero({
           <span>Plugin</span>
         </button>
       </div>
+
 
       {/* Hero Window Container (Exact Mem0 Image 2 Card) */}
       <div className="max-w-5xl mx-auto rounded-2xl bg-white border border-[#e5e5e5] shadow-xl shadow-stone-200/50 overflow-hidden text-left">

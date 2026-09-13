@@ -333,7 +333,7 @@ export default function Home() {
                 setHeroTab('studio');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#18120e] text-white hover:bg-black font-medium text-sm transition shadow-md"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-md bg-[#18120e] text-white hover:bg-black font-medium text-sm transition shadow-md"
             >
               <Sparkles className="w-4 h-4 text-[#c88d51]" />
               <span>Try Interactive Demo</span>

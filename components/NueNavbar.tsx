@@ -102,19 +102,18 @@ export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
               )}
             </button>
 
-            {/* Primary Get Started Button (Exact Image 1 Pill with Circle Arrow) */}
+            {/* Primary Get Started Button (Rectangular) */}
             <a
               href="#studio"
-              className="inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full bg-[#e8d5c4] hover:bg-[#dec2aa] text-[#1a120c] text-xs font-medium transition shadow-sm border border-[#d6beaa]"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#e8d5c4] hover:bg-[#dec2aa] text-[#1a120c] text-xs font-medium transition shadow-sm border border-[#d6beaa]"
             >
               <span>Get Started</span>
-              <span className="w-6 h-6 rounded-full bg-[#1a120c] flex items-center justify-center">
-                <ArrowRight className="w-3.5 h-3.5 text-white" />
-              </span>
+              <ArrowRight className="w-3.5 h-3.5 text-[#1a120c]" />
             </a>
           </div>
         </div>
       </header>
+
     </div>
   );
 }

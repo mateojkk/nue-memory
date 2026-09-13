@@ -188,7 +188,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
 
             {/* Overlays reflecting applied preferences */}
             {/* Pacing Badge */}
-            <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-[#c88d51]/30 text-[11px] font-mono text-[#f5f2eb]">
+            <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-[#c88d51]/30 text-[11px] font-mono text-[#f5f2eb]">
               <Zap className="w-3 h-3 text-[#dda15e]" />
               <span>
                 {version.pacing === 'fast' ? 'Fast Pacing (0-5s Intro)' : 'Cinematic Pacing'}
@@ -196,7 +196,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             </div>
 
             {/* Audio Stem Badge */}
-            <div className="absolute top-3.5 right-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/75 backdrop-blur-md border border-[#c88d51]/30 text-[11px] font-mono text-[#dda15e]">
+            <div className="absolute top-3.5 right-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-[#c88d51]/30 text-[11px] font-mono text-[#dda15e]">
               <Volume2 className="w-3 h-3 text-[#c88d51]" />
               <span className="truncate max-w-[150px]">{version.audioStyle.style}</span>
             </div>
@@ -227,7 +227,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             {displayMode === 'video' && (
               <button
                 onClick={togglePlay}
-                className="absolute inset-0 m-auto w-12 h-12 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[#c88d51]/30 flex items-center justify-center text-[#fbf7ee] opacity-0 hover:opacity-100 transition-opacity z-30"
+                className="absolute inset-0 m-auto w-12 h-12 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[#c88d51]/30 flex items-center justify-center text-[#fbf7ee] opacity-0 hover:opacity-100 transition-opacity z-30"
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 translate-x-0.5" />}
               </button>
@@ -277,7 +277,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
               {version.appliedPreferences.map((pref) => (
                 <span
                   key={pref.id}
-                  className="px-2 py-0.5 rounded-full bg-[#f5ece4] border border-[#e2d5c5] text-[#78350f] text-[10px] font-mono font-medium"
+                  className="px-2 py-0.5 rounded-md bg-[#f5ece4] border border-[#e2d5c5] text-[#78350f] text-[10px] font-mono font-medium"
                 >
                   {pref.category}: {pref.preference.slice(0, 26)}...
                 </span>
