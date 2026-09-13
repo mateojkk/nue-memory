@@ -9,40 +9,40 @@ export function NueHowItWorks() {
   const steps = [
     {
       title: 'Add',
-      description: 'Input creative prompts in seconds with no config or boilerplate.',
+      description: 'Input data in seconds with no config or boilerplate.',
       badgeText: '✓ Memory Updated.',
-      userMessage: 'Hi! Generate our product launch hero video.',
-      agentResponse: 'Composing clip with your remembered 9:16 vertical, fast pacing, and bold captions.',
+      userMessage: 'Hi! Can you schedule my tomorrow morning for me?',
+      agentResponse: 'Scheduled! Blocked 10:00 AM - 1:00 PM for deep work with no interruptions based on your preferences.',
     },
     {
       title: 'Learn',
-      description: 'Nue extracts and updates visual preferences autonomously.',
-      badgeText: '✓ Creative Classification Complete.',
-      userMessage: 'The background music is too loud. Use an ambient electronic bed instead.',
-      agentResponse: 'Extracted rule: [MUSIC] = Ambient Electronic. Updated Walrus vault.',
+      description: 'Nue extracts and updates memories autonomously.',
+      badgeText: '✓ Long-Term Preference Extracted.',
+      userMessage: 'I prefer bright, minimal visuals rather than cluttered layouts.',
+      agentResponse: 'Extracted rule: [VISUAL_STYLE] = Minimal, High Brightness. Committed to Walrus agent memory.',
     },
     {
       title: 'Retrieve',
-      description: 'Nue retrieves key creative memories as creators direct.',
-      badgeText: '✓ Context Injected from Walrus.',
-      userMessage: 'New Project: Minimalist jewelry brand commercial.',
-      agentResponse: 'Retrieved 3 persistent preferences from previous projects. Zero reprompting needed.',
+      description: 'Nue retrieves key memories as users interact.',
+      badgeText: '✓ Context Injected into Agent.',
+      userMessage: 'Generate our new marketing campaign presentation.',
+      agentResponse: 'Retrieved 3 persistent preferences from previous sessions. Composing with minimal visuals.',
     },
   ];
 
   return (
-    <section id="how-it-works" className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0]">
-      {/* Section Label & Headline (Exact mem0 Image 4 Layout with Nue) */}
+    <section id="how-it-works" className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0] font-light">
+      {/* Section Label & Headline (Exact mem0 Image 4 Layout) */}
       <div className="mb-14 text-left">
-        <h3 className="text-xl sm:text-2xl font-bold text-stone-400 mb-2 font-sans">
+        <h3 className="text-xl sm:text-2xl font-medium text-stone-400 mb-2 font-sans">
           How it works
         </h3>
-        <h2 className="text-3xl sm:text-5xl font-extrabold text-[#18120e] tracking-tight font-sans">
-          Direct anything. Nue learns preferences
+        <h2 className="text-3xl sm:text-5xl font-medium text-[#18120e] tracking-tight font-sans">
+          Add anything. Nue learns preferences
         </h2>
       </div>
 
-      {/* Main Stepper Card (Exact mem0 Image 4 Split View) */}
+      {/* Main Stepper Card */}
       <div className="rounded-3xl border border-[#e5e5e5] bg-white p-6 sm:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
         {/* Left Column: Vertical Timeline */}
         <div className="lg:col-span-5 space-y-8 relative pl-2">
@@ -77,7 +77,7 @@ export function NueHowItWorks() {
                 {/* Step Title & Description */}
                 <div>
                   <h4
-                    className={`text-xl font-bold transition font-sans ${
+                    className={`text-xl font-medium transition font-sans ${
                       isActive
                         ? 'text-[#18120e]'
                         : 'text-stone-400 group-hover:text-stone-600'
@@ -86,7 +86,7 @@ export function NueHowItWorks() {
                     {step.title}
                   </h4>
                   <p
-                    className={`text-xs sm:text-sm mt-1 leading-relaxed transition ${
+                    className={`text-xs sm:text-sm mt-1 leading-relaxed transition font-light ${
                       isActive ? 'text-[#736357]' : 'text-stone-400'
                     }`}
                   >
@@ -98,30 +98,30 @@ export function NueHowItWorks() {
           })}
         </div>
 
-        {/* Right Column: Warm Gradient Card with Chat Bubble */}
+        {/* Right Column: Warm Gradient Card */}
         <div className="lg:col-span-7">
           <div className="rounded-3xl bg-gradient-to-br from-[#d49b6a] via-[#a85a2a] to-[#45220f] p-6 sm:p-10 text-white relative overflow-hidden shadow-xl min-h-[320px] flex flex-col justify-center">
             <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
 
-            <div className="opacity-40 text-[11px] font-mono mb-4 text-center">
+            <div className="opacity-40 text-[11px] font-mono mb-4 text-center font-light">
               ... flat whites, and start deep-work around 10 AM.
             </div>
 
-            <div className="flex items-center justify-between text-xs font-semibold mb-4 px-2">
-              <span className="inline-flex items-center gap-1.5 text-white/95">
+            <div className="flex items-center justify-between text-xs font-medium mb-4 px-2">
+              <span className="inline-flex items-center gap-1.5 text-white/95 font-medium">
                 <Check className="w-4 h-4 text-amber-200" />
                 <span>{steps[activeStep].badgeText}</span>
               </span>
-              <span className="text-white/60 font-mono text-[11px]">Now</span>
+              <span className="text-white/60 font-mono text-[11px] font-light">Now</span>
             </div>
 
             <div className="rounded-2xl bg-white text-[#18120e] p-4 sm:p-5 shadow-lg mb-3">
-              <p className="text-sm sm:text-base font-semibold font-sans">
+              <p className="text-sm sm:text-base font-medium font-sans">
                 {steps[activeStep].userMessage}
               </p>
             </div>
 
-            <div className="rounded-xl bg-black/25 backdrop-blur-md text-white/90 p-3.5 text-xs sm:text-sm border border-white/10">
+            <div className="rounded-xl bg-black/25 backdrop-blur-md text-white/90 p-3.5 text-xs sm:text-sm border border-white/10 font-light">
               <p>{steps[activeStep].agentResponse}</p>
             </div>
           </div>

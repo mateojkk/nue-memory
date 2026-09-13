@@ -17,10 +17,10 @@ import {
 import { Sparkles, ExternalLink } from 'lucide-react';
 
 export default function Home() {
-  // Hero Tab State: 'studio' | 'sdk' | 'pipeline'
+  // Hero Tab State: 'sdk' | 'studio' | 'pipeline'
   const [heroTab, setHeroTab] = useState<'sdk' | 'studio' | 'pipeline'>('studio');
 
-  // Projects State
+  // Projects State (Demonstrating Media Memory feature under Nue)
   const [projects, setProjects] = useState<CreativeProject[]>([
     {
       id: 'proj-1',
@@ -39,7 +39,7 @@ export default function Home() {
       id: 'msg-welcome',
       sender: 'agent',
       content:
-        'Welcome to Media Studio. I am your Livepeer Media Agent.\n\nEnter a creative brief or try one of the suggestions below to start generating.',
+        'Welcome to Media Studio. I am your Livepeer Agent, powered by Nue persistent memory.\n\nEnter a creative prompt or try one of the suggestions below to start generating.',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -117,7 +117,7 @@ export default function Home() {
         const appliedCount = newVersion.appliedPreferences.length;
         const memoryDetails =
           appliedCount > 0
-            ? `\n\n✨ Automatically applied ${appliedCount} remembered preference(s) from Nue.`
+            ? `\n\n✨ Automatically applied ${appliedCount} remembered preference(s) from Nue Memory.`
             : '';
 
         setMessages((prev) => [
@@ -158,7 +158,7 @@ export default function Home() {
     setIsGenerating(true);
 
     try {
-      // Step 1: Classify feedback and extract preferences
+      // Step 1: Classify feedback and extract preferences via Nue
       const classifyRes = await fetch('/api/classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -178,7 +178,7 @@ export default function Home() {
         setPendingPreferences(classifyData.classification.extractedPreferences);
       }
 
-      // Step 2: Livepeer Agent regenerates revised version
+      // Step 2: Livepeer Agent regenerates revised version with Nue context
       const nextVersionNumber = activeProject.versions.length + 1;
       await handleGenerate(
         activeProject.initialPrompt,
@@ -220,7 +220,7 @@ export default function Home() {
     }
   };
 
-  // Switch or Create New Project (Cross-Project Recall Demo)
+  // Switch or Create New Project (Cross-Session Recall Demo)
   const handleCreateNewProject = (
     title = 'Project B - Minimalist Clothing Promo',
     prompt = 'Create a promo for my new clothing brand.'
@@ -243,7 +243,7 @@ export default function Home() {
       {
         id: `msg-${Date.now()}`,
         sender: 'agent',
-        content: `Switched to new project: "${title}".\nI will query your Media Memory on Walrus and automatically apply your persistent preferences.`,
+        content: `Switched to new project: "${title}".\nI will query your agent memory on Walrus and automatically apply your persistent preferences.`,
         timestamp: new Date().toISOString(),
       },
     ]);
@@ -267,14 +267,14 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white text-[#18120e] selection:bg-[#eed8c2] selection:text-[#18120e]">
-      {/* 1. Exact Navbar (Image 1 Layout, Nue Branding) */}
+    <div className="flex flex-col min-h-screen bg-white text-[#18120e] font-light selection:bg-[#eed8c2] selection:text-[#18120e]">
+      {/* 1. Navbar */}
       <NueNavbar
         onOpenVault={() => setIsMemoryPanelOpen(true)}
         activeCount={activeMemories.filter((m) => m.isActive).length}
       />
 
-      {/* 2. Exact Hero, Switcher & Code/Studio Window (Image 1 & Image 2, Nue Branding) */}
+      {/* 2. Hero, Switcher & Code/Studio Window */}
       <main className="flex-1">
         <NueHero
           activeTab={heroTab}
@@ -310,40 +310,40 @@ export default function Home() {
           onOpenInspector={() => setIsInspectorOpen(true)}
         />
 
-        {/* 3. Exact Dark "Built for <creators>" Section (Image 3) */}
+        {/* 3. Dark "Built for <developers>" Section */}
         <NueDevelopersSection />
 
-        {/* 4. Exact "How It Works" Section with Vertical Stepper (Image 4) */}
+        {/* 4. "How It Works" Section with Vertical Stepper */}
         <NueHowItWorks />
 
-        {/* 5. Exact "Creative Memory That Adapts To Your Domain" Section (Image 5) */}
+        {/* 5. "AI Memory That Adapts To Your Domain" Section */}
         <NueDomainsSection />
 
-        {/* Call To Action Banner */}
-        <section className="py-24 px-4 max-w-7xl mx-auto text-center">
+        {/* Call To Action Banner (Nue Vision) */}
+        <section className="py-24 px-4 max-w-7xl mx-auto text-center font-light">
           <div className="p-10 sm:p-16 rounded-3xl bg-[#faf8f5] border border-[#e5e5e5] relative overflow-hidden shadow-sm">
-            <h2 className="text-3xl sm:text-5xl font-extrabold text-[#18120e] mb-4 tracking-tight font-sans">
-              Give your creative agents memory.
+            <h2 className="text-3xl sm:text-5xl font-medium text-[#18120e] mb-4 tracking-tight font-sans">
+              Move AI agents from stateless tools to systems with continuity.
             </h2>
-            <p className="text-sm sm:text-base text-stone-600 max-w-xl mx-auto mb-8 leading-relaxed font-normal">
-              Autonomous media agents shouldn&apos;t suffer from creative amnesia. Nue is built by NextMathLabs for the future of decentralized creative AI.
+            <p className="text-sm sm:text-base text-stone-600 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
+              The future of agents is not just &ldquo;What can the agent do?&rdquo; but &ldquo;What does the agent know about me from everything we&apos;ve done before?&rdquo; Nue is the memory layer that makes that possible.
             </p>
             <button
               onClick={() => {
                 setHeroTab('studio');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#18120e] text-white hover:bg-black font-bold text-sm transition shadow-md"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#18120e] text-white hover:bg-black font-medium text-sm transition shadow-md"
             >
               <Sparkles className="w-4 h-4 text-[#c88d51]" />
-              <span>Launch Studio Now</span>
+              <span>Try Interactive Demo</span>
             </button>
           </div>
         </section>
       </main>
 
       {/* Multi-Column Clean Footer */}
-      <footer className="px-6 py-14 bg-white border-t border-[#f0f0f0] text-xs text-stone-600">
+      <footer className="px-6 py-14 bg-white border-t border-[#f0f0f0] text-xs text-stone-600 font-light">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div>
             <div className="flex items-center gap-2 mb-3">
@@ -351,76 +351,76 @@ export default function Home() {
                 <circle cx="12" cy="12" r="3" fill="currentColor" />
                 <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
               </svg>
-              <span className="font-bold text-[#18120e] text-lg tracking-tight">nue</span>
+              <span className="font-medium text-[#18120e] text-lg tracking-tight">nue</span>
             </div>
-            <p className="text-stone-500 text-xs leading-relaxed mb-3">
-              Decentralized persistent creative memory for AI media agents.
+            <p className="text-stone-500 text-xs leading-relaxed mb-3 font-light">
+              The memory infrastructure layer for AI agents.
             </p>
-            <span className="text-[11px] font-mono text-[#9c4e1f] font-semibold bg-[#fbf2e9] px-2 py-0.5 rounded border border-[#f0e2d3]">
-              A NextMathLabs Company
+            <span className="text-[11px] font-mono text-[#9c4e1f] font-medium bg-[#fbf2e9] px-2 py-0.5 rounded border border-[#f0e2d3]">
+              Founded by NextMathLabs
             </span>
           </div>
 
           <div>
-            <h4 className="font-bold text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
+            <h4 className="font-medium text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
               Product
             </h4>
-            <ul className="space-y-2 text-stone-600">
+            <ul className="space-y-2 text-stone-600 font-light">
               <li>
                 <button onClick={() => { setHeroTab('studio'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#18120e] transition">
-                  Media Memory
+                  Media Memory (Shipped Feature)
                 </button>
               </li>
               <li>
-                <a href="#features" className="hover:text-[#18120e] transition">Memory Compression</a>
+                <a href="#features" className="hover:text-[#18120e] transition">Memory Compression Engine</a>
               </li>
               <li>
-                <a href="#features" className="hover:text-[#18120e] transition">Conflict Resolution</a>
+                <a href="#features" className="hover:text-[#18120e] transition">Conflict Evolution</a>
               </li>
               <li>
                 <button onClick={() => { setHeroTab('pipeline'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#18120e] transition">
-                  Context Orchestrator
+                  Architecture Pipeline
                 </button>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
+            <h4 className="font-medium text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
               Infrastructure
             </h4>
-            <ul className="space-y-2 text-stone-600">
-              <li>
-                <a href="https://agent.livepeer.org" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
-                  Livepeer Agent MCP <ExternalLink className="w-3 h-3 text-stone-400" />
-                </a>
-              </li>
-              <li>
-                <a href="https://memory.walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
-                  Walrus MemWal <ExternalLink className="w-3 h-3 text-stone-400" />
-                </a>
-              </li>
+            <ul className="space-y-2 text-stone-600 font-light">
               <li>
                 <a href="https://walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
                   Sui Walrus Storage <ExternalLink className="w-3 h-3 text-stone-400" />
                 </a>
               </li>
+              <li>
+                <a href="https://memory.walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
+                  Walrus MemWal SDK <ExternalLink className="w-3 h-3 text-stone-400" />
+                </a>
+              </li>
+              <li>
+                <a href="https://agent.livepeer.org" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
+                  Livepeer Agent MCP <ExternalLink className="w-3 h-3 text-stone-400" />
+                </a>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
+            <h4 className="font-medium text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
               Company
             </h4>
-            <ul className="space-y-2 text-stone-600">
-              <li className="text-[#18120e] font-semibold">NextMathLabs Inc.</li>
+            <ul className="space-y-2 text-stone-600 font-light">
+              <li className="text-[#18120e] font-medium">NextMathLabs Inc.</li>
               <li><span className="text-[#9c4e1f]">Livepeer Agent Hackathon</span></li>
               <li className="text-stone-400">Aug 24 – Sep 21, 2026</li>
             </ul>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto pt-6 border-t border-[#f0f0f0] flex flex-col sm:flex-row items-center justify-between text-[11px] text-stone-500 gap-4">
+        <div className="max-w-7xl mx-auto pt-6 border-t border-[#f0f0f0] flex flex-col sm:flex-row items-center justify-between text-[11px] text-stone-500 gap-4 font-light">
           <div>
             © 2026 Nue · Founded by NextMathLabs. All rights reserved.
           </div>

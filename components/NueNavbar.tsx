@@ -12,17 +12,17 @@ export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
   const [showBanner, setShowBanner] = useState(true);
 
   return (
-    <div className="w-full bg-white sticky top-0 z-50">
+    <div className="w-full bg-white sticky top-0 z-50 font-light">
       {/* Top Notification Banner (Exact mem0 style, warm sand/caramel accent) */}
       {showBanner && (
         <div className="bg-[#fbf2e9] border-b border-[#f0e2d3] px-4 py-2 text-xs text-[#18120e] flex items-center justify-between transition relative">
-          <div className="flex-1 flex items-center justify-center gap-2 flex-wrap">
-            <span className="font-medium text-[13px]">
-              Nue now has a way to keep memory accurate as it grows.
+          <div className="flex-1 flex items-center justify-center gap-2 flex-wrap font-light">
+            <span className="font-light text-[13px]">
+              Nue now has a way to keep agent memory accurate as it grows.
             </span>
             <a
               href="#studio"
-              className="px-2.5 py-0.5 rounded-md bg-white border border-[#e2d5c5] text-xs font-semibold hover:bg-[#faf6f0] transition shadow-2xs inline-flex items-center gap-1 text-[#18120e]"
+              className="px-2.5 py-0.5 rounded-md bg-white border border-[#e2d5c5] text-xs font-medium hover:bg-[#faf6f0] transition shadow-2xs inline-flex items-center gap-1 text-[#18120e]"
             >
               <span>Introducing Media Memory!</span>
             </a>
@@ -48,13 +48,13 @@ export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
                 <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
               </svg>
             </div>
-            <a href="/" className="text-2xl font-bold tracking-tight text-[#18120e] font-sans">
+            <a href="/" className="text-xl font-medium tracking-tight text-[#18120e] font-sans">
               nue
             </a>
           </div>
 
           {/* Desktop Nav Links */}
-          <nav className="hidden lg:flex items-center gap-7 text-[13px] font-semibold text-[#18120e] tracking-tight">
+          <nav className="hidden lg:flex items-center gap-7 text-[13px] font-medium text-[#18120e] tracking-tight">
             <div className="flex items-center gap-1 cursor-pointer hover:text-[#9c4e1f] transition">
               <span>DEVELOPERS</span>
               <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
@@ -78,8 +78,8 @@ export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
 
           {/* Right Controls */}
           <div className="flex items-center gap-3">
-            {/* GitHub Star Pill Badge (Exact mem0 style) */}
-            <div className="hidden sm:inline-flex items-center rounded-lg border border-[#e5e5e5] bg-white text-xs font-semibold overflow-hidden shadow-2xs">
+            {/* GitHub Star Pill Badge */}
+            <div className="hidden sm:inline-flex items-center rounded-lg border border-[#e5e5e5] bg-white text-xs font-medium overflow-hidden shadow-2xs">
               <span className="flex items-center gap-1.5 px-2.5 py-1.5 border-r border-[#e5e5e5] text-[#18120e]">
                 <Star className="w-3.5 h-3.5 fill-[#18120e]" />
                 <span>Star</span>
@@ -96,16 +96,16 @@ export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
               <Database className="w-3.5 h-3.5 text-[#9c4e1f]" />
               <span className="hidden md:inline">Walrus Vault</span>
               {activeCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[#18120e] text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-[#18120e] text-white text-[9px] font-medium flex items-center justify-center">
                   {activeCount}
                 </span>
               )}
             </button>
 
-            {/* Primary Get Started Button (Exact mem0 pill with circular dark arrow) */}
+            {/* Primary Get Started Button */}
             <a
               href="#studio"
-              className="inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full bg-[#1a120c] hover:bg-[#281c15] text-white text-xs font-bold transition shadow-sm"
+              className="inline-flex items-center gap-2 pl-4 pr-1.5 py-1.5 rounded-full bg-[#1a120c] hover:bg-[#281c15] text-white text-xs font-medium transition shadow-sm"
             >
               <span>Get Started</span>
               <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">

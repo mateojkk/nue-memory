@@ -4,112 +4,112 @@ import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 export function NueDomainsSection() {
-  const [activeDomain, setActiveDomain] = useState<string>('Commercial & Ads');
+  const [activeDomain, setActiveDomain] = useState<string>('Coding Agents');
 
   const domainTabs = [
-    'Commercial & Ads',
-    'Social Video',
-    'Product Launch',
-    'Fashion & Apparel',
-    'Cinematic Stories',
+    'Coding Agents',
+    'Research Agents',
+    'Creative Media',
+    'Personal Assistants',
+    'Enterprise CRM',
   ];
 
   const domainCards: Record<
     string,
     Array<{ title: string; description: string }>
   > = {
-    'Commercial & Ads': [
+    'Coding Agents': [
       {
-        title: 'Smart Campaign Director',
+        title: 'Project Structure Memory',
         description:
-          'Remembers brand guidelines, color palettes, and aspect ratios across campaigns, providing personalized video outputs that improve with every generation.',
+          'Remembers how a developer structures their repositories, monorepos, module boundaries, and folder organization across sessions.',
       },
       {
-        title: 'Visual Style Companion',
+        title: 'Stack & Tooling Context',
         description:
-          'Learns what lighting, camera motion, and pacing work (and what doesn\'t) for each client, offering tailored director prompts automatically.',
+          'Retains language preferences, linter rules, testing frameworks, and dependency requirements without repeated developer prompts.',
       },
       {
-        title: 'Episodic Consistency Engine',
+        title: 'Architectural Decisions',
         description:
-          'Builds on previous episodes to deliver consistent characters, textures, and aesthetic continuity across multi-scene video workflows.',
-      },
-    ],
-    'Social Video': [
-      {
-        title: 'Viral Hook Optimizer',
-        description:
-          'Remembers which thumbnail compositions and opening 3-second pacing yield maximum engagement across vertical video channels.',
-      },
-      {
-        title: 'Creator Aesthetic Vault',
-        description:
-          'Locks down the creator\'s signature audio mix, font pairings, and color grading across TikTok, Reels, and YouTube Shorts.',
-      },
-      {
-        title: 'Audience Feedback Learner',
-        description:
-          'Translates viewer comments into actionable video prompt directives for subsequent automated batch renders.',
+          'Builds on past code reviews and architectural decisions, preventing recurring mistakes and adhering to engineering standards.',
       },
     ],
-    'Product Launch': [
+    'Research Agents': [
       {
-        title: 'Feature Showcase Director',
+        title: 'Source Credibility Vault',
         description:
-          'Retains 3D render lighting specifications and product angle choreography across multiple announcement teasers.',
+          'Remembers vetted citations, peer-reviewed sources, and verified data repositories across complex investigation threads.',
       },
       {
-        title: 'Brand Tone Preserver',
+        title: 'Investigation Continuity',
         description:
-          'Ensures marketing voiceover cadence and subtitle styling match company branding across global localized editions.',
+          'Carries hypothesis evolution, counter-arguments, and synthesis notes across multi-week research projects seamlessly.',
       },
       {
-        title: 'Iterative Revision Tracker',
+        title: 'Terminology & Ontology Retainer',
         description:
-          'Tracks stakeholder critique across versions, guaranteeing previous adjustments aren\'t forgotten when regenerating scenes.',
-      },
-    ],
-    'Fashion & Apparel': [
-      {
-        title: 'Fabric Texture Master',
-        description:
-          'Remembers fine material rendering rules, specular highlight parameters, and runway motion dynamics for clothing items.',
-      },
-      {
-        title: 'Seasonal Palette Sync',
-        description:
-          'Carries colorway definitions across autumn/winter and spring/summer lookbook promotional assets autonomously.',
-      },
-      {
-        title: 'Model Pose Continuity',
-        description:
-          'Preserves framing consistency and model stance language throughout an entire digital catalog campaign.',
+          'Enforces domain-specific vocabulary and taxonomy definitions consistently throughout technical publications.',
       },
     ],
-    'Cinematic Stories': [
+    'Creative Media': [
       {
-        title: 'Narrative Arc Retainer',
+        title: 'Media Memory on Livepeer',
         description:
-          'Maintains world-building lore, character appearance traits, and cinematic mood across full episodic scripts.',
+          'Our first shipped capability: applies Nue to AI-generated media, remembering pacing, lighting, camera angles, and soundtrack styles.',
       },
       {
-        title: 'Director Camera Lens Profile',
+        title: 'Brand Aesthetics Companion',
         description:
-          'Enforces preferred anamorphic focal lengths, depth of field, and film grain simulations without repeat configuration.',
+          'Locks down color palettes, typography scales, and visual guidelines across multiple episodic marketing campaigns.',
       },
       {
-        title: 'Soundscape Coordinator',
+        title: 'Cross-Project Recall',
         description:
-          'Remembers musical leitmotifs and atmospheric sound layers, pairing audio cues consistently with recurring plot motifs.',
+          'When starting a new media project, retrieves persistent creative direction rules from Walrus with zero reprompting required.',
+      },
+    ],
+    'Personal Assistants': [
+      {
+        title: 'Routines & Scheduling Memory',
+        description:
+          'Remembers deep-work windows, meeting constraints, preferred travel itineraries, and recurring calendar rules.',
+      },
+      {
+        title: 'Personal Taste & Dietary Profile',
+        description:
+          'Retains culinary preferences, dietary restrictions, and lifestyle habits to guide recommendations naturally over time.',
+      },
+      {
+        title: 'Communication Cadence',
+        description:
+          'Learns how concisely a user likes their summaries delivered and what tone suits different personal and professional contexts.',
+      },
+    ],
+    'Enterprise CRM': [
+      {
+        title: 'Stakeholder Relationship Graph',
+        description:
+          'Retains organizational hierarchies, champion priorities, and decision-maker sentiment across quarterly enterprise sales cycles.',
+      },
+      {
+        title: 'Commitment & Objections Ledger',
+        description:
+          'Logs contract commitments, compliance stipulations, and technical evaluation criteria across multi-agent account teams.',
+      },
+      {
+        title: 'Historical Deal Continuity',
+        description:
+          'Surfaces past negotiation context and pricing benchmarks whenever a customer re-engages for contract renewals.',
       },
     ],
   };
 
-  const cards = domainCards[activeDomain] || domainCards['Commercial & Ads'];
+  const cards = domainCards[activeDomain] || domainCards['Coding Agents'];
 
   return (
-    <section className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0]">
-      {/* Top Center Black Icon (Exact mem0 Image 5 Icon) */}
+    <section className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0] font-light">
+      {/* Top Center Black Icon */}
       <div className="flex justify-center mb-6">
         <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center shadow-md">
           <div className="relative">
@@ -119,13 +119,13 @@ export function NueDomainsSection() {
         </div>
       </div>
 
-      {/* Main Headline & Subtitle (Exact mem0 Image 5 with Nue) */}
+      {/* Main Headline & Subtitle */}
       <div className="text-center max-w-3xl mx-auto mb-12">
-        <h2 className="text-3xl sm:text-5xl font-extrabold text-[#18120e] tracking-tight mb-4 font-sans">
-          Creative memory that adapts to your domain
+        <h2 className="text-3xl sm:text-5xl font-medium text-[#18120e] tracking-tight mb-4 font-sans">
+          AI memory that adapts to your domain
         </h2>
-        <p className="text-stone-500 text-base sm:text-lg font-normal">
-          Nue helps Livepeer Agent remember what matters.
+        <p className="text-stone-500 text-base sm:text-lg font-light">
+          Nue is application-agnostic. The memory layer that helps any AI agent remember what matters.
         </p>
       </div>
 
@@ -138,8 +138,8 @@ export function NueDomainsSection() {
               <button
                 key={tab}
                 onClick={() => setActiveDomain(tab)}
-                className={`py-4 text-sm font-semibold transition relative whitespace-nowrap ${
-                  isActive ? 'text-[#18120e]' : 'text-stone-500 hover:text-[#18120e]'
+                className={`py-4 text-sm font-medium transition relative whitespace-nowrap ${
+                  isActive ? 'text-[#18120e]' : 'text-stone-500 hover:text-[#18120e] font-light'
                 }`}
               >
                 <span>{tab}</span>
@@ -160,11 +160,11 @@ export function NueDomainsSection() {
             className="rounded-2xl border border-[#e5e5e5] p-8 bg-white min-h-[300px] flex flex-col justify-between hover:shadow-lg transition-all duration-300 group"
           >
             <div>
-              <h3 className="text-2xl font-bold text-[#18120e] tracking-tight leading-snug mb-4 group-hover:text-[#9c4e1f] transition font-sans">
+              <h3 className="text-2xl font-medium text-[#18120e] tracking-tight leading-snug mb-4 group-hover:text-[#9c4e1f] transition font-sans">
                 {card.title}
               </h3>
             </div>
-            <p className="text-stone-500 text-xs sm:text-sm leading-relaxed font-normal">
+            <p className="text-stone-500 text-xs sm:text-sm leading-relaxed font-light">
               {card.description}
             </p>
           </div>

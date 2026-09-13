@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --background: #faf8f5;
   --foreground: #18120e;
   
@@ -27,13 +28,46 @@
   --brown-cream: #fdfbf7;
 }
 
+/* Strictly Inter font across the app */
+* {
+  font-family: var(--font-inter), 'Inter', sans-serif !important;
+}
+
 body {
   background-color: #faf8f5;
   color: #18120e;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif !important;
+  font-weight: 300 !important; /* light by default */
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* STRICT RULE: Light (300) and Medium (500) only across the entire app */
+h1, h2, h3, h4, h5, h6, b, strong, th {
+  font-weight: 500 !important; /* medium */
+}
+
+/* Remap any bold/semibold/extrabold/black weights strictly to medium (500) */
+.font-bold,
+.font-extrabold,
+.font-semibold,
+.font-black {
+  font-weight: 500 !important;
+}
+
+.font-normal,
+.font-light {
+  font-weight: 300 !important;
+}
+
+.font-medium {
+  font-weight: 500 !important;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-inter), 'Inter', monospace !important;
+  font-weight: 300;
 }
 
 /* Nue Grid Background & Ambient Warm Brown Radial Glows */
@@ -91,7 +125,7 @@ body {
   background-color: #1a120c;
   color: #ffffff;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   padding: 0.625rem 1.125rem;
   border-radius: 0.625rem;
   transition: all 0.15s ease-in-out;
