@@ -118,7 +118,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({
           <span className="text-[10px] font-mono uppercase tracking-wider text-[#ab9482] font-medium">
             Demo Scenarios &amp; Revisions
           </span>
-          <span className="text-[9px] font-mono text-[#786152]">Track 3 Loop</span>
+          <span className="text-[9px] font-mono text-[#786152]">Quick Presets</span>
         </div>
         <div className="flex flex-col gap-1.5">
           {suggestions.map((suggestion, i) => (
