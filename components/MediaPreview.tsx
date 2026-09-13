@@ -63,7 +63,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#9c4e1f]" />
-            <span className="text-xs font-bold text-[#18120e]">
+            <span className="text-xs font-medium text-[#18120e]">
               {version ? `Version ${version.versionNumber}` : 'Workspace Canvas'}
             </span>
           </div>
@@ -77,12 +77,12 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         <div className="flex items-center gap-2">
           {/* Display Mode: Video vs Keyframe */}
           {version?.thumbnailUrl && (
-            <div className="flex bg-[#f5ece4] p-0.5 rounded-lg border border-[#e2d5c5] text-xs font-medium">
+            <div className="flex bg-[#f5ece4] p-0.5 rounded-md border border-[#e2d5c5] text-xs font-medium">
               <button
                 onClick={() => setDisplayMode('video')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-sm transition ${
                   displayMode === 'video'
-                    ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                    ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
                     : 'text-[#786152] hover:text-[#18120e]'
                 }`}
               >
@@ -91,9 +91,9 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
               </button>
               <button
                 onClick={() => setDisplayMode('keyframe')}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-md transition ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-sm transition ${
                   displayMode === 'keyframe'
-                    ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                    ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
                     : 'text-[#786152] hover:text-[#18120e]'
                 }`}
               >
@@ -104,12 +104,12 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
           )}
 
           {/* Aspect Ratio Switcher */}
-          <div className="flex bg-[#f5ece4] p-0.5 rounded-lg border border-[#e2d5c5] text-xs font-mono">
+          <div className="flex bg-[#f5ece4] p-0.5 rounded-md border border-[#e2d5c5] text-xs font-mono">
             <button
               onClick={() => setAspectMode('16:9')}
-              className={`px-2.5 py-1 rounded-md transition ${
+              className={`px-2.5 py-1 rounded-sm transition ${
                 aspectMode === '16:9'
-                  ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                  ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
                   : 'text-[#786152] hover:text-[#18120e]'
               }`}
             >
@@ -117,9 +117,9 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             </button>
             <button
               onClick={() => setAspectMode('9:16')}
-              className={`px-2.5 py-1 rounded-md transition ${
+              className={`px-2.5 py-1 rounded-sm transition ${
                 aspectMode === '9:16'
-                  ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                  ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
                   : 'text-[#786152] hover:text-[#18120e]'
               }`}
             >
@@ -138,7 +138,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
               <Sparkles className="w-5 h-5 text-[#dda15e] absolute inset-0 m-auto animate-pulse" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white tracking-tight">
+              <h3 className="text-sm font-medium text-white tracking-tight">
                 Livepeer Agent Synthesizing Media
               </h3>
               <p className="text-xs text-[#ab9482] mt-1 max-w-sm font-mono">
@@ -167,7 +167,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
                   href={version.thumbnailUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute bottom-3 right-3 z-30 px-2.5 py-1 rounded-lg bg-black/80 hover:bg-black text-[11px] font-mono text-[#dda15e] hover:text-white border border-[#c88d51]/30 flex items-center gap-1.5 backdrop-blur-md transition"
+                  className="absolute bottom-3 right-3 z-30 px-2.5 py-1 rounded-md bg-black/80 hover:bg-black text-[11px] font-mono text-[#dda15e] hover:text-white border border-[#c88d51]/30 flex items-center gap-1.5 backdrop-blur-md transition"
                 >
                   <span>Open Livepeer Asset</span>
                   <ExternalLink className="w-3 h-3" />
@@ -205,16 +205,16 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             {version.captionStyle?.enabled && displayMode === 'video' && (
               <div className="absolute bottom-16 inset-x-4 z-20 flex flex-col items-center text-center pointer-events-none">
                 <div
-                  className={`transition-all duration-200 uppercase font-black tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] ${
+                  className={`transition-all duration-200 uppercase font-medium tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] ${
                     version.captionStyle.size === 'large'
-                      ? 'text-lg sm:text-2xl text-[#fef08a] bg-[#140e0b]/90 px-4 py-1.5 rounded-lg border border-[#c88d51]/50'
+                      ? 'text-lg sm:text-2xl text-[#fef08a] bg-[#140e0b]/90 px-4 py-1.5 rounded-md border border-[#c88d51]/50'
                       : 'text-xs sm:text-sm text-white bg-black/60 px-3 py-1 rounded border border-white/20'
                   }`}
                 >
                   {version.captionStyle.highlight}
                 </div>
                 <div
-                  className={`mt-1 font-semibold text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${
+                  className={`mt-1 font-medium text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${
                     version.captionStyle.size === 'large' ? 'text-xs sm:text-sm' : 'text-[11px] text-zinc-300'
                   }`}
                 >
@@ -227,7 +227,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             {displayMode === 'video' && (
               <button
                 onClick={togglePlay}
-                className="absolute inset-0 m-auto w-12 h-12 rounded-lg bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[#c88d51]/30 flex items-center justify-center text-[#fbf7ee] opacity-0 hover:opacity-100 transition-opacity z-30"
+                className="absolute inset-0 m-auto w-12 h-12 rounded-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[#c88d51]/30 flex items-center justify-center text-[#fbf7ee] opacity-0 hover:opacity-100 transition-opacity z-30"
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 translate-x-0.5" />}
               </button>
@@ -270,7 +270,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         {version && version.appliedPreferences.length > 0 && (
           <div className="flex items-center justify-between text-xs pt-2 border-t border-[#e7e2da] text-[#786152]">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="flex items-center gap-1 text-[#78350f] font-semibold text-[11px]">
+              <span className="flex items-center gap-1 text-[#78350f] font-medium text-[11px]">
                 <Sparkles className="w-3 h-3 text-[#9c4e1f]" />
                 Walrus Memories Applied:
               </span>
@@ -300,7 +300,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
           <button
             key={v.versionNumber}
             onClick={() => onSelectVersion(idx)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition flex items-center gap-1.5 border ${
+            className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center gap-1.5 border ${
               selectedVersionIndex === idx
                 ? 'bg-[#1a120c] border-[#1a120c] text-white shadow-2xs'
                 : 'bg-[#faf6f0] border-[#e7e2da] text-[#786152] hover:text-[#18120e] hover:border-[#c88d51]/40'

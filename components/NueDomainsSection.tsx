@@ -4,108 +4,108 @@ import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 export function NueDomainsSection() {
-  const [activeDomain, setActiveDomain] = useState<string>('Healthcare');
+  const [activeDomain, setActiveDomain] = useState<string>('Coding Agents');
 
   const domainTabs = [
-    'Healthcare',
-    'Education',
-    'E-commerce',
-    'Customer Support',
-    'Sales & CRM',
+    'Coding Agents',
+    'Research Agents',
+    'Creative Media',
+    'Personal Assistants',
+    'Enterprise CRM',
   ];
 
   const domainCards: Record<
     string,
     Array<{ title: string; description: string }>
   > = {
-    'Healthcare': [
+    'Coding Agents': [
       {
-        title: 'Smart Patient Care Assistant',
+        title: 'Repository Architecture Copilot',
         description:
-          'Remembers patient history, allergies, and treatment preferences across visits therefore providing personalized care that improves with every interaction.',
+          'Remembers repo conventions, monorepo structures, and custom lint rules across pull requests so agents never violate project guidelines.',
       },
       {
-        title: 'Chronic Condition Companion',
+        title: 'Toolchain & Dependency Memory',
         description:
-          'Learns what works (and what doesn\'t) for the patient over time, offering thoughtful reminders and insights tailored to each patient\'s journey.',
+          'Recalls package managers, test runners, and build configurations across workspace sessions without requiring repeated configuration.',
       },
       {
-        title: 'Therapy Progress Tracker',
+        title: 'Bug & Refactor Ledger',
         description:
-          'Builds on previous sessions to deliver consistent, context-aware mental health support. Creates trust through conversations that remember what matters to each patient.',
-      },
-    ],
-    'Education': [
-      {
-        title: 'Adaptive Learning Mentor',
-        description:
-          'Tracks student learning pace, concept mastery, and preferred problem-solving styles across semesters without starting from scratch.',
-      },
-      {
-        title: 'Curriculum Retention Guide',
-        description:
-          'Recalls prior test misconceptions to deliver targeted spaced-repetition exercises tailored to the individual learner.',
-      },
-      {
-        title: 'Research Project Companion',
-        description:
-          'Preserves thesis outlines, primary sources, and academic notes across multi-week research workflows.',
+          'Preserves historical debugging traces and previously attempted solutions to avoid repeating dead-end fixes in subsequent runs.',
       },
     ],
-    'E-commerce': [
+    'Research Agents': [
       {
-        title: 'Personalized Shopping Stylist',
+        title: 'Literature Synthesis Engine',
         description:
-          'Remembers sizing, aesthetic preferences, and budget constraints across multi-brand purchases to curate relevant wardrobes.',
+          'Retains primary sources, author citations, and paper abstracts across multi-week academic investigations without prompt overflow.',
       },
       {
-        title: 'Post-Purchase Care Concierge',
+        title: 'Hypothesis Evolution Tracker',
         description:
-          'Recalls past orders, delivery nuances, and warranty preferences to resolve support requests instantly.',
+          'Records how working theories change as new data points emerge, maintaining a rigorous audit trail of evidence and conclusions.',
       },
       {
-        title: 'Household Replenishment Agent',
+        title: 'Domain Knowledge Graph',
         description:
-          'Anticipates recurring consumable needs and suggests timely refills based on actual historical consumption patterns.',
-      },
-    ],
-    'Customer Support': [
-      {
-        title: 'Zero-Repetition Resolver',
-        description:
-          'Ensures customers never have to repeat their issue when routed between teams, retaining full conversational history.',
-      },
-      {
-        title: 'Technical Diagnostic Vault',
-        description:
-          'Logs device models, firmware configurations, and previously attempted troubleshooting steps across tickets.',
-      },
-      {
-        title: 'VIP Account Sentiments',
-        description:
-          'Monitors historical customer satisfaction and recurring friction points to prioritize high-touch resolutions.',
+          'Constructs persistent topic graphs and key definitions that sharpen every subsequent query and agent investigation.',
       },
     ],
-    'Sales & CRM': [
+    'Creative Media': [
       {
-        title: 'Deal Intelligence Copilot',
+        title: 'Art Direction & Style Engine',
         description:
-          'Retains stakeholder priorities, buying criteria, and competitor mentions across quarterly enterprise sales calls.',
+          'Preserves color palettes, aspect ratios, typography rules, and aesthetic guidance across generation batches for complete brand fidelity.',
       },
       {
-        title: 'Executive Relationship Ledger',
+        title: 'Episodic Video Continuity',
         description:
-          'Preserves account history, key milestones, and personal rapport notes across long multi-agent sales cycles.',
+          'Retains character appearances, scene lighting, and audio grading preferences for multi-shot video production across sessions.',
       },
       {
-        title: 'Pipeline Velocity Booster',
+        title: 'Asset Metadata Graph',
         description:
-          'Surfaces proven objection-handling strategies and relevant case studies based on similar historical winning deals.',
+          'Tracks prompt revisions, seed records, and model weights across Livepeer and Walrus pipelines for seamless asset provenance.',
+      },
+    ],
+    'Personal Assistants': [
+      {
+        title: 'Contextual Schedule Manager',
+        description:
+          'Remembers meeting preferences, focus hour blocks, and calendar nuances across weeks to automate scheduling without friction.',
+      },
+      {
+        title: 'Personal Preference Ledger',
+        description:
+          'Learns dietary choices, travel habits, and communication preferences over time without redundant questioning.',
+      },
+      {
+        title: 'Cross-Session Continuity',
+        description:
+          'Picks up conversations exactly where they left off, eliminating repetitive context re-establishment across agent restarts.',
+      },
+    ],
+    'Enterprise CRM': [
+      {
+        title: 'Account Relationship Graph',
+        description:
+          'Retains stakeholder priorities, executive buying signals, and historical objections across multi-month sales cycles.',
+      },
+      {
+        title: 'Compliance & Policy Guardian',
+        description:
+          'Enforces internal data policies, NDA boundaries, and regulatory rules consistently across all enterprise agent workflows.',
+      },
+      {
+        title: 'Institutional Knowledge Base',
+        description:
+          'Preserves organizational decisions and operational patterns so new agents don\'t start from zero when onboarding.',
       },
     ],
   };
 
-  const cards = domainCards[activeDomain] || domainCards['Healthcare'];
+  const cards = domainCards[activeDomain] || domainCards['Coding Agents'];
 
   return (
     <section className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0] font-light">

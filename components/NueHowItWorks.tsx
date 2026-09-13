@@ -11,22 +11,25 @@ export function NueHowItWorks() {
       title: 'Add',
       description: 'Input data in seconds with no config or boilerplate.',
       badgeText: '✓ Memory Updated.',
+      clippedText: '... flat whites, and start deep-work around 10 AM.',
       userMessage: 'Hi! Can you schedule my tomorrow morning for me?',
       agentResponse: 'Scheduled! Blocked 10:00 AM - 1:00 PM for deep work with no interruptions based on your preferences.',
     },
     {
       title: 'Learn',
       description: 'Nue extracts and updates memories autonomously.',
-      badgeText: '✓ Long-Term Preference Extracted.',
-      userMessage: 'I prefer bright, minimal visuals rather than cluttered layouts.',
-      agentResponse: 'Extracted rule: [VISUAL_STYLE] = Minimal, High Brightness. Committed to Walrus agent memory.',
+      badgeText: '✓ Persistent Memory Extracted.',
+      clippedText: '... prefer bright, minimal visuals rather than cluttered layouts.',
+      userMessage: 'Can you generate the creative concept for our product teaser?',
+      agentResponse: 'Extracted rule: [VISUAL_STYLE] = Minimal, High Contrast. Committed to Walrus agent memory.',
     },
     {
       title: 'Retrieve',
-      description: 'Nue retrieves key memories as users interact.',
+      description: 'Nue retrieves key memories as agents interact.',
       badgeText: '✓ Context Injected into Agent.',
-      userMessage: 'Generate our new marketing campaign presentation.',
-      agentResponse: 'Retrieved 3 persistent preferences from previous sessions. Composing with minimal visuals.',
+      clippedText: '... enforce strict TypeScript, Zod schemas, and Tailwind.',
+      userMessage: 'Scaffold the API client and data models for our pipeline.',
+      agentResponse: 'Retrieved 3 persistent architectural rules from previous runs. Scaffolded with strict TypeScript and Zod.',
     },
   ];
 
@@ -104,7 +107,7 @@ export function NueHowItWorks() {
             <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
 
             <div className="opacity-40 text-[11px] font-mono mb-4 text-center font-light">
-              ... flat whites, and start deep-work around 10 AM.
+              {steps[activeStep].clippedText}
             </div>
 
             <div className="flex items-center justify-between text-xs font-medium mb-4 px-2">

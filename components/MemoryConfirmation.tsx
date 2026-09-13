@@ -42,7 +42,7 @@ export const MemoryConfirmation: React.FC<MemoryConfirmationProps> = ({
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-[#18120e]">
+            <h4 className="text-xs font-medium text-[#18120e]">
               Remember this for future media?
             </h4>
             <p className="text-[10px] text-[#786152] font-mono">
@@ -64,9 +64,9 @@ export const MemoryConfirmation: React.FC<MemoryConfirmationProps> = ({
         {detectedPreferences.map((pref, i) => (
           <div
             key={i}
-            className="p-2.5 rounded-xl bg-[#faf6f0] border border-[#e2d5c5] flex items-start gap-2.5 text-xs text-[#18120e]"
+            className="p-2.5 rounded-lg bg-[#faf6f0] border border-[#e2d5c5] flex items-start gap-2.5 text-xs text-[#18120e]"
           >
-            <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#f5ece4] text-[#78350f] shrink-0 mt-0.5">
+            <span className="text-[9px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[#f5ece4] text-[#78350f] shrink-0 mt-0.5">
               {pref.category}
             </span>
             <span className="font-medium flex-1 leading-snug">{pref.preference}</span>
@@ -84,7 +84,7 @@ export const MemoryConfirmation: React.FC<MemoryConfirmationProps> = ({
           <button
             onClick={onDismiss}
             disabled={isSaving}
-            className="px-3 py-1.5 rounded-lg text-xs font-medium text-[#786152] hover:text-[#18120e] transition"
+            className="px-3 py-1.5 rounded-md text-xs font-medium text-[#786152] hover:text-[#18120e] transition"
           >
             This project only
           </button>

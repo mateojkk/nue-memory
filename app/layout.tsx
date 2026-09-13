@@ -10,9 +10,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Nue · Media Memory',
+  title: 'Nue · The Memory Infrastructure Layer for AI Agents',
   description:
-    'Nue is a company founded by NextMathLabs. Media Memory is the first feature shipped under Nue, providing decentralized persistent creative preferences for Livepeer Agent via Walrus MemWal.',
+    'Nue is the memory infrastructure layer for AI agents, giving agents persistent memory to retain what matters, learn from previous interactions, and evolve context over time with durable Walrus storage.',
 };
 
 export default function RootLayout({

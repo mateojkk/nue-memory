@@ -180,9 +180,9 @@ export function NueDevelopersSection() {
               )}
             </div>
 
-            {/* Right Column: Visual Graphic (Exact mem0 Image 3 Diagram) */}
+            {/* Right Column: Visual Graphic (Exact mem0 Image 3 Layout with Authentic Nue Memory) */}
             <div className="lg:col-span-6">
-              <div className="rounded-2xl bg-[#d4a373]/15 border border-[#c88d51]/30 p-6 sm:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-[300px]">
+              <div className="rounded-2xl bg-[#d4a373]/15 border border-[#c88d51]/30 p-6 sm:p-8 relative overflow-hidden flex flex-col items-center justify-center min-h-[320px]">
                 <div 
                   className="absolute inset-0 opacity-[0.2] pointer-events-none"
                   style={{
@@ -191,30 +191,98 @@ export function NueDevelopersSection() {
                   }}
                 />
 
-                <div className="w-full max-w-sm rounded-2xl bg-[#1c1815] border border-stone-800 p-4 shadow-xl relative z-10 space-y-3">
-                  {/* User Message (Pill with warm brown tint) */}
-                  <div className="flex justify-end">
-                    <div className="rounded-2xl rounded-tr-xs bg-[#b87333]/30 border border-[#b87333]/50 text-stone-100 text-xs px-3.5 py-2.5 max-w-[90%] leading-relaxed font-light">
-                      &quot;4-day push-pull-legs + core. I&apos;m lacto-ovo vegetarian and try to hit 130 g protein daily.&quot;
+                {/* TAB 1: EFFICIENCY (Extract What Matters: Temporary vs Persistent) */}
+                {activeTab === 'efficiency' && (
+                  <div className="w-full max-w-sm rounded-xl bg-[#1c1815] border border-stone-800 p-4 shadow-xl relative z-10 space-y-3">
+                    {/* Extraction Tag Indicator */}
+                    <div className="flex items-center justify-between text-[10px] font-mono text-stone-400 pb-1 border-b border-stone-800">
+                      <span className="text-[#c88d51]">NUE EXTRACTION ENGINE</span>
+                      <span className="text-stone-500">FILTER NOISE</span>
                     </div>
-                  </div>
 
-                  {/* Agent Response */}
-                  <div className="flex justify-start">
-                    <div className="rounded-2xl rounded-tl-xs bg-[#29221d] text-stone-300 text-xs px-3.5 py-2.5 max-w-[90%] leading-relaxed font-light">
-                      &quot;Perfect, that gives me everything I need to guide your training and nutrition.&quot;
+                    {/* User Message */}
+                    <div className="flex justify-end">
+                      <div className="rounded-xl rounded-tr-xs bg-[#b87333]/25 border border-[#b87333]/40 text-stone-100 text-xs px-3.5 py-2.5 max-w-[92%] leading-relaxed font-light">
+                        &quot;Make this clip 5 seconds shorter, and remember: I prefer bright, minimal visuals rather than cluttered layouts.&quot;
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Downward connector lines pointing to SAVED ON WALRUS pill */}
-                  <div className="pt-2 flex flex-col items-center">
-                    <div className="w-px h-4 bg-[#c88d51]/60" />
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fbf2e9] text-[#18120e] text-[11px] font-medium font-mono shadow-md border border-[#e8d5c4]">
-                      <Check className="w-3.5 h-3.5 text-[#9c4e1f]" />
-                      <span>SAVED ON WALRUS</span>
+                    {/* Agent Response */}
+                    <div className="flex justify-start">
+                      <div className="rounded-xl rounded-tl-xs bg-[#29221d] text-stone-300 text-xs px-3.5 py-2.5 max-w-[92%] leading-relaxed font-light">
+                        &quot;Rendered the 5s cut. Extracted and committed your long-term preference for bright, minimal visuals to persistent memory.&quot;
+                      </div>
+                    </div>
+
+                    {/* Dual Connector Lines down to SAVED badge */}
+                    <div className="pt-2 flex flex-col items-center relative">
+                      <div className="w-24 h-3 border-b border-x border-[#c88d51]/60 rounded-b-sm mb-1" />
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fbf2e9] text-[#18120e] text-[11px] font-medium font-mono shadow-md border border-[#e8d5c4]">
+                        <Check className="w-3.5 h-3.5 text-[#9c4e1f]" />
+                        <span>SAVED TO WALRUS</span>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+
+                {/* TAB 2: VISIBILITY (Decoupled Architecture: Agent -> Nue -> Walrus) */}
+                {activeTab === 'visibility' && (
+                  <div className="w-full max-w-sm rounded-xl bg-[#1c1815] border border-stone-800 p-5 shadow-xl relative z-10 space-y-3 font-mono text-xs">
+                    <div className="p-3 rounded-lg bg-[#251f1a] border border-[#3d2f25] text-center">
+                      <span className="text-stone-400 text-[10px] block">RUNTIME INGESTION</span>
+                      <span className="text-white font-medium">AI AGENT (OpenAI / Claude / Livepeer)</span>
+                    </div>
+
+                    <div className="flex justify-center text-[#c88d51]">
+                      <span>↓ remember(context) · retrieve(query)</span>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#2e1d12] border border-[#c88d51]/50 text-center shadow-inner">
+                      <span className="text-[#c88d51] text-[10px] font-medium block">MEMORY INFRASTRUCTURE LAYER</span>
+                      <span className="text-white font-medium">NUE INTELLIGENCE ENGINE</span>
+                      <span className="text-[10px] text-stone-400 block mt-0.5">Extraction · Structuring · Lifecycle</span>
+                    </div>
+
+                    <div className="flex justify-center text-[#c88d51]">
+                      <span>↓ durable cryptographic blobs</span>
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-[#141210] border border-stone-800 text-center flex items-center justify-between">
+                      <div className="text-left">
+                        <span className="text-[10px] text-stone-500 block">STORAGE BACKEND</span>
+                        <span className="text-emerald-400 font-medium">SUI WALRUS BLOB</span>
+                      </div>
+                      <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-300">DECENTRALIZED</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: CONTROL (Memory Evolution & Conflict Resolution) */}
+                {activeTab === 'control' && (
+                  <div className="w-full max-w-sm rounded-xl bg-[#1c1815] border border-stone-800 p-4 shadow-xl relative z-10 space-y-3">
+                    <div className="flex items-center justify-between text-[10px] font-mono pb-1 border-b border-stone-800">
+                      <span className="text-stone-400">MEMORY EVOLUTION</span>
+                      <span className="text-emerald-400">ZERO CONFLICTS</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-red-950/20 border border-red-900/40 text-xs font-mono line-through text-stone-500">
+                      <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-red-900/40 text-red-300 mr-1.5">Superseded</span>
+                      &quot;Use dark, high-saturation color grading&quot;
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-[#29221d] border border-[#c88d51]/40 text-xs font-mono text-stone-200">
+                      <span className="text-[9px] uppercase px-1.5 py-0.5 rounded bg-[#9c4e1f]/40 text-[#c88d51] mr-1.5">Active Preference</span>
+                      &quot;Switch to bright, minimal monochrome aesthetics&quot;
+                    </div>
+
+                    <div className="pt-2 flex flex-col items-center">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-[#fbf2e9] text-[#18120e] text-[11px] font-medium font-mono shadow-md border border-[#e8d5c4]">
+                        <Check className="w-3.5 h-3.5 text-[#9c4e1f]" />
+                        <span>UPDATED IN WALRUS MEMORY</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

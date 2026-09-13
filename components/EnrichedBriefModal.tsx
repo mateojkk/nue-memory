@@ -31,7 +31,7 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
               <Sparkles className="w-4 h-4 text-[#9c4e1f]" />
             </div>
             <div>
-              <h3 className="text-xs font-bold text-[#18120e]">
+              <h3 className="text-xs font-medium text-[#18120e]">
                 Context Orchestration Inspector
               </h3>
               <p className="text-[10px] text-[#786152] font-mono">
@@ -41,7 +41,7 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-stone-400 hover:text-[#18120e] transition"
+            className="p-1 rounded-md text-stone-400 hover:text-[#18120e] transition"
           >
             <X className="w-4 h-4" />
           </button>
@@ -52,7 +52,7 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
           {/* Step 1: User's raw request */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono font-bold text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-[10px] font-mono font-medium text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
                 <Send className="w-3 h-3 text-[#9c4e1f]" />
                 Stage 1 · Original User Creative Brief
               </span>
@@ -66,11 +66,11 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
           {/* Step 2: Retrieved preferences */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono font-bold text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-[10px] font-mono font-medium text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
                 <Layers className="w-3 h-3 text-[#9c4e1f]" />
                 Stage 2 · Retrieved Walrus Memories ({appliedMemories.length})
               </span>
-              <span className="text-[10px] font-mono text-[#9c4e1f] font-semibold bg-[#f5ece4] px-2 py-0.5 rounded border border-[#e2d5c5]">
+              <span className="text-[10px] font-mono text-[#9c4e1f] font-medium bg-[#f5ece4] px-2 py-0.5 rounded border border-[#e2d5c5]">
                 MemWal Match
               </span>
             </div>
@@ -86,7 +86,7 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
                     className="p-2.5 rounded-xl bg-[#fdfbf7] border border-[#c88d51]/25 flex items-center justify-between text-xs font-mono"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-[#f5ece4] text-[#78350f]">
+                      <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-medium bg-[#f5ece4] text-[#78350f]">
                         {pref.category}
                       </span>
                       <span className="text-[#18120e] font-medium">{pref.preference}</span>
@@ -103,11 +103,11 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
           {/* Step 3: Enriched final prompt */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono font-bold text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-[10px] font-mono font-medium text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3 text-[#9c4e1f]" />
                 Stage 3 · Final Augmented Livepeer Agent Directives
               </span>
-              <span className="text-[10px] font-mono text-emerald-600 font-semibold">Live Remote MCP</span>
+              <span className="text-[10px] font-mono text-emerald-600 font-medium">Live Remote MCP</span>
             </div>
             <pre className="p-3.5 rounded-xl bg-[#140e0b] border border-[#281c15] text-[#fbf7ee] text-xs font-mono whitespace-pre-wrap leading-relaxed">
               {enrichedBrief}
@@ -120,7 +120,7 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
           <span>Autonomous Prompt Orchestrator</span>
           <button
             onClick={onClose}
-            className="px-3 py-1 rounded-lg bg-[#1a120c] text-white hover:bg-[#281c15] font-semibold text-xs transition"
+            className="px-3 py-1 rounded-md bg-[#1a120c] text-white hover:bg-[#281c15] font-medium text-xs transition"
           >
             Close
           </button>

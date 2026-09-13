@@ -43,7 +43,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({
             <Bot className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-[#18120e]">Livepeer Creative Agent</h3>
+            <h3 className="text-xs font-medium text-[#18120e]">Livepeer Creative Agent</h3>
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
               <span className="text-[10px] font-mono text-[#786152]">MCP Connected · MemWal Active</span>
@@ -54,7 +54,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({
         <button
           onClick={onRegenerate}
           disabled={isLoading}
-          className="p-1.5 rounded-lg text-[#786152] hover:text-[#18120e] hover:bg-white transition border border-transparent hover:border-[#e2d5c5]"
+          className="p-1.5 rounded-md text-[#786152] hover:text-[#18120e] hover:bg-white transition border border-transparent hover:border-[#e2d5c5]"
           title="Regenerate current version"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -75,7 +75,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({
             )}
 
             <div
-              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
+              className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-xs leading-relaxed ${
                 msg.sender === 'user'
                   ? 'bg-[#1a120c] text-white shadow-2xs font-medium'
                   : 'bg-[#faf6f0] border border-[#e7e2da] text-[#18120e]'
@@ -103,17 +103,17 @@ export const AgentChat: React.FC<AgentChatProps> = ({
       {/* Suggested Demo Prompts */}
       <div className="px-4 py-3 bg-[#faf6f0] border-t border-[#e7e2da]">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#786152] font-bold">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[#786152] font-medium">
             Demo Scenarios &amp; Revisions
           </span>
-          <span className="text-[9px] font-mono text-[#9c4e1f] font-semibold">Quick Presets</span>
+          <span className="text-[9px] font-mono text-[#9c4e1f] font-medium">Quick Presets</span>
         </div>
         <div className="flex flex-col gap-1.5">
           {suggestions.map((suggestion, i) => (
             <button
               key={i}
               onClick={() => onSelectSuggestion && onSelectSuggestion(suggestion)}
-              className="text-left text-xs text-[#18120e] hover:text-[#9c4e1f] bg-white hover:bg-[#f5ece4] px-3 py-2 rounded-xl border border-[#e7e2da] hover:border-[#c88d51]/50 flex items-center justify-between group transition shadow-2xs"
+              className="text-left text-xs text-[#18120e] hover:text-[#9c4e1f] bg-white hover:bg-[#f5ece4] px-3 py-2 rounded-md border border-[#e7e2da] hover:border-[#c88d51]/50 flex items-center justify-between group transition shadow-2xs"
             >
               <span className="truncate pr-2 font-medium">{suggestion}</span>
               <ArrowRight className="w-3 h-3 text-stone-400 group-hover:text-[#9c4e1f] group-hover:translate-x-0.5 transition shrink-0" />
@@ -131,12 +131,12 @@ export const AgentChat: React.FC<AgentChatProps> = ({
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Direct the creative agent or review revisions..."
             disabled={isLoading}
-            className="flex-1 bg-[#faf6f0] border border-[#e7e2da] rounded-xl px-4 py-2 text-xs text-[#18120e] placeholder-[#786152] focus:outline-none focus:border-[#c88d51] focus:bg-white transition"
+            className="flex-1 bg-[#faf6f0] border border-[#e7e2da] rounded-md px-4 py-2 text-xs text-[#18120e] placeholder-[#786152] focus:outline-none focus:border-[#c88d51] focus:bg-white transition"
           />
           <button
             type="submit"
             disabled={!inputText.trim() || isLoading}
-            className="p-2.5 rounded-xl bg-[#1a120c] text-white hover:bg-[#281c15] disabled:opacity-30 font-semibold shadow-sm transition flex items-center justify-center shrink-0"
+            className="p-2.5 rounded-md bg-[#1a120c] text-white hover:bg-[#281c15] disabled:opacity-30 font-medium shadow-sm transition flex items-center justify-center shrink-0"
             title="Send prompt"
           >
             <Send className="w-3.5 h-3.5 stroke-[2.5]" />

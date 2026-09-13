@@ -79,7 +79,7 @@ export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
           {/* Right Controls (Exact mem0 Image 1 layout) */}
           <div className="flex items-center gap-3">
             {/* GitHub Star Pill Badge */}
-            <div className="hidden sm:inline-flex items-center rounded-lg border border-[#e5e5e5] bg-white text-xs font-medium overflow-hidden shadow-2xs">
+            <div className="hidden sm:inline-flex items-center rounded-md border border-[#e5e5e5] bg-white text-xs font-medium overflow-hidden shadow-2xs">
               <span className="flex items-center gap-1.5 px-2.5 py-1.5 border-r border-[#e5e5e5] text-[#18120e]">
                 <Star className="w-3.5 h-3.5 fill-[#18120e]" />
                 <span>Star</span>
@@ -90,7 +90,7 @@ export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
             {/* Walrus Vault Drawer Trigger */}
             <button
               onClick={onOpenVault}
-              className="px-3 py-1.5 rounded-lg border border-[#e5e5e5] hover:border-[#c88d51] bg-white text-xs font-medium text-[#18120e] flex items-center gap-1.5 transition"
+              className="px-3 py-1.5 rounded-md border border-[#e5e5e5] hover:border-[#c88d51] bg-white text-xs font-medium text-[#18120e] flex items-center gap-1.5 transition"
               title="Open Walrus Memory Vault"
             >
               <Database className="w-3.5 h-3.5 text-[#9c4e1f]" />
