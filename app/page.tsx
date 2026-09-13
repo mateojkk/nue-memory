@@ -17,8 +17,8 @@ import {
 import { Sparkles, ExternalLink } from 'lucide-react';
 
 export default function Home() {
-  // Hero Tab State: 'sdk' | 'studio' | 'pipeline'
-  const [heroTab, setHeroTab] = useState<'sdk' | 'studio' | 'pipeline'>('studio');
+  // Hero Tab State: 'sdk' | 'studio' | 'pipeline' (defaults to 'sdk' to match Image 1 & 2)
+  const [heroTab, setHeroTab] = useState<'sdk' | 'studio' | 'pipeline'>('sdk');
 
   // Projects State (Demonstrating Media Memory feature under Nue)
   const [projects, setProjects] = useState<CreativeProject[]>([

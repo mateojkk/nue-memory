@@ -9,6 +9,8 @@ import {
   Code2,
   Layers,
   Plus,
+  Bot,
+  Plug,
 } from 'lucide-react';
 import { MediaPreview } from './MediaPreview';
 import { AgentChat } from './AgentChat';
@@ -61,7 +63,7 @@ export function NueHero({
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedSetup, setCopiedSetup] = useState(false);
 
-  // Exact Python Quickstart matching mem0 Image 2
+  // Exact Python Quickstart matching mem0 Image 2 line-for-line
   const pythonCode = [
     { line: 1, content: '# Step 1 - Install the SDK (run in your terminal, not in Python):', color: 'text-stone-500' },
     { line: 2, content: '# pip install nue-memory', color: 'text-stone-500' },
@@ -129,7 +131,7 @@ export function NueHero({
 
   return (
     <section className="pt-16 pb-20 px-4 max-w-7xl mx-auto text-center relative z-10 font-light">
-      {/* Backed by NextMathLabs Badge */}
+      {/* Backed by NextMathLabs Badge (Exact mem0 Image 1 pill layout) */}
       <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#e5e5e5] text-xs font-medium text-[#18120e] mb-10 shadow-2xs">
         <span>Backed by</span>
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#fbf2e9] text-[#9c4e1f] font-medium text-[11px] border border-[#f0e2d3]">
@@ -144,9 +146,10 @@ export function NueHero({
         across sessions and agents
       </h1>
 
-      {/* Subtitle: Memory infrastructure layer for AI agents */}
+      {/* Subtitle (Exact Mem0 2-line layout) */}
       <p className="text-base sm:text-lg md:text-[19px] text-[#736357] max-w-2xl mx-auto mb-9 leading-relaxed font-light">
-        Drop-in memory infrastructure for AI agents and apps. Context that persists. Built for production.
+        Drop-in memory infrastructure for AI agents and <br className="hidden sm:inline" />
+        apps. Context that persists. Built for production.
       </p>
 
       {/* Dual CTA Buttons (Exact Mem0 layout with Circle Arrow & Copy icon) */}
@@ -174,7 +177,7 @@ export function NueHero({
         </button>
       </div>
 
-      {/* Floating Pill Tab Switcher */}
+      {/* Floating Pill Tab Switcher (Exact Image 1 Tabs: [ ▣ SDK Integration ] | [ ♙ Agent Harness ] | [ ⎇ Plugin ]) */}
       <div className="inline-flex items-center bg-[#f2eae1] p-1 rounded-full border border-[#e4d7c8] mb-8 text-xs font-medium shadow-2xs">
         <button
           onClick={() => setActiveTab('sdk')}
@@ -196,8 +199,8 @@ export function NueHero({
               : 'text-[#736357] hover:text-[#18120e] font-light'
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5 text-[#c88d51]" />
-          <span>Media Memory (Feature Demo)</span>
+          <Bot className="w-3.5 h-3.5 text-[#c88d51]" />
+          <span>Agent Harness (Media Memory)</span>
         </button>
 
         <button
@@ -208,12 +211,12 @@ export function NueHero({
               : 'text-[#736357] hover:text-[#18120e] font-light'
           }`}
         >
-          <Layers className="w-3.5 h-3.5 text-[#b45a27]" />
-          <span>Architecture Pipeline</span>
+          <Plug className="w-3.5 h-3.5 text-[#b45a27]" />
+          <span>Plugin</span>
         </button>
       </div>
 
-      {/* Hero Window Container */}
+      {/* Hero Window Container (Exact Mem0 Image 2 Card) */}
       <div className="max-w-5xl mx-auto rounded-2xl bg-white border border-[#e5e5e5] shadow-xl shadow-stone-200/50 overflow-hidden text-left">
         {/* Window Top Bar */}
         <div className="px-5 py-3.5 bg-white border-b border-[#f0f0f0] flex items-center justify-between">
@@ -223,7 +226,7 @@ export function NueHero({
             <span className="w-3 h-3 rounded-full bg-[#27c93f] inline-block" />
           </div>
 
-          {/* Right Language / Mode Switcher */}
+          {/* Right Language Switcher (Exact Image 2 [ 🐍 PYTHON | 🟨 NODE.JS ]) */}
           {activeTab === 'sdk' ? (
             <div className="flex items-center gap-2">
               <div className="inline-flex items-center bg-[#f5f5f5] p-1 rounded-lg text-xs font-mono font-medium text-[#525252]">
@@ -291,7 +294,7 @@ export function NueHero({
 
         {/* Window Body Content */}
         <div className="p-5 sm:p-7 bg-[#faf8f5]">
-          {/* TAB 1: SDK CODE */}
+          {/* TAB 1: SDK CODE (Matches Image 2 line-for-line) */}
           {activeTab === 'sdk' && (
             <div className="bg-white rounded-xl border border-[#ededed] p-5 font-mono text-[13px] leading-relaxed overflow-x-auto shadow-2xs">
               <div className="space-y-1 font-light">
@@ -309,7 +312,7 @@ export function NueHero({
             </div>
           )}
 
-          {/* TAB 2: INTERACTIVE LIVE STUDIO (Demonstrating Media Memory feature) */}
+          {/* TAB 2: INTERACTIVE LIVE STUDIO (Media Memory capability demo) */}
           {activeTab === 'studio' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[580px]">
               {/* Left Column: Video Preview Player (7 cols) */}
@@ -358,10 +361,9 @@ export function NueHero({
             </div>
           )}
 
-          {/* TAB 3: ARCHITECTURE PIPELINE (Manifesto Architecture Diagram) */}
+          {/* TAB 3: PLUGIN / ARCHITECTURE PIPELINE */}
           {activeTab === 'pipeline' && (
             <div className="max-w-4xl mx-auto py-6 px-4 space-y-8">
-              {/* Architecture ASCII / Flow Card */}
               <div className="rounded-2xl bg-white border border-[#e5e5e5] p-6 shadow-sm">
                 <span className="text-[11px] font-mono uppercase tracking-wider text-[#9c4e1f] font-medium block mb-2">
                   Memory Infrastructure Layer
@@ -388,7 +390,6 @@ export function NueHero({
                 </div>
               </div>
 
-              {/* Memory Lifecycle Steps */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-sans text-left">
                 <div className="p-5 rounded-xl bg-white border border-[#e5e5e5] shadow-2xs">
                   <div className="w-7 h-7 rounded-lg bg-[#fbf2e9] text-[#9c4e1f] flex items-center justify-center text-xs font-medium mb-3">
@@ -396,7 +397,7 @@ export function NueHero({
                   </div>
                   <h4 className="text-sm font-medium text-[#18120e] mb-1">Extract What Matters</h4>
                   <p className="text-xs text-stone-500 font-light leading-relaxed">
-                    Distinguishes temporary instructions (&quot;make this image brighter&quot;) from persistent preferences (&quot;I prefer bright, minimal visuals&quot;).
+                    Distinguishes temporary instructions from persistent preferences without prompt pollution.
                   </p>
                 </div>
 
@@ -406,7 +407,7 @@ export function NueHero({
                   </div>
                   <h4 className="text-sm font-medium text-[#18120e] mb-1">Durable Walrus Storage</h4>
                   <p className="text-xs text-stone-500 font-light leading-relaxed">
-                    Nue handles structuring and lifecycle, while Walrus provides decentralized, cryptographic persistence independent of any single model.
+                    Nue handles structuring and lifecycle, while Walrus provides decentralized cryptographic persistence.
                   </p>
                 </div>
 
@@ -416,7 +417,7 @@ export function NueHero({
                   </div>
                   <h4 className="text-sm font-medium text-[#18120e] mb-1">Evolve Over Time</h4>
                   <p className="text-xs text-stone-500 font-light leading-relaxed">
-                    Memory is not static. When user preferences change, Nue updates the memory layer instead of accumulating contradictory records indefinitely.
+                    Memory is not static. Newly expressed preferences supersede older contradictory records seamlessly.
                   </p>
                 </div>
               </div>
@@ -425,7 +426,7 @@ export function NueHero({
         </div>
       </div>
 
-      {/* Metric Badge Below Window */}
+      {/* Metric Badge Below Window (Exact Image 2) */}
       <div className="mt-14 flex flex-col items-center justify-center">
         <div className="px-5 py-2 rounded-xl bg-[#18120e] text-white font-mono text-xl sm:text-2xl font-medium tracking-tight shadow-md inline-block mb-3">
           160,000+
