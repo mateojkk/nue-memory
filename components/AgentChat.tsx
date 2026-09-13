@@ -35,77 +35,65 @@ export const AgentChat: React.FC<AgentChatProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#09090b] border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+    <div className="rounded-2xl bg-white border border-[#e7e2da] shadow-sm flex flex-col overflow-hidden h-full">
       {/* Chat Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-[#0d0a08] border-b border-white/5">
+      <div className="px-4 py-3 bg-[#faf6f0] border-b border-[#e7e2da] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="relative">
-            <div className="w-7 h-7 rounded-lg bg-[#1e1510] border border-[#c88d51]/30 flex items-center justify-center text-[#dda15e]">
-              <Bot className="w-3.5 h-3.5" />
-            </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-[#dda15e] border-2 border-[#0d0a08]" />
+          <div className="w-7 h-7 rounded-lg bg-[#f5ece4] border border-[#e2d5c5] flex items-center justify-center text-[#9c4e1f]">
+            <Bot className="w-4 h-4" />
           </div>
           <div>
+            <h3 className="text-xs font-bold text-[#18120e]">Livepeer Creative Agent</h3>
             <div className="flex items-center gap-1.5">
-              <h3 className="text-xs font-semibold text-white tracking-tight">Livepeer Agent</h3>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-[#1e1510] text-[#dda15e] border border-[#c88d51]/25">
-                MCP Creative
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-mono text-[#786152]">MCP Connected · MemWal Active</span>
             </div>
-            <p className="text-[10px] text-[#ab9482] font-mono">Decentralized Video Execution Layer</p>
           </div>
         </div>
 
         <button
           onClick={onRegenerate}
           disabled={isLoading}
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#18120e] hover:bg-[#241a14] text-[#dda15e] border border-[#c88d51]/30 text-xs font-medium transition disabled:opacity-40"
+          className="p-1.5 rounded-lg text-[#786152] hover:text-[#18120e] hover:bg-white transition border border-transparent hover:border-[#e2d5c5]"
+          title="Regenerate current version"
         >
-          <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Regenerate</span>
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      {/* Message List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3.5">
+      {/* Messages Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 min-h-[260px] max-h-[360px] bg-white">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`flex gap-2.5 text-xs ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             {msg.sender === 'agent' && (
-              <div className="w-6 h-6 rounded-md bg-[#1e1510] border border-[#c88d51]/30 flex items-center justify-center shrink-0 text-[#dda15e] mt-0.5">
-                <Bot className="w-3 h-3 text-[#c88d51]" />
+              <div className="w-6 h-6 rounded-md bg-[#f5ece4] border border-[#e2d5c5] flex items-center justify-center text-[#9c4e1f] shrink-0 mt-0.5">
+                <Sparkles className="w-3 h-3" />
               </div>
             )}
 
             <div
-              className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 leading-relaxed ${
+              className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
                 msg.sender === 'user'
-                  ? 'bg-[#241a14] text-[#fbf7ee] border border-[#9c4e1f]/35 rounded-br-xs'
-                  : 'bg-[#120e0b] border border-white/10 text-[#f5f2eb] rounded-bl-xs'
+                  ? 'bg-[#1a120c] text-white shadow-2xs font-medium'
+                  : 'bg-[#faf6f0] border border-[#e7e2da] text-[#18120e]'
               }`}
             >
-              <p className="whitespace-pre-wrap">{msg.content}</p>
-
-              {msg.versionNumber && (
-                <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[11px] text-[#dda15e] font-mono">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-3 h-3 text-[#c88d51]" />
-                    <span>Livepeer Render: v{msg.versionNumber}</span>
-                  </div>
-                  <span className="text-[#ab9482] text-[10px]">MCP Tool Completed</span>
-                </div>
-              )}
-
-              <span className="block text-[9px] text-[#ab9482] font-mono text-right mt-1">
+              <div className="whitespace-pre-wrap">{msg.content}</div>
+              <div
+                className={`mt-1 text-[9px] font-mono ${
+                  msg.sender === 'user' ? 'text-stone-400 text-right' : 'text-[#786152]'
+                }`}
+              >
                 {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
+              </div>
             </div>
 
             {msg.sender === 'user' && (
-              <div className="w-6 h-6 rounded-md bg-[#241a14] border border-[#9c4e1f]/35 flex items-center justify-center shrink-0 text-[#dda15e] mt-0.5">
-                <User className="w-3 h-3 text-[#c88d51]" />
+              <div className="w-6 h-6 rounded-md bg-[#1a120c] flex items-center justify-center text-white shrink-0 mt-0.5">
+                <User className="w-3 h-3" />
               </div>
             )}
           </div>
@@ -113,29 +101,29 @@ export const AgentChat: React.FC<AgentChatProps> = ({
       </div>
 
       {/* Suggested Demo Prompts */}
-      <div className="px-4 py-2.5 bg-[#0b0806] border-t border-white/5">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[#ab9482] font-medium">
+      <div className="px-4 py-3 bg-[#faf6f0] border-t border-[#e7e2da]">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-[#786152] font-bold">
             Demo Scenarios &amp; Revisions
           </span>
-          <span className="text-[9px] font-mono text-[#786152]">Quick Presets</span>
+          <span className="text-[9px] font-mono text-[#9c4e1f] font-semibold">Quick Presets</span>
         </div>
         <div className="flex flex-col gap-1.5">
           {suggestions.map((suggestion, i) => (
             <button
               key={i}
               onClick={() => onSelectSuggestion && onSelectSuggestion(suggestion)}
-              className="text-left text-xs text-[#cbbba8] hover:text-[#fbf7ee] bg-[#140e0b] hover:bg-[#201712] px-3 py-1.5 rounded-xl border border-white/5 hover:border-[#c88d51]/30 flex items-center justify-between group transition"
+              className="text-left text-xs text-[#18120e] hover:text-[#9c4e1f] bg-white hover:bg-[#f5ece4] px-3 py-2 rounded-xl border border-[#e7e2da] hover:border-[#c88d51]/50 flex items-center justify-between group transition shadow-2xs"
             >
-              <span className="truncate pr-2">{suggestion}</span>
-              <ArrowRight className="w-3 h-3 text-[#ab9482] group-hover:text-[#dda15e] group-hover:translate-x-0.5 transition shrink-0" />
+              <span className="truncate pr-2 font-medium">{suggestion}</span>
+              <ArrowRight className="w-3 h-3 text-stone-400 group-hover:text-[#9c4e1f] group-hover:translate-x-0.5 transition shrink-0" />
             </button>
           ))}
         </div>
       </div>
 
-      {/* Input Box */}
-      <form onSubmit={handleSubmit} className="p-3 bg-[#0d0a08] border-t border-white/5">
+      {/* Message Input Box */}
+      <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-[#e7e2da]">
         <div className="flex items-center gap-2">
           <input
             type="text"
@@ -143,12 +131,12 @@ export const AgentChat: React.FC<AgentChatProps> = ({
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Direct the creative agent or review revisions..."
             disabled={isLoading}
-            className="flex-1 bg-[#140e0b] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white placeholder-[#786152] focus:outline-none focus:border-[#c88d51] transition"
+            className="flex-1 bg-[#faf6f0] border border-[#e7e2da] rounded-xl px-4 py-2 text-xs text-[#18120e] placeholder-[#786152] focus:outline-none focus:border-[#c88d51] focus:bg-white transition"
           />
           <button
             type="submit"
             disabled={!inputText.trim() || isLoading}
-            className="p-2 rounded-xl bg-[#fbf7ee] text-[#140e0b] hover:bg-[#ede4d1] disabled:opacity-30 font-semibold shadow-sm transition flex items-center justify-center shrink-0"
+            className="p-2.5 rounded-xl bg-[#1a120c] text-white hover:bg-[#281c15] disabled:opacity-30 font-semibold shadow-sm transition flex items-center justify-center shrink-0"
             title="Send prompt"
           >
             <Send className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -158,4 +146,3 @@ export const AgentChat: React.FC<AgentChatProps> = ({
     </div>
   );
 };
-

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Terminal, Copy, Check, Code2 } from 'lucide-react';
+import { Copy, Check, Code2 } from 'lucide-react';
 
 export function SdkShowcase() {
   const [activeTab, setActiveTab] = useState<'typescript' | 'python'>('typescript');
@@ -65,38 +65,38 @@ print(f"Composed video with {len(context.active_preferences)} Walrus preferences
   };
 
   return (
-    <section id="sdk" className="py-24 px-4 max-w-7xl mx-auto border-t border-white/5">
+    <section id="sdk" className="py-24 px-4 max-w-7xl mx-auto border-t border-[#e7e2da]">
       <div className="text-center max-w-3xl mx-auto mb-14">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#18120e] border border-[#c88d51]/25 text-[#dda15e] text-xs font-mono font-medium mb-4">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#f5ece4] border border-[#e2d5c5] text-[#78350f] text-xs font-mono font-semibold mb-4">
           <Code2 className="w-3.5 h-3.5" />
           <span>Developer SDK</span>
         </div>
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-4">
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#18120e] mb-4">
           Simple, drop-in integration{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#dda15e] via-[#fbf7ee] to-[#c88d51]">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9c4e1f] via-[#c88d51] to-[#b45a27]">
             in 4 lines of code
           </span>
         </h2>
-        <p className="text-sm sm:text-base text-[#ab9482] leading-relaxed">
+        <p className="text-sm sm:text-base text-[#786152] leading-relaxed">
           Connect your Livepeer Agent workflows to Walrus MemWal with native TypeScript and Python libraries.
         </p>
       </div>
 
-      <div className="max-w-4xl mx-auto rounded-2xl bg-[#09090b] border border-white/10 overflow-hidden shadow-2xl shadow-black/80">
+      <div className="max-w-4xl mx-auto rounded-2xl bg-[#140e0b] border border-[#281c15] overflow-hidden shadow-xl">
         {/* Tab bar header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[#0d0a08] border-b border-white/5">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 mr-3">
+        <div className="flex items-center justify-between px-5 py-3.5 bg-[#1e1510] border-b border-[#2e2016]">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 mr-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#38281e]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#563b28]" />
               <span className="w-2.5 h-2.5 rounded-full bg-[#784e2a]" />
             </div>
-            <div className="flex bg-[#140e0b] p-1 rounded-lg border border-white/5">
+            <div className="flex bg-[#140e0b] p-1 rounded-lg border border-[#2e2016]">
               <button
                 onClick={() => setActiveTab('typescript')}
                 className={`px-3 py-1 rounded-md text-xs font-mono font-medium transition ${
                   activeTab === 'typescript'
-                    ? 'bg-[#241a14] text-[#fbf7ee] border border-[#c88d51]/30 shadow-sm'
+                    ? 'bg-[#2a1c13] text-[#fbf7ee] border border-[#c88d51]/40 shadow-sm'
                     : 'text-[#ab9482] hover:text-white'
                 }`}
               >
@@ -106,7 +106,7 @@ print(f"Composed video with {len(context.active_preferences)} Walrus preferences
                 onClick={() => setActiveTab('python')}
                 className={`px-3 py-1 rounded-md text-xs font-mono font-medium transition ${
                   activeTab === 'python'
-                    ? 'bg-[#241a14] text-[#fbf7ee] border border-[#c88d51]/30 shadow-sm'
+                    ? 'bg-[#2a1c13] text-[#fbf7ee] border border-[#c88d51]/40 shadow-sm'
                     : 'text-[#ab9482] hover:text-white'
                 }`}
               >
@@ -117,7 +117,7 @@ print(f"Composed video with {len(context.active_preferences)} Walrus preferences
 
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#140e0b] hover:bg-[#201712] border border-white/10 text-xs font-mono text-[#cbbba8] hover:text-[#fbf7ee] transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2a1c13] hover:bg-[#382519] border border-[#c88d51]/30 text-xs font-mono text-[#dda15e] transition"
           >
             {copied ? (
               <>
@@ -134,7 +134,7 @@ print(f"Composed video with {len(context.active_preferences)} Walrus preferences
         </div>
 
         {/* Code body */}
-        <div className="p-6 bg-[#09090b] overflow-x-auto text-xs sm:text-sm font-mono leading-relaxed">
+        <div className="p-6 bg-[#140e0b] overflow-x-auto text-xs sm:text-sm font-mono leading-relaxed">
           <pre className="text-[#cbbba8]">
             <code>
               {currentCode.split('\n').map((line, i) => {
@@ -144,7 +144,7 @@ print(f"Composed video with {len(context.active_preferences)} Walrus preferences
                 
                 return (
                   <div key={i} className="table-row">
-                    <span className="table-cell pr-6 text-right select-none text-zinc-700 w-8">
+                    <span className="table-cell pr-6 text-right select-none text-[#563b28] w-8">
                       {i + 1}
                     </span>
                     <span

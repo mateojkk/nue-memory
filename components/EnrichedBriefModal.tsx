@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Sparkles, Send, Layers, Terminal } from 'lucide-react';
+import { X, Sparkles, Send, Layers } from 'lucide-react';
 import { MediaPreference } from '@/lib/types';
 
 interface EnrichedBriefModalProps {
@@ -22,106 +22,110 @@ export const EnrichedBriefModal: React.FC<EnrichedBriefModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-[#0e0a08] border border-[#c88d51]/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-2xl bg-white border border-[#e7e2da] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-[#0d0a08]">
+        <div className="px-5 py-4 border-b border-[#e7e2da] flex items-center justify-between bg-[#faf6f0]">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#1e1510] border border-[#c88d51]/30 flex items-center justify-center text-[#dda15e]">
-              <Sparkles className="w-3.5 h-3.5 text-[#c88d51]" />
+            <div className="w-8 h-8 rounded-xl bg-[#f5ece4] border border-[#e2d5c5] flex items-center justify-center text-[#9c4e1f]">
+              <Sparkles className="w-4 h-4 text-[#9c4e1f]" />
             </div>
             <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-white">
-                Nue Memory · Context Orchestration Inspector
+              <h3 className="text-xs font-bold text-[#18120e]">
+                Context Orchestration Inspector
               </h3>
-              <p className="text-[10px] text-[#ab9482] font-mono">
+              <p className="text-[10px] text-[#786152] font-mono">
                 MemWal vector retrieval → Livepeer Agent MCP injection pipeline
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#ab9482] hover:text-white transition"
+            className="p-1 rounded-lg text-stone-400 hover:text-[#18120e] transition"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh]">
+        <div className="p-5 space-y-4 overflow-y-auto max-h-[70vh] bg-white">
           {/* Step 1: User's raw request */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono font-semibold text-[#ab9482] uppercase tracking-wider flex items-center gap-1.5">
-                <Send className="w-3 h-3 text-[#c88d51]" />
+              <span className="text-[10px] font-mono font-bold text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
+                <Send className="w-3 h-3 text-[#9c4e1f]" />
                 Stage 1 · Original User Creative Brief
               </span>
-              <span className="text-[10px] font-mono text-[#786152]">Zero-reprompt</span>
+              <span className="text-[10px] font-mono text-stone-400">Zero-reprompt</span>
             </div>
-            <div className="p-3 bg-[#18120e] border border-[#38281e] rounded-xl text-xs text-[#f5f2eb] font-medium">
-              &ldquo;{rawBrief || 'No prompt specified.'}&rdquo;
+            <div className="p-3.5 rounded-xl bg-[#faf6f0] border border-[#e7e2da] text-xs font-mono text-[#18120e]">
+              &quot;{rawBrief}&quot;
             </div>
           </div>
 
-          {/* Step 2: Retrieved memories */}
+          {/* Step 2: Retrieved preferences */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono font-semibold text-[#ab9482] uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3 h-3 text-[#dda15e]" />
-                Stage 2 · Persistent Memories Retrieved from Walrus ({appliedMemories.length})
+              <span className="text-[10px] font-mono font-bold text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
+                <Layers className="w-3 h-3 text-[#9c4e1f]" />
+                Stage 2 · Retrieved Walrus Memories ({appliedMemories.length})
               </span>
-              <span className="text-[10px] font-mono text-[#dda15e]">MemWal Match</span>
+              <span className="text-[10px] font-mono text-[#9c4e1f] font-semibold bg-[#f5ece4] px-2 py-0.5 rounded border border-[#e2d5c5]">
+                MemWal Match
+              </span>
             </div>
-            {appliedMemories.length === 0 ? (
-              <div className="p-3 bg-[#18120e] border border-[#38281e] rounded-xl text-xs text-[#ab9482] italic">
-                No existing memories found for this generation.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {appliedMemories.map((mem) => (
+            <div className="space-y-1.5">
+              {appliedMemories.length === 0 ? (
+                <div className="p-3 rounded-xl bg-[#faf6f0] border border-[#e7e2da] text-xs text-stone-400 font-mono italic">
+                  No previous preferences matched.
+                </div>
+              ) : (
+                appliedMemories.map((pref) => (
                   <div
-                    key={mem.id}
-                    className="p-2.5 bg-[#18120e] border border-[#38281e] rounded-xl flex items-center justify-between text-xs"
+                    key={pref.id}
+                    className="p-2.5 rounded-xl bg-[#fdfbf7] border border-[#c88d51]/25 flex items-center justify-between text-xs font-mono"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-full bg-[#241a14] text-[#dda15e] font-mono text-[10px] uppercase border border-[#9c4e1f]/40">
-                        {mem.category}
+                      <span className="px-1.5 py-0.5 rounded text-[9px] uppercase font-bold bg-[#f5ece4] text-[#78350f]">
+                        {pref.category}
                       </span>
-                      <span className="text-[#f5f2eb] font-medium">{mem.preference}</span>
+                      <span className="text-[#18120e] font-medium">{pref.preference}</span>
                     </div>
-                    <span className="text-[10px] font-mono text-[#c88d51]">{mem.memwalBlobId}</span>
+                    <span className="text-[10px] text-stone-400 shrink-0 ml-2">
+                      {pref.memwalBlobId || 'walrus-blob'}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </div>
 
-          {/* Step 3: Final Enriched Brief sent to Livepeer */}
+          {/* Step 3: Enriched final prompt */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono font-semibold text-[#ab9482] uppercase tracking-wider flex items-center gap-1.5">
-                <Terminal className="w-3 h-3 text-[#dda15e]" />
-                Stage 3 · Final Augmented Context Dispatched to Livepeer Agent
+              <span className="text-[10px] font-mono font-bold text-[#786152] uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-[#9c4e1f]" />
+                Stage 3 · Final Augmented Livepeer Agent Directives
               </span>
-              <span className="text-[10px] font-mono text-[#dda15e]">Livepeer MCP Tool</span>
+              <span className="text-[10px] font-mono text-emerald-600 font-semibold">Live Remote MCP</span>
             </div>
-            <pre className="p-3.5 bg-black border border-[#38281e] rounded-xl text-xs text-[#dda15e] font-mono whitespace-pre-wrap leading-relaxed">
+            <pre className="p-3.5 rounded-xl bg-[#140e0b] border border-[#281c15] text-[#fbf7ee] text-xs font-mono whitespace-pre-wrap leading-relaxed">
               {enrichedBrief}
             </pre>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-3.5 bg-[#0d0a08] border-t border-white/10 flex justify-end">
+        <div className="px-5 py-3 border-t border-[#e7e2da] bg-[#faf6f0] flex items-center justify-between text-xs font-mono text-[#786152]">
+          <span>Autonomous Prompt Orchestrator</span>
           <button
             onClick={onClose}
-            className="px-3.5 py-1.5 rounded-lg bg-[#fbf7ee] text-[#140e0b] hover:bg-[#ede4d1] font-semibold text-xs transition shadow-md shadow-[#9c4e1f]/10"
+            className="px-3 py-1 rounded-lg bg-[#1a120c] text-white hover:bg-[#281c15] font-semibold text-xs transition"
           >
-            Done
+            Close
           </button>
         </div>
       </div>
     </div>
   );
 };
-

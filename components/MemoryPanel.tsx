@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Sparkles, Database, Trash2, CheckCircle2, ShieldCheck, Code, ExternalLink } from 'lucide-react';
+import { X, Database, Trash2, Eye, ShieldCheck, Sparkles, Code2 } from 'lucide-react';
 import { MediaPreference } from '@/lib/types';
 
 interface MemoryPanelProps {
@@ -17,159 +17,173 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
   memories,
   onForget,
 }) => {
-  const [inspectMemory, setInspectMemory] = useState<MediaPreference | null>(null);
+  const [inspectPref, setInspectPref] = useState<MediaPreference | null>(null);
 
   if (!isOpen) return null;
 
+  const activeMemories = memories.filter((m) => m.isActive);
+  const supersededMemories = memories.filter((m) => !m.isActive);
+
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-md h-full bg-[#0e0a08] border-l border-[#c88d51]/25 shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex justify-end">
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Drawer */}
+      <div className="relative w-full max-w-md bg-[#faf8f5] h-full shadow-2xl flex flex-col z-10 border-l border-[#e7e2da] animate-slideLeft">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between bg-[#0d0a08]">
+        <div className="px-6 py-4 bg-white border-b border-[#e7e2da] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#1e1510] border border-[#c88d51]/30 flex items-center justify-center text-[#dda15e]">
-              <Database className="w-3.5 h-3.5 text-[#c88d51]" />
+            <div className="w-8 h-8 rounded-xl bg-[#f5ece4] border border-[#e2d5c5] flex items-center justify-center text-[#9c4e1f]">
+              <Database className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-xs font-semibold text-white tracking-tight uppercase">
-                  Media Memory Vault
-                </h3>
-                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-[#c88d51]/15 text-[#dda15e] border border-[#c88d51]/25">
-                  MemWal Live
-                </span>
-              </div>
-              <p className="text-[10px] text-[#ab9482] font-mono">Durable vector memory on Walrus</p>
+              <h3 className="text-sm font-bold text-[#18120e]">Walrus Memory Vault</h3>
+              <p className="text-[10px] font-mono text-[#786152]">
+                Sui Walrus decentralized creative preference store
+              </p>
             </div>
           </div>
-
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-[#ab9482] hover:text-[#fbf7ee] hover:bg-white/5 transition"
+            className="p-1.5 rounded-lg text-stone-400 hover:text-[#18120e] hover:bg-[#faf6f0] transition"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content list */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
-          {memories.length === 0 ? (
-            <div className="text-center py-20 px-4">
-              <div className="w-12 h-12 rounded-2xl bg-[#18120e] border border-white/5 flex items-center justify-center mx-auto mb-3 text-[#ab9482]">
-                <Database className="w-5 h-5 text-[#c88d51]" />
-              </div>
-              <h4 className="text-xs font-medium text-[#f5f2eb]">No Memories Persisted Yet</h4>
-              <p className="text-[11px] text-[#ab9482] mt-1 max-w-xs mx-auto leading-relaxed">
-                Generate media and provide creative feedback. Click &ldquo;Remember&rdquo; to store preferences into Walrus via MemWal.
-              </p>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          {/* Active Memories */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#18120e] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#9c4e1f]" />
+                Active Preferences ({activeMemories.length})
+              </span>
+              <span className="text-[10px] font-mono text-[#9c4e1f] font-semibold bg-[#f5ece4] px-2 py-0.5 rounded border border-[#e2d5c5]">
+                Auto-Injected in Prompts
+              </span>
             </div>
-          ) : (
-            memories.map((mem) => (
-              <div
-                key={mem.id}
-                className={`p-3.5 rounded-xl border transition-all ${
-                  mem.isActive
-                    ? 'bg-[#18120e] border-[#38281e] hover:border-[#c88d51]/40'
-                    : 'bg-[#100c09] border-white/5 opacity-50'
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full bg-[#241a14] text-[#dda15e] text-[10px] font-mono uppercase tracking-wider border border-[#9c4e1f]/40">
-                      {mem.category}
-                    </span>
-                    <span className="flex items-center gap-1 text-[10px] font-mono text-[#dda15e]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#dda15e]" />
-                      Active
-                    </span>
-                  </div>
 
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => setInspectMemory(mem)}
-                      className="p-1 rounded text-[#ab9482] hover:text-[#dda15e] hover:bg-white/5 transition"
-                      title="Inspect Raw Walrus Payload"
-                    >
-                      <Code className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => onForget(mem.id)}
-                      className="p-1 rounded text-[#ab9482] hover:text-red-400 hover:bg-white/5 transition"
-                      title="Forget Memory"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-
-                <p className="text-xs text-[#f5f2eb] font-medium leading-relaxed">
-                  {mem.preference}
+            {activeMemories.length === 0 ? (
+              <div className="text-center py-10 px-4 rounded-2xl bg-white border border-[#e7e2da] text-stone-400 text-xs">
+                <p className="mb-1">No active preferences found on Walrus.</p>
+                <p className="text-[10px] text-stone-400">
+                  Direct the agent in Studio and confirm memories to persist them here.
                 </p>
-
-                {/* Walrus Blob ID & Timestamp */}
-                <div className="mt-3 pt-2.5 border-t border-white/5 flex items-center justify-between text-[10px] text-[#ab9482] font-mono">
-                  <div className="truncate max-w-[210px] flex items-center gap-1">
-                    <span className="text-[#786152]">Blob:</span>
-                    <span className="text-[#c88d51]">{mem.memwalBlobId || 'walrus-synced'}</span>
-                  </div>
-                  <span>
-                    {new Date(mem.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                  </span>
-                </div>
-
-                {mem.supersedesId && (
-                  <div className="mt-2 text-[10px] font-mono text-[#dda15e] bg-[#2d1b11] px-2 py-0.5 rounded border border-[#9c4e1f]/50">
-                    Evolved: supersedes conflicting previous preference
-                  </div>
-                )}
               </div>
-            ))
+            ) : (
+              <div className="space-y-3">
+                {activeMemories.map((pref) => (
+                  <div
+                    key={pref.id}
+                    className="p-4 rounded-2xl bg-white border border-[#e7e2da] hover:border-[#c88d51]/40 transition shadow-2xs group"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded bg-[#f5ece4] text-[#78350f]">
+                        {pref.category}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] font-mono text-stone-400 bg-[#faf6f0] px-2 py-0.5 rounded border border-[#e7e2da]">
+                          {pref.memwalBlobId || 'walrus-blob'}
+                        </span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-[#18120e] font-medium mb-3 leading-relaxed">
+                      {pref.preference}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-[#e7e2da] text-[10px] font-mono text-[#786152]">
+                      <span>Strength: {pref.strength}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setInspectPref(pref)}
+                          className="p-1 rounded text-[#786152] hover:text-[#18120e] hover:bg-[#faf6f0] transition"
+                          title="Inspect raw payload"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onForget(pref.id)}
+                          className="p-1 rounded text-red-500 hover:text-red-600 hover:bg-red-50 transition"
+                          title="Delete from memory"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Superseded Memories */}
+          {supersededMemories.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-mono font-bold uppercase tracking-wider text-stone-500">
+                  Superseded &amp; Evolved ({supersededMemories.length})
+                </span>
+                <span className="text-[10px] font-mono text-stone-400">Audit History</span>
+              </div>
+
+              <div className="space-y-2">
+                {supersededMemories.map((pref) => (
+                  <div
+                    key={pref.id}
+                    className="p-3 rounded-xl bg-white/70 border border-[#e7e2da] opacity-60 text-xs"
+                  >
+                    <div className="flex items-center justify-between mb-1 text-[10px] font-mono text-stone-400">
+                      <span className="uppercase">{pref.category}</span>
+                      <span>Superseded</span>
+                    </div>
+                    <p className="line-through text-stone-400 text-xs">{pref.preference}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Footer info */}
-        <div className="p-3.5 bg-[#0d0a08] border-t border-white/10 text-xs text-[#ab9482] flex items-center justify-between font-mono">
-          <div className="flex items-center gap-1.5 text-[#dda15e]">
-            <CheckCircle2 className="w-3.5 h-3.5 text-[#dda15e]" />
-            <span>{memories.filter((m) => m.isActive).length} Memories Stored</span>
+        {/* Footer */}
+        <div className="p-4 bg-white border-t border-[#e7e2da] flex items-center justify-between text-xs font-mono text-[#786152]">
+          <div className="flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>MemWal Active on Sui Walrus</span>
           </div>
-          <span className="text-[10px] text-[#786152]">Mysten MemWal SDK v0.1.6</span>
+          <span className="text-[10px] text-stone-400">Track 03 Innovation</span>
         </div>
       </div>
 
-      {/* Raw JSON Inspector Modal */}
-      {inspectMemory && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="w-full max-w-lg bg-[#0e0a08] border border-[#c88d51]/30 rounded-2xl p-5 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+      {/* Raw Payload Modal */}
+      {inspectPref && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-[#140e0b] border border-[#2e2016] rounded-2xl max-w-lg w-full p-6 text-white font-mono shadow-2xl">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#2e2016]">
               <div className="flex items-center gap-2">
-                <Code className="w-4 h-4 text-[#c88d51]" />
-                <h4 className="text-xs font-semibold uppercase tracking-wider text-white">
-                  Walrus On-Chain Memory Payload
-                </h4>
+                <Code2 className="w-4 h-4 text-[#dda15e]" />
+                <span className="text-xs font-bold">Walrus Raw Blob Inspection</span>
               </div>
               <button
-                onClick={() => setInspectMemory(null)}
-                className="text-[#ab9482] hover:text-white"
+                onClick={() => setInspectPref(null)}
+                className="p-1 rounded text-stone-400 hover:text-white"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <pre className="mt-3 p-3.5 bg-black rounded-xl text-[11px] font-mono text-[#dda15e] overflow-x-auto max-h-80 border border-[#38281e] leading-relaxed">
-              {JSON.stringify(inspectMemory, null, 2)}
+            <pre className="p-4 rounded-xl bg-black border border-[#2e2016] text-[#cbbba8] text-xs overflow-x-auto max-h-80 leading-relaxed">
+              {JSON.stringify(inspectPref, null, 2)}
             </pre>
-            <div className="mt-4 flex justify-end">
-              <button
-                onClick={() => setInspectMemory(null)}
-                className="px-3.5 py-1.5 rounded-lg bg-[#fbf7ee] text-[#140e0b] hover:bg-[#ede4d1] text-xs font-semibold transition shadow-md shadow-[#9c4e1f]/10"
-              >
-                Close
-              </button>
-            </div>
           </div>
         </div>
       )}
     </div>
   );
 };
-

@@ -301,44 +301,44 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-black text-zinc-100 mem0-bg-grid relative selection:bg-[#c88d51]/30 selection:text-[#fbf7ee]">
+    <div className="flex flex-col min-h-screen bg-[#faf8f5] text-[#18120e] mem0-bg-grid relative selection:bg-[#eed8c2] selection:text-[#18120e]">
       {/* Subtle top ambient radial glow */}
       <div className="absolute top-0 inset-x-0 h-[600px] mem0-radial-glow pointer-events-none" />
 
       {/* Floating Pill Header (Strict Mem0 Style) */}
-      <header className="sticky top-0 z-50 px-4 sm:px-6 py-3.5 bg-black/80 backdrop-blur-xl border-b border-white/10">
+      <header className="sticky top-0 z-50 px-4 sm:px-8 py-3.5 bg-white/85 backdrop-blur-xl border-b border-[#e7e2da]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#c88d51] via-[#b45a27] to-[#78350f] flex items-center justify-center shadow-md shadow-[#9c4e1f]/30 border border-[#dda15e]/30">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#1a120c] via-[#78350f] to-[#c88d51] flex items-center justify-center shadow-md shadow-[#9c4e1f]/20 border border-[#e2d5c5]">
               <Sparkles className="w-4 h-4 text-[#fbf7ee]" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold tracking-tight text-white">Nue Memory</span>
-              <span className="hidden sm:inline-flex text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#18120e] text-[#ab9482] border border-[#38281e]">
+              <span className="text-sm font-bold tracking-tight text-[#18120e]">Nue Memory</span>
+              <span className="hidden sm:inline-flex text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#f5ece4] text-[#78350f] border border-[#e2d5c5] font-semibold">
                 A NextMathLabs Company
               </span>
             </div>
           </div>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-[#ab9482]">
-            <a href="#features" className="hover:text-[#fbf7ee] transition">Capabilities</a>
-            <a href="#studio" className="hover:text-[#fbf7ee] transition">Interactive Studio</a>
-            <a href="#how-it-works" className="hover:text-[#fbf7ee] transition">How It Works</a>
-            <a href="#sdk" className="hover:text-[#fbf7ee] transition">SDK</a>
+          <nav className="hidden md:flex items-center gap-7 text-xs font-semibold text-[#786152]">
+            <a href="#features" className="hover:text-[#18120e] transition">Capabilities</a>
+            <a href="#studio" className="hover:text-[#18120e] transition">Interactive Studio</a>
+            <a href="#how-it-works" className="hover:text-[#18120e] transition">How It Works</a>
+            <a href="#sdk" className="hover:text-[#18120e] transition">SDK</a>
           </nav>
 
           {/* Header Action Buttons */}
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setIsMemoryPanelOpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-[#140e0b] hover:bg-[#201712] border border-white/10 hover:border-[#c88d51]/40 text-xs font-mono text-[#cbbba8] hover:text-[#fbf7ee] flex items-center gap-1.5 transition"
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-[#faf6f0] border border-[#e7e2da] hover:border-[#c88d51]/50 text-xs font-mono text-[#18120e] flex items-center gap-1.5 transition shadow-2xs font-semibold"
             >
-              <Database className="w-3.5 h-3.5 text-[#dda15e]" />
+              <Database className="w-3.5 h-3.5 text-[#9c4e1f]" />
               <span className="hidden sm:inline">Walrus</span>
               <span>Vault</span>
               {activeMemories.filter((m) => m.isActive).length > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[#c88d51] text-black text-[9px] font-bold flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-[#9c4e1f] text-white text-[9px] font-bold flex items-center justify-center">
                   {activeMemories.filter((m) => m.isActive).length}
                 </span>
               )}
@@ -347,7 +347,7 @@ export default function Home() {
             <a
               href="#studio"
               onClick={() => setHeroTab('studio')}
-              className="px-3.5 py-1.5 rounded-lg bg-[#fbf7ee] text-[#140e0b] hover:bg-[#ede4d1] font-semibold text-xs transition shadow-sm flex items-center gap-1"
+              className="px-4 py-1.5 rounded-xl bg-[#1a120c] text-white hover:bg-[#281c15] font-bold text-xs transition shadow-sm flex items-center gap-1"
             >
               <span>Launch Studio</span>
               <ArrowRight className="w-3 h-3" />
@@ -359,22 +359,22 @@ export default function Home() {
       {/* Hero Section (Strict Mem0 Style) */}
       <section className="pt-20 pb-12 px-4 max-w-7xl mx-auto text-center relative z-10">
         {/* Announcement Badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#18120e] border border-[#c88d51]/30 text-[#dda15e] text-xs font-mono font-medium mb-8 hover:border-[#c88d51]/60 transition">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#dda15e] animate-pulse" />
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#f5ece4] border border-[#e2d5c5] text-[#78350f] text-xs font-mono font-bold mb-8 hover:border-[#c88d51]/60 transition shadow-2xs">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#9c4e1f] animate-pulse" />
           <span>Introducing Media Memory · Persistent Creative Intelligence for Livepeer Agents</span>
           <ArrowRight className="w-3 h-3" />
         </div>
 
         {/* Large Mem0 Headline */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white mb-6 max-w-5xl mx-auto leading-[1.1]">
-          Creative memory that persists{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#dda15e] via-[#fbf7ee] to-[#c88d51]">
-            across projects &amp; media agents
+        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-[#18120e] mb-6 max-w-5xl mx-auto leading-[1.08]">
+          AI media agents forget.{' '}
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9c4e1f] via-[#c88d51] to-[#b45a27]">
+            Nue Memory remembers.
           </span>
         </h1>
 
         {/* Subtitle */}
-        <p className="text-base sm:text-lg md:text-xl text-[#ab9482] max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
+        <p className="text-base sm:text-lg md:text-xl text-[#786152] max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
           The decentralized memory layer for Livepeer Agent. Nue Memory captures creative feedback and stores preferences on Sui Walrus via MemWal—delivering zero-reprompt personalization across every new project.
         </p>
 
@@ -383,34 +383,34 @@ export default function Home() {
           <a
             href="#studio"
             onClick={() => setHeroTab('studio')}
-            className="px-6 py-3 rounded-xl bg-[#fbf7ee] text-[#140e0b] hover:bg-[#ede4d1] font-bold text-sm transition shadow-lg shadow-[#c88d51]/10 flex items-center gap-2"
+            className="px-6 py-3.5 rounded-xl bg-[#1a120c] text-white hover:bg-[#281c15] font-bold text-sm transition shadow-md shadow-[#1a120c]/15 flex items-center gap-2"
           >
-            <Sparkles className="w-4 h-4 text-[#9c4e1f]" />
+            <Sparkles className="w-4 h-4 text-[#dda15e]" />
             <span>Try Interactive Studio</span>
           </a>
 
           <button
             onClick={() => setIsMemoryPanelOpen(true)}
-            className="px-5 py-3 rounded-xl bg-[#140e0b] hover:bg-[#201712] border border-white/10 hover:border-[#c88d51]/40 text-sm font-medium text-[#cbbba8] hover:text-white transition flex items-center gap-2"
+            className="px-5 py-3.5 rounded-xl bg-white hover:bg-[#faf6f0] border border-[#e7e2da] hover:border-[#c88d51]/50 text-sm font-semibold text-[#18120e] transition flex items-center gap-2 shadow-2xs"
           >
-            <Database className="w-4 h-4 text-[#dda15e]" />
+            <Database className="w-4 h-4 text-[#9c4e1f]" />
             <span>Inspect Walrus Vault</span>
           </button>
         </div>
 
         {/* Mem0 Quick Install Snippet */}
-        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-[#0d0a08] border border-white/10 font-mono text-xs text-[#ab9482]">
-          <Terminal className="w-3.5 h-3.5 text-[#dda15e]" />
-          <span className="text-zinc-300">npm i @nue-memory/media-memory @mysten-incubation/memwal</span>
+        <div className="inline-flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-[#e7e2da] font-mono text-xs text-[#18120e] shadow-2xs">
+          <Terminal className="w-3.5 h-3.5 text-[#9c4e1f]" />
+          <span className="text-[#18120e] font-medium">npm i @nue-memory/media-memory @mysten-incubation/memwal</span>
           <button
             onClick={copyInstallCommand}
-            className="p-1 hover:text-white transition ml-1"
+            className="p-1 text-[#786152] hover:text-[#18120e] transition ml-1"
             title="Copy command"
           >
             {copiedInstall ? (
-              <Check className="w-3.5 h-3.5 text-[#dda15e]" />
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
             ) : (
-              <Copy className="w-3.5 h-3.5 text-[#ab9482]" />
+              <Copy className="w-3.5 h-3.5" />
             )}
           </button>
         </div>
@@ -418,54 +418,54 @@ export default function Home() {
 
       {/* Hero Interactive Component (Mem0 Tabbed Window) */}
       <section id="studio" className="px-4 max-w-7xl mx-auto pb-24 relative z-10">
-        <div className="rounded-2xl bg-[#09090b] border border-white/10 shadow-2xl shadow-black overflow-hidden">
+        <div className="rounded-2xl bg-white border border-[#e7e2da] shadow-xl shadow-[#c88d51]/5 overflow-hidden">
           {/* Tab Header Bar */}
-          <div className="px-4 py-3 bg-[#0d0a08] border-b border-white/5 flex flex-wrap items-center justify-between gap-3">
+          <div className="px-4 py-3.5 bg-[#faf6f0] border-b border-[#e7e2da] flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#38281e]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#563b28]" />
-                <span className="w-2.5 h-2.5 rounded-full bg-[#784e2a]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#d4c5b5]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#b89f89]" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#9c785d]" />
               </div>
 
               {/* Navigation Tabs */}
-              <div className="flex bg-[#140e0b] p-1 rounded-lg border border-white/5 text-xs font-mono">
+              <div className="flex bg-[#f5ece4] p-1 rounded-xl border border-[#e2d5c5] text-xs font-mono">
                 <button
                   onClick={() => setHeroTab('studio')}
-                  className={`px-3 py-1 rounded-md transition ${
+                  className={`px-3.5 py-1.5 rounded-lg transition ${
                     heroTab === 'studio'
-                      ? 'bg-[#241a14] text-[#fbf7ee] border border-[#c88d51]/30 font-semibold'
-                      : 'text-[#ab9482] hover:text-white'
+                      ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                      : 'text-[#786152] hover:text-[#18120e]'
                   }`}
                 >
                   Live Studio (Demo)
                 </button>
                 <button
                   onClick={() => setHeroTab('sdk')}
-                  className={`px-3 py-1 rounded-md transition ${
+                  className={`px-3.5 py-1.5 rounded-lg transition ${
                     heroTab === 'sdk'
-                      ? 'bg-[#241a14] text-[#fbf7ee] border border-[#c88d51]/30 font-semibold'
-                      : 'text-[#ab9482] hover:text-white'
+                      ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                      : 'text-[#786152] hover:text-[#18120e]'
                   }`}
                 >
                   SDK Integration
                 </button>
                 <button
                   onClick={() => setHeroTab('orchestrator')}
-                  className={`px-3 py-1 rounded-md transition ${
+                  className={`px-3.5 py-1.5 rounded-lg transition ${
                     heroTab === 'orchestrator'
-                      ? 'bg-[#241a14] text-[#fbf7ee] border border-[#c88d51]/30 font-semibold'
-                      : 'text-[#ab9482] hover:text-white'
+                      ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                      : 'text-[#786152] hover:text-[#18120e]'
                   }`}
                 >
                   Context Orchestrator
                 </button>
                 <button
                   onClick={() => setHeroTab('vault')}
-                  className={`px-3 py-1 rounded-md transition ${
+                  className={`px-3.5 py-1.5 rounded-lg transition ${
                     heroTab === 'vault'
-                      ? 'bg-[#241a14] text-[#fbf7ee] border border-[#c88d51]/30 font-semibold'
-                      : 'text-[#ab9482] hover:text-white'
+                      ? 'bg-white text-[#18120e] font-bold shadow-2xs border border-[#e2d5c5]'
+                      : 'text-[#786152] hover:text-[#18120e]'
                   }`}
                 >
                   Walrus Vault ({activeMemories.filter((m) => m.isActive).length})
@@ -483,19 +483,19 @@ export default function Home() {
                       'Create a promo for my new clothing brand.'
                     )
                   }
-                  className="px-2.5 py-1 rounded-lg bg-[#1a130f] hover:bg-[#281c15] text-[#dda15e] border border-[#c88d51]/30 text-[11px] font-mono flex items-center gap-1.5 transition"
+                  className="px-3 py-1.5 rounded-xl bg-[#f5ece4] hover:bg-[#ede0d4] text-[#78350f] border border-[#e2d5c5] text-xs font-mono font-bold flex items-center gap-1.5 transition shadow-2xs"
                   title="Test cross-project recall with zero reprompting"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>New Project (Demo)</span>
                 </button>
 
                 {activeVersion && (
                   <button
                     onClick={() => setIsInspectorOpen(true)}
-                    className="px-2.5 py-1 rounded-lg bg-[#140e0b] hover:bg-[#1f1611] text-[#ab9482] hover:text-white border border-white/5 text-[11px] font-mono flex items-center gap-1 transition"
+                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-[#faf6f0] text-[#18120e] border border-[#e7e2da] text-xs font-mono font-semibold flex items-center gap-1.5 transition shadow-2xs"
                   >
-                    <Layers className="w-3 h-3 text-[#c88d51]" />
+                    <Layers className="w-3.5 h-3.5 text-[#9c4e1f]" />
                     <span>Inspect Context</span>
                   </button>
                 )}
@@ -505,14 +505,14 @@ export default function Home() {
 
           {/* Banner notification */}
           {bannerNotice && (
-            <div className="px-5 py-2 bg-[#1b120c] border-b border-[#c88d51]/30 text-xs font-mono text-[#dda15e] flex items-center justify-between animate-fadeIn">
+            <div className="px-5 py-2.5 bg-[#f5ece4] border-b border-[#e2d5c5] text-xs font-mono text-[#78350f] font-semibold flex items-center justify-between animate-fadeIn">
               <span className="flex items-center gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#dda15e]" />
+                <Sparkles className="w-3.5 h-3.5 text-[#9c4e1f]" />
                 {bannerNotice}
               </span>
               <button
                 onClick={() => setBannerNotice(null)}
-                className="text-[10px] text-zinc-500 hover:text-white ml-4"
+                className="text-[10px] text-stone-500 hover:text-[#18120e] ml-4 font-bold"
               >
                 Dismiss
               </button>
@@ -520,10 +520,11 @@ export default function Home() {
           )}
 
           {/* Tab Content Display */}
-          <div className="p-4 sm:p-6 bg-[#09090b]">
+          <div className="p-4 sm:p-6 bg-[#faf8f5]">
             {/* TAB 1: LIVE STUDIO */}
             {heroTab === 'studio' && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[640px]">
+                {/* Left: Media Preview & Player Canvas (7 Cols) */}
                 <div className="lg:col-span-7 flex flex-col">
                   <MediaPreview
                     version={activeVersion}
@@ -615,22 +616,22 @@ export default function Home() {
             {/* TAB 4: WALRUS MEMORY VAULT */}
             {heroTab === 'vault' && (
               <div className="max-w-4xl mx-auto font-mono text-xs">
-                <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-[#e7e2da]">
                   <div className="flex items-center gap-2">
-                    <Database className="w-4 h-4 text-[#dda15e]" />
-                    <span className="font-bold text-white uppercase tracking-wider text-[11px]">
+                    <Database className="w-4 h-4 text-[#9c4e1f]" />
+                    <span className="font-bold text-[#18120e] uppercase tracking-wider text-[11px]">
                       Walrus Decentralized Blobs on Sui
                     </span>
                   </div>
-                  <span className="text-zinc-500 text-[10px]">
+                  <span className="text-[#786152] text-[10px]">
                     {activeMemories.filter((m) => m.isActive).length} active preferences stored
                   </span>
                 </div>
 
                 {activeMemories.length === 0 ? (
-                  <div className="text-center py-12 text-[#ab9482]">
+                  <div className="text-center py-12 text-[#786152]">
                     <p className="mb-2">No preferences committed to Walrus yet.</p>
-                    <p className="text-[11px] text-zinc-600">
+                    <p className="text-[11px] text-stone-400">
                       Generate a clip in Live Studio, provide feedback, and click &quot;Remember in Walrus Memory&quot;.
                     </p>
                   </div>
@@ -641,26 +642,26 @@ export default function Home() {
                         key={mem.id}
                         className={`p-4 rounded-xl border transition ${
                           mem.isActive
-                            ? 'bg-[#140e0b] border-[#c88d51]/30'
-                            : 'bg-[#0e0c0a] border-white/5 opacity-50'
+                            ? 'bg-white border-[#e7e2da] shadow-2xs'
+                            : 'bg-[#faf6f0] border-[#e7e2da] opacity-50'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-[#c88d51]/20 text-[#dda15e]">
+                          <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-[#f5ece4] text-[#78350f]">
                             {mem.category}
                           </span>
-                          <span className="text-[10px] text-zinc-500">
+                          <span className="text-[10px] text-stone-400">
                             {mem.memwalBlobId || 'walrus-blob'}
                           </span>
                         </div>
-                        <p className="text-[#fbf7ee] text-xs mb-3 leading-relaxed">
+                        <p className="text-[#18120e] text-xs mb-3 leading-relaxed font-sans font-medium">
                           {mem.preference}
                         </p>
-                        <div className="flex items-center justify-between pt-2 border-t border-white/5 text-[10px] text-zinc-500">
+                        <div className="flex items-center justify-between pt-2 border-t border-[#e7e2da] text-[10px] text-stone-400">
                           <span>Strength: {mem.strength}</span>
                           <button
                             onClick={() => handleForgetMemory(mem.id)}
-                            className="text-red-400/80 hover:text-red-300 transition"
+                            className="text-red-500 hover:text-red-700 transition font-bold"
                           >
                             Forget
                           </button>
@@ -676,23 +677,23 @@ export default function Home() {
       </section>
 
       {/* Social Proof & Metrics Strip */}
-      <section className="py-10 border-y border-white/5 bg-[#070504]">
+      <section className="py-12 border-y border-[#e7e2da] bg-white">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-6 text-center font-mono">
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-[#dda15e] mb-1">100%</div>
-            <div className="text-xs text-[#ab9482]">Zero-Reprompt Recall</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#9c4e1f] mb-1">100%</div>
+            <div className="text-xs text-[#786152]">Zero-Reprompt Recall</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1">12</div>
-            <div className="text-xs text-[#ab9482]">Creative Taxonomy Categories</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#18120e] mb-1">12</div>
+            <div className="text-xs text-[#786152]">Creative Taxonomy Categories</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-[#dda15e] mb-1">Sui Walrus</div>
-            <div className="text-xs text-[#ab9482]">MemWal Decentralized Storage</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#9c4e1f] mb-1">Sui Walrus</div>
+            <div className="text-xs text-[#786152]">MemWal Decentralized Storage</div>
           </div>
           <div>
-            <div className="text-2xl sm:text-3xl font-bold text-white mb-1">Livepeer MCP</div>
-            <div className="text-xs text-[#ab9482]">Autonomous Media Agents</div>
+            <div className="text-2xl sm:text-3xl font-bold text-[#18120e] mb-1">Livepeer MCP</div>
+            <div className="text-xs text-[#786152]">Autonomous Media Agents</div>
           </div>
         </div>
       </section>
@@ -708,83 +709,82 @@ export default function Home() {
 
       {/* Mem0 Call To Action Banner */}
       <section className="py-24 px-4 max-w-7xl mx-auto text-center relative">
-        <div className="p-10 sm:p-16 rounded-3xl bg-gradient-to-b from-[#140e0b] to-[#09090b] border border-[#c88d51]/30 relative overflow-hidden">
-          <div className="absolute inset-0 bg-radial from-[#c88d51]/10 to-transparent blur-3xl pointer-events-none" />
-          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-4 relative z-10">
+        <div className="p-10 sm:p-16 rounded-3xl bg-gradient-to-b from-[#f5ece4] to-white border border-[#e2d5c5] relative overflow-hidden shadow-lg shadow-[#c88d51]/5">
+          <h2 className="text-3xl sm:text-5xl font-extrabold text-[#18120e] mb-4 relative z-10 tracking-tight">
             Give your creative agents memory.
           </h2>
-          <p className="text-sm sm:text-base text-[#ab9482] max-w-xl mx-auto mb-8 relative z-10 leading-relaxed">
+          <p className="text-sm sm:text-base text-[#786152] max-w-xl mx-auto mb-8 relative z-10 leading-relaxed font-normal">
             Autonomous media agents shouldn&apos;t suffer from creative amnesia. Nue Memory is built by NextMathLabs for the future of decentralized creative AI.
           </p>
           <a
             href="#studio"
             onClick={() => setHeroTab('studio')}
-            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-[#fbf7ee] text-[#140e0b] hover:bg-[#ede4d1] font-bold text-sm transition shadow-xl relative z-10"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-[#1a120c] text-white hover:bg-[#281c15] font-bold text-sm transition shadow-lg shadow-[#1a120c]/15 relative z-10"
           >
-            <Sparkles className="w-4 h-4 text-[#9c4e1f]" />
+            <Sparkles className="w-4 h-4 text-[#dda15e]" />
             <span>Launch Studio Now</span>
           </a>
         </div>
       </section>
 
       {/* Multi-Column Footer (Mem0 Style) */}
-      <footer className="px-6 py-12 bg-[#070504] border-t border-white/5 text-xs text-[#ab9482]">
+      <footer className="px-6 py-14 bg-white border-t border-[#e7e2da] text-xs text-[#786152]">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div>
             <div className="flex items-center gap-2.5 mb-3">
-              <div className="w-6 h-6 rounded-lg bg-[#c88d51] flex items-center justify-center text-black font-bold text-xs">
+              <div className="w-6 h-6 rounded-lg bg-[#1a120c] flex items-center justify-center text-white font-bold text-xs">
                 N
               </div>
-              <span className="font-bold text-white text-sm">Nue Memory</span>
+              <span className="font-bold text-[#18120e] text-sm">Nue Memory</span>
             </div>
-            <p className="text-zinc-400 text-xs leading-relaxed mb-3">
+            <p className="text-[#786152] text-xs leading-relaxed mb-3">
               Decentralized persistent creative memory for AI media agents.
             </p>
-            <span className="text-[11px] font-mono text-[#dda15e]">
+            <span className="text-[11px] font-mono text-[#9c4e1f] font-semibold bg-[#f5ece4] px-2 py-0.5 rounded border border-[#e2d5c5]">
               A NextMathLabs Company
             </span>
           </div>
 
           <div>
-            <h4 className="font-bold text-white mb-3 uppercase tracking-wider text-[10px] font-mono">
+            <h4 className="font-bold text-[#18120e] mb-3 uppercase tracking-wider text-[10px] font-mono">
               Product
             </h4>
             <ul className="space-y-2 font-mono text-[11px]">
-              <li><a href="#studio" className="hover:text-white transition">Media Memory</a></li>
-              <li><a href="#features" className="hover:text-white transition">Autonomous Extraction</a></li>
-              <li><a href="#features" className="hover:text-white transition">Conflict Evolution</a></li>
-              <li><a href="#features" className="hover:text-white transition">Context Orchestrator</a></li>
+              <li><a href="#studio" className="hover:text-[#18120e] transition">Media Memory</a></li>
+              <li><a href="#features" className="hover:text-[#18120e] transition">Autonomous Extraction</a></li>
+              <li><a href="#features" className="hover:text-[#18120e] transition">Conflict Evolution</a></li>
+              <li><a href="#features" className="hover:text-[#18120e] transition">Context Orchestrator</a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold text-white mb-3 uppercase tracking-wider text-[10px] font-mono">
+            <h4 className="font-bold text-[#18120e] mb-3 uppercase tracking-wider text-[10px] font-mono">
               Infrastructure
             </h4>
             <ul className="space-y-2 font-mono text-[11px]">
-              <li><a href="https://agent.livepeer.org" target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center gap-1">Livepeer Agent MCP <ExternalLink className="w-3 h-3 text-zinc-600" /></a></li>
-              <li><a href="https://memory.walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center gap-1">Walrus MemWal <ExternalLink className="w-3 h-3 text-zinc-600" /></a></li>
-              <li><a href="https://walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-white transition flex items-center gap-1">Sui Walrus Storage <ExternalLink className="w-3 h-3 text-zinc-600" /></a></li>
+              <li><a href="https://agent.livepeer.org" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">Livepeer Agent MCP <ExternalLink className="w-3 h-3 text-stone-400" /></a></li>
+              <li><a href="https://memory.walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">Walrus MemWal <ExternalLink className="w-3 h-3 text-stone-400" /></a></li>
+              <li><a href="https://walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">Sui Walrus Storage <ExternalLink className="w-3 h-3 text-stone-400" /></a></li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-bold text-white mb-3 uppercase tracking-wider text-[10px] font-mono">
+            <h4 className="font-bold text-[#18120e] mb-3 uppercase tracking-wider text-[10px] font-mono">
               Company
             </h4>
             <ul className="space-y-2 font-mono text-[11px]">
-              <li className="text-zinc-300">NextMathLabs Inc.</li>
-              <li><span className="text-[#dda15e]">Livepeer Agent Hackathon</span></li>
-              <li className="text-zinc-500">Aug 24 – Sep 21, 2026</li>
+              <li className="text-[#18120e] font-semibold">NextMathLabs Inc.</li>
+              <li><span className="text-[#9c4e1f]">Livepeer Agent Hackathon</span></li>
+              <li className="text-stone-400">Aug 24 – Sep 21, 2026</li>
             </ul>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-zinc-500 gap-4">
+        <div className="max-w-7xl mx-auto pt-6 border-t border-[#e7e2da] flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-stone-500 gap-4">
           <div>
             © 2026 Nue Memory · A NextMathLabs company. All rights reserved.
           </div>
-          <div className="flex items-center gap-4 text-zinc-400">
+          <div className="flex items-center gap-4 text-[#786152]">
             <span>Powered by Walrus MemWal</span>
             <span>·</span>
             <span>Livepeer Agent</span>
