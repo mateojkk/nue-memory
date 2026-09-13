@@ -5,29 +5,32 @@ import Image from 'next/image';
 
 interface NueLogoProps {
   className?: string;
-  size?: number;
+  size?: number; // target height in pixels
   showText?: boolean;
   textSize?: string;
 }
 
 export function NueLogo({
   className = '',
-  size = 28,
+  size = 24,
   showText = true,
   textSize = 'text-xl',
 }: NueLogoProps) {
+  // 213x155 is ~1.374 aspect ratio
+  const width = Math.round(size * (213 / 155));
+
   return (
     <div className={`inline-flex items-center gap-2.5 ${className}`}>
       <div
-        className="relative overflow-hidden rounded-md border border-[#2e2620] bg-[#141210] shrink-0 shadow-sm"
-        style={{ width: size, height: size }}
+        className="relative shrink-0 flex items-center justify-center"
+        style={{ width, height: size }}
       >
         <Image
-          src="/logo.jpg"
+          src="/logo-transparent.png"
           alt="Nue Logo"
-          width={size * 2}
-          height={size * 2}
-          className="w-full h-full object-cover"
+          width={213}
+          height={155}
+          className="w-full h-full object-contain [image-rendering:pixelated]"
           priority
         />
       </div>

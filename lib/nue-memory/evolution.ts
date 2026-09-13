@@ -1,4 +1,6 @@
 import { MediaPreference } from '../types';
+import { planMemoryEvolution } from './engine/evolution';
+import { mediaPrefToStructured, structuredToMediaPref } from '../walrus-memwal/client';
 
 export interface EvolutionResult {
   updatedMemories: MediaPreference[];
@@ -8,51 +10,44 @@ export interface EvolutionResult {
 
 /**
  * Evolves a set of media memories given a newly confirmed preference.
- * Ensures newer preferences supersede older contradictory ones within the same category/domain.
+ * Uses the core Nue Memory evolution engine to detect contradictions and maintain provenance.
  */
 export function evolveMemories(
   existingMemories: MediaPreference[],
   newPreference: MediaPreference
 ): EvolutionResult {
-  const updated: MediaPreference[] = [];
-  const superseded: MediaPreference[] = [];
+  const structuredExisting = existingMemories.map(mediaPrefToStructured);
+  const structuredNew = mediaPrefToStructured(newPreference);
 
-  // Check for conflicts in the same category
-  for (const memory of existingMemories) {
-    if (!memory.isActive) {
-      updated.push(memory);
-      continue;
-    }
+  const plan = planMemoryEvolution(structuredExisting, structuredNew);
 
-    if (memory.category === newPreference.category && memory.id !== newPreference.id) {
-      // Conflict detected! Supersede old memory
-      const supersededMemory: MediaPreference = {
-        ...memory,
+  const supersededMemories: MediaPreference[] = plan.memoriesToDeactivate.map(structuredToMediaPref);
+  const supersededIds = new Set(supersededMemories.map((m) => m.id));
+
+  const updatedMemories: MediaPreference[] = existingMemories.map((m) => {
+    if (supersededIds.has(m.id)) {
+      return {
+        ...m,
         isActive: false,
         updatedAt: new Date().toISOString(),
       };
-      superseded.push(supersededMemory);
-      updated.push(supersededMemory);
-    } else {
-      updated.push(memory);
     }
-  }
+    return m;
+  });
 
-  // Set supersedes link on the new memory if applicable
-  const latestPreference: MediaPreference = {
+  const persistedPreference: MediaPreference = {
     ...newPreference,
-    supersedesId: superseded.length > 0 ? superseded[0].id : undefined,
+    supersedesId: plan.memoryToPersist.supersedesId,
     isActive: true,
     updatedAt: new Date().toISOString(),
   };
 
-  updated.push(latestPreference);
-
-  const activeMemories = updated.filter((m) => m.isActive);
+  updatedMemories.push(persistedPreference);
+  const activeMemories = updatedMemories.filter((m) => m.isActive);
 
   return {
-    updatedMemories: updated,
-    supersededMemories: superseded,
+    updatedMemories,
+    supersededMemories,
     activeMemories,
   };
 }
@@ -69,7 +64,6 @@ export function consolidateMemories(memories: MediaPreference[]): MediaPreferenc
     if (!existing) {
       activeByCategory.set(mem.category, mem);
     } else {
-      // Choose newer timestamp
       if (new Date(mem.createdAt) > new Date(existing.createdAt)) {
         activeByCategory.set(mem.category, mem);
       }

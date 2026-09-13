@@ -1,136 +1,203 @@
-import { StructuredMemory, PreferenceStrength, PreferenceScope } from '../types';
+import { StructuredMemory, MemoryStore, MemorySearchResult } from './core/types';
+import { WalrusMemWalStore, defaultWalrusStore } from './storage/walrus-store';
+import {
+  extractMemories,
+  candidateToStructuredMemory,
+  MemoryExtractionResult,
+} from './engine/extractor';
+import { planMemoryEvolution, EvolutionPlan } from './engine/evolution';
+import { formatAgentContext, RetrievedContext } from './engine/retrieval';
 
 export interface MemoryClientConfig {
   apiKey?: string;
-  endpoint?: string;
-  storage?: 'walrus' | 'local' | 'memory';
+  store?: MemoryStore;
+  namespace?: string;
+  defaultUserId?: string;
+  defaultDomain?: string;
 }
 
-export interface AddMemoryOptions {
+export interface AddOptions {
   userId?: string;
-  scope?: PreferenceScope;
-  source?: 'user_feedback' | 'creative_brief' | 'manual_entry' | 'system_inference';
+  domain?: string;
+  projectId?: string;
+  sessionContext?: string;
+  autoEvolve?: boolean;
 }
 
-export interface SearchMemoryOptions {
+export interface SearchOptions {
   userId?: string;
-  filters?: {
-    category?: string;
-    scope?: string;
-    isActive?: boolean;
-    userId?: string;
-  };
+  domain?: string;
+  category?: string;
   limit?: number;
+  minConfidence?: number;
+  includeSuperseded?: boolean;
+}
+
+export interface AddResult {
+  success: boolean;
+  classification: MemoryExtractionResult['classification'];
+  reasoning: string;
+  extractedCount: number;
+  memories: StructuredMemory[];
+  temporaryInstructions: string[];
+  evolutionPlans: EvolutionPlan[];
 }
 
 /**
  * Nue Memory SDK - Developer Interface for AI Agent Memory
- * Sits between AI agents and durable storage (Walrus)
+ * Sits between AI agents and durable storage (Walrus MemWal on Sui).
  */
 export class MemoryClient {
-  private apiKey: string;
-  private storage: string;
-  private cache: Map<string, StructuredMemory> = new Map();
+  private store: MemoryStore;
+  private defaultUserId: string;
+  private defaultDomain: string;
 
   constructor(config: MemoryClientConfig = {}) {
-    this.apiKey = config.apiKey || (typeof process !== 'undefined' ? process.env.NUE_API_KEY || '' : '');
-    this.storage = config.storage || 'walrus';
+    this.store = config.store || defaultWalrusStore;
+    this.defaultUserId = config.defaultUserId || 'default_user';
+    this.defaultDomain = config.defaultDomain || 'general';
   }
 
   /**
-   * Add agent interaction: Nue extracts what matters, filters temporary noise, and stores structured memory
+   * Initializes the underlying Walrus MemWal storage engine
+   */
+  async initialize(): Promise<void> {
+    await this.store.initialize();
+  }
+
+  /**
+   * Add agent interaction:
+   * 1. Extracts what matters, differentiating temporary noise from durable preferences.
+   * 2. Evaluates semantic conflicts against existing memories (evolution/supersession).
+   * 3. Persists structured memories with provenance to Walrus MemWal.
    */
   async add(
-    messages: Array<{ role: string; content: string }>,
-    options: AddMemoryOptions = {}
-  ): Promise<{ success: boolean; extractedCount: number; memories: StructuredMemory[] }> {
-    const userMessages = messages.filter((m) => m.role === 'user');
-    const combinedContent = userMessages.map((m) => m.content).join(' ');
+    input: string | Array<{ role: string; content: string }>,
+    options: AddOptions = {}
+  ): Promise<AddResult> {
+    await this.store.initialize();
 
-    const memories: StructuredMemory[] = [];
-    const now = new Date().toISOString();
+    const userId = options.userId || this.defaultUserId;
+    const domain = options.domain || this.defaultDomain;
 
-    // Check for creative or technical preferences
-    if (combinedContent.toLowerCase().includes('bright') || combinedContent.toLowerCase().includes('minimal')) {
-      memories.push({
-        id: `mem-${Date.now()}-style`,
-        type: 'preference',
-        category: 'visual_style',
-        value: 'bright and minimal',
-        strength: 'high',
-        confidence: 0.96,
-        source: options.source || 'user_feedback',
-        scope: options.scope || 'media',
-        userId: options.userId || 'default_user',
-        createdAt: now,
-        updatedAt: now,
-        isActive: true,
-      });
+    // Normalize input text
+    const text =
+      typeof input === 'string'
+        ? input
+        : input
+            .filter((m) => m.role === 'user' || m.role === 'feedback')
+            .map((m) => m.content)
+            .join(' ');
+
+    // Stage 1: Extraction & Classification
+    const extraction = extractMemories(text, {
+      userId,
+      domain,
+      projectId: options.projectId,
+      sessionContext: options.sessionContext,
+    });
+
+    if (extraction.candidates.length === 0) {
+      return {
+        success: true,
+        classification: extraction.classification,
+        reasoning: extraction.reasoning,
+        extractedCount: 0,
+        memories: [],
+        temporaryInstructions: extraction.temporaryInstructions,
+        evolutionPlans: [],
+      };
     }
 
-    if (combinedContent.toLowerCase().includes('caption') && (combinedContent.toLowerCase().includes('larger') || combinedContent.toLowerCase().includes('large'))) {
-      memories.push({
-        id: `mem-${Date.now()}-cap`,
-        type: 'preference',
-        category: 'typography',
-        value: 'large, readable captions with high contrast',
-        strength: 'high',
-        confidence: 0.94,
-        source: options.source || 'user_feedback',
-        scope: options.scope || 'media',
-        userId: options.userId || 'default_user',
-        createdAt: now,
-        updatedAt: now,
-        isActive: true,
-      });
-    }
+    const savedMemories: StructuredMemory[] = [];
+    const evolutionPlans: EvolutionPlan[] = [];
 
-    if (combinedContent.toLowerCase().includes('music') && (combinedContent.toLowerCase().includes('remove') || combinedContent.toLowerCase().includes('avoid') || combinedContent.toLowerCase().includes('dramatic'))) {
-      memories.push({
-        id: `mem-${Date.now()}-music`,
-        type: 'preference',
-        category: 'music',
-        value: 'avoid dramatic music; prefer modern rhythm beds',
-        strength: 'high',
-        confidence: 0.92,
-        source: options.source || 'user_feedback',
-        scope: options.scope || 'media',
-        userId: options.userId || 'default_user',
-        createdAt: now,
-        updatedAt: now,
-        isActive: true,
-      });
-    }
+    // Stage 2: Evolution & Persistence
+    const existingMemories = await this.store.list({ userId, domain });
 
-    for (const mem of memories) {
-      this.cache.set(mem.id, mem);
+    for (const candidate of extraction.candidates) {
+      const memoryObj = candidateToStructuredMemory(candidate, {
+        userId,
+        domain,
+        projectId: options.projectId,
+        sessionContext: options.sessionContext,
+      });
+
+      if (options.autoEvolve !== false) {
+        const plan = planMemoryEvolution(existingMemories, memoryObj);
+        evolutionPlans.push(plan);
+
+        // Deactivate any superseded memories
+        for (const deact of plan.memoriesToDeactivate) {
+          await this.store.update(deact.id, {
+            isActive: false,
+            supersededById: plan.memoryToPersist.id,
+          });
+        }
+
+        const { memory } = await this.store.save(plan.memoryToPersist);
+        savedMemories.push(memory);
+      } else {
+        const { memory } = await this.store.save(memoryObj);
+        savedMemories.push(memory);
+      }
     }
 
     return {
       success: true,
-      extractedCount: memories.length,
-      memories,
+      classification: extraction.classification,
+      reasoning: extraction.reasoning,
+      extractedCount: savedMemories.length,
+      memories: savedMemories,
+      temporaryInstructions: extraction.temporaryInstructions,
+      evolutionPlans,
     };
   }
 
   /**
    * Search and retrieve relevant persistent context for any agent task
    */
-  async search(query: string, options: SearchMemoryOptions = {}): Promise<StructuredMemory[]> {
-    const all = Array.from(this.cache.values());
-    const q = query.toLowerCase();
+  async search(
+    query: string,
+    options: SearchOptions = {}
+  ): Promise<StructuredMemory[]> {
+    await this.store.initialize();
 
-    return all.filter((mem) => {
-      if (!mem.isActive) return false;
-      if (options.filters?.userId && mem.userId !== options.filters.userId) return false;
-      if (options.filters?.category && mem.category !== options.filters.category) return false;
-      return (
-        mem.value.toLowerCase().includes(q) ||
-        mem.category.toLowerCase().includes(q) ||
-        q.includes(mem.category) ||
-        q.includes('preference') ||
-        q.includes('all')
-      );
+    const results = await this.store.search({
+      query,
+      userId: options.userId || this.defaultUserId,
+      domain: options.domain || this.defaultDomain,
+      category: options.category,
+      limit: options.limit,
+      minConfidence: options.minConfidence,
+      includeSuperseded: options.includeSuperseded,
+    });
+
+    return results.map((r) => r.memory);
+  }
+
+  /**
+   * Search and format memories directly into an agent prompt injection block
+   */
+  async getContext(
+    query: string,
+    options: SearchOptions = {}
+  ): Promise<RetrievedContext> {
+    await this.store.initialize();
+
+    const searchResults = await this.store.search({
+      query,
+      userId: options.userId || this.defaultUserId,
+      domain: options.domain || this.defaultDomain,
+      category: options.category,
+      limit: options.limit || 6,
+      minConfidence: options.minConfidence,
+      includeSuperseded: options.includeSuperseded,
+    });
+
+    return formatAgentContext(searchResults, {
+      maxItems: options.limit || 6,
+      domain: options.domain || this.defaultDomain,
     });
   }
 
@@ -138,39 +205,39 @@ export class MemoryClient {
    * Get single memory by ID
    */
   async get(memoryId: string): Promise<StructuredMemory | null> {
-    return this.cache.get(memoryId) || null;
+    return this.store.get(memoryId);
   }
 
   /**
    * Update existing memory record
    */
-  async update(memoryId: string, updates: Partial<StructuredMemory>): Promise<StructuredMemory | null> {
-    const existing = this.cache.get(memoryId);
-    if (!existing) return null;
-    const updated = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-    this.cache.set(memoryId, updated);
-    return updated;
+  async update(
+    memoryId: string,
+    updates: Partial<StructuredMemory>
+  ): Promise<StructuredMemory | null> {
+    return this.store.update(memoryId, updates);
   }
 
   /**
-   * Delete memory record
+   * Delete / forget memory record from Walrus
    */
   async delete(memoryId: string): Promise<boolean> {
-    return this.cache.delete(memoryId);
+    return this.store.delete(memoryId);
   }
 
   /**
-   * Evolve existing memory: newer preference supersedes older conflicting record
+   * Explicitly evolve memory: supersedes an old memory record with new data
    */
-  async evolve(oldMemoryId: string, newMemoryData: Omit<StructuredMemory, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>): Promise<{ superseded: StructuredMemory; active: StructuredMemory } | null> {
-    const old = this.cache.get(oldMemoryId);
+  async evolve(
+    oldMemoryId: string,
+    newMemoryData: Omit<StructuredMemory, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>
+  ): Promise<{ superseded: StructuredMemory; active: StructuredMemory } | null> {
+    await this.store.initialize();
+
+    const old = await this.store.get(oldMemoryId);
     if (!old) return null;
 
-    const newId = `mem-${Date.now()}-evolved`;
+    const newId = `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
 
     const superseded: StructuredMemory = {
@@ -189,10 +256,44 @@ export class MemoryClient {
       updatedAt: now,
     };
 
-    this.cache.set(oldMemoryId, superseded);
-    this.cache.set(newId, active);
+    await this.store.update(oldMemoryId, {
+      isActive: false,
+      supersededById: newId,
+    });
+    const { memory: savedActive } = await this.store.save(active);
 
-    return { superseded, active };
+    return { superseded, active: savedActive };
+  }
+
+  /**
+   * List all stored memories
+   */
+  async list(filter?: {
+    userId?: string;
+    domain?: string;
+    activeOnly?: boolean;
+  }): Promise<StructuredMemory[]> {
+    return this.store.list(filter);
+  }
+
+  /**
+   * Check health of Walrus MemWal relayer
+   */
+  async health(): Promise<{ status: string; version: string; mode?: string }> {
+    if ('health' in this.store && typeof (this.store as any).health === 'function') {
+      return (this.store as any).health();
+    }
+    return { status: 'healthy', version: '0.1.6' };
+  }
+
+  /**
+   * Restore/rebuild indexed entries from Walrus storage
+   */
+  async restore(namespace?: string): Promise<{ restored: number; total: number }> {
+    if ('restore' in this.store && typeof (this.store as any).restore === 'function') {
+      return (this.store as any).restore(namespace);
+    }
+    return { restored: 0, total: 0 };
   }
 }
 

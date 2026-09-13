@@ -115,7 +115,7 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     category: 'pacing',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:intro is too (?:slow|fast)|speed up|slow down|(?:prefer|like)\s+(?:fast|brisk|smooth|cinematic|energetic)\s+(?:pacing|cuts?|intro)|pacing\s+(?:is too|should be))/i,
+    pattern: /(?:(?:intro|pacing|cuts?)\s+.*(?:too slow|too fast|speed up|slow down|fast|brisk|smooth|cinematic|energetic|gentle)|(?:prefer|like|want|use|switch(?:ed)? to)\s+.*(?:fast|brisk|smooth|cinematic|energetic|gentle|slow)\s+(?:pacing|cuts?|intro)|pacing\s+(?:is too|should be|must be))/i,
     extract: (text) => {
       const lower = text.toLowerCase();
       if (lower.includes('too slow') || lower.includes('speed up') || lower.includes('fast') || lower.includes('energetic')) {
@@ -125,7 +125,7 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
         };
       }
       return {
-        value: 'Prefer smooth, steady cinematic pacing',
+        value: 'Prefer smooth, steady cinematic pacing with gentle transitions',
         confidence: 0.90,
       };
     },

@@ -1,26 +1,68 @@
 import { MediaPreference } from '../types';
+import { StructuredMemory } from '../nue-memory/core/types';
+import { defaultWalrusStore, WalrusMemWalStore } from '../nue-memory/storage/walrus-store';
+
+/**
+ * Adapter converting domain-agnostic StructuredMemory to legacy MediaPreference
+ */
+export function structuredToMediaPref(mem: StructuredMemory): MediaPreference {
+  return {
+    id: mem.id,
+    type: 'media_preference',
+    category: mem.category as any,
+    preference: mem.value,
+    strength: mem.confidence >= 0.9 ? 'high' : mem.confidence >= 0.8 ? 'medium' : 'low',
+    scope: mem.scope === 'domain' ? 'media' : mem.scope === 'session' ? 'project' : mem.scope,
+    source: 'user_feedback',
+    createdAt: mem.createdAt,
+    updatedAt: mem.updatedAt,
+    projectId: mem.source.projectId,
+    projectTitle: mem.source.eventContext,
+    memwalBlobId: mem.storageBlobId,
+    supersedesId: mem.supersedesId,
+    isActive: mem.isActive,
+  };
+}
+
+/**
+ * Adapter converting MediaPreference to domain-agnostic StructuredMemory
+ */
+export function mediaPrefToStructured(pref: MediaPreference): StructuredMemory {
+  return {
+    id: pref.id || `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    userId: 'default_user',
+    type: 'preference',
+    category: pref.category,
+    value: pref.preference,
+    confidence: pref.strength === 'high' ? 0.95 : pref.strength === 'medium' ? 0.85 : 0.75,
+    scope: (pref.scope === 'media' || pref.scope === 'coding') ? 'domain' : (pref.scope === 'project' ? 'project' : 'global'),
+    domain: 'media',
+    source: {
+      type: pref.source === 'manual_entry' ? 'explicit_statement' : 'user_feedback',
+      eventContext: pref.projectTitle ? `Project: ${pref.projectTitle}` : 'Media Review Feedback',
+      projectId: pref.projectId,
+      timestamp: pref.createdAt || new Date().toISOString(),
+    },
+    createdAt: pref.createdAt || new Date().toISOString(),
+    updatedAt: pref.updatedAt || new Date().toISOString(),
+    isActive: pref.isActive !== false,
+    supersedesId: pref.supersedesId,
+    storageBlobId: pref.memwalBlobId,
+  };
+}
 
 /**
  * MemWal Client for Walrus Memory
- * Implements Walrus Memory SDK (@mysten-incubation/memwal)
- * Supports live Walrus Memory Relayer with zero-config MemWalMock fallback.
+ * Bridges Media Memory application workflows directly to the unified WalrusMemWalStore engine.
  */
-
-export interface MemWalRecallResult {
-  text: string;
-  blobId?: string;
-  similarity?: number;
-  metadata?: Record<string, unknown>;
-}
-
 export class MemWalService {
   private static instance: MemWalService;
-  private client: any = null;
-  private isInitialized = false;
-  private namespace = 'nue-media-memory';
-  private preferencesMap: Map<string, MediaPreference> = new Map();
+  private store: WalrusMemWalStore;
+  private memoryCache: Map<string, MediaPreference> = new Map();
 
-  private constructor() {}
+  private constructor() {
+    this.store = defaultWalrusStore;
+  }
 
   public static getInstance(): MemWalService {
     if (!MemWalService.instance) {
@@ -30,139 +72,95 @@ export class MemWalService {
   }
 
   public async initialize(): Promise<void> {
-    if (this.isInitialized) return;
-
-    try {
-      const memwalModule = await import('@mysten-incubation/memwal');
-      const { MemWal, MemWalMock } = memwalModule;
-
-      const privateKey = process.env.MEMWAL_PRIVATE_KEY;
-      const accountId = process.env.MEMWAL_ACCOUNT_ID;
-      const serverUrl = process.env.MEMWAL_SERVER_URL || 'https://relayer.memory.walrus.xyz';
-
-      if (privateKey && accountId) {
-        console.log('[MemWal] Initializing live Walrus Memory client with delegate key...');
-        this.client = MemWal.create({
-          key: privateKey,
-          accountId: accountId,
-          serverUrl,
-          namespace: this.namespace,
-        });
-      } else {
-        console.log('[MemWal] Initializing zero-config MemWal (MemWalMock) on Walrus...');
-        this.client = MemWalMock.create({
-          namespace: this.namespace,
-        });
-      }
-      this.isInitialized = true;
-    } catch (err) {
-      console.warn('[MemWal] Notice during MemWal initialization:', err);
-      this.isInitialized = true;
-    }
+    await this.store.initialize();
   }
 
   /**
    * Persists a structured MediaPreference to Walrus Memory via MemWal
    */
-  public async rememberPreference(preference: MediaPreference): Promise<{ blobId: string; preference: MediaPreference }> {
+  public async rememberPreference(
+    preference: MediaPreference
+  ): Promise<{ blobId: string; preference: MediaPreference }> {
     await this.initialize();
 
-    const textToRemember = `Category: ${preference.category}. Preference: ${preference.preference}. Scope: ${preference.scope}. Strength: ${preference.strength}.`;
+    const structured = mediaPrefToStructured(preference);
+    const { blobId, memory } = await this.store.save(structured);
 
-    let assignedBlobId = `walrus_blob_${Math.random().toString(36).substring(2, 12)}`;
-
-    try {
-      if (this.client?.rememberAndWait) {
-        const memwalResult = await this.client.rememberAndWait(textToRemember, {
-          category: preference.category,
-          preference: preference.preference,
-          scope: preference.scope,
-          strength: preference.strength,
-          projectTitle: preference.projectTitle,
-        });
-
-        if (memwalResult && (memwalResult.blob_id || memwalResult.blobId)) {
-          assignedBlobId = memwalResult.blob_id || memwalResult.blobId;
-        }
-      }
-    } catch (error) {
-      console.error('[MemWal] Error during rememberAndWait:', error);
-    }
-
-    const updatedPreference: MediaPreference = {
+    const updatedPref: MediaPreference = {
       ...preference,
-      memwalBlobId: assignedBlobId,
-      isActive: true,
-      updatedAt: new Date().toISOString(),
+      id: memory.id,
+      memwalBlobId: blobId || memory.storageBlobId,
+      supersedesId: memory.supersedesId,
+      isActive: memory.isActive,
+      updatedAt: memory.updatedAt,
     };
 
-    this.preferencesMap.set(updatedPreference.id, updatedPreference);
-    return { blobId: assignedBlobId, preference: updatedPreference };
+    this.memoryCache.set(updatedPref.id, updatedPref);
+    return { blobId: updatedPref.memwalBlobId || 'walrus_blob', preference: updatedPref };
   }
 
   /**
-   * Recalls preferences relevant to a given query or brief using MemWal
+   * Recalls preferences relevant to a given query or brief using MemWal semantic vector search
    */
   public async recallPreferences(query: string): Promise<MediaPreference[]> {
     await this.initialize();
 
-    const activeList = Array.from(this.preferencesMap.values()).filter((m) => m.isActive);
+    const searchResults = await this.store.search({
+      query,
+      domain: 'media',
+      includeSuperseded: false,
+      limit: 10,
+    });
 
-    try {
-      if (this.client?.recall) {
-        const recallRes = await this.client.recall({
-          query,
-          topK: 10,
-          maxDistance: 1.0,
-        });
+    const preferences = searchResults.map((r) => structuredToMediaPref(r.memory));
 
-        if (recallRes?.results?.length) {
-          console.log(`[MemWal] Recalled ${recallRes.results.length} memories from Walrus for query: "${query}"`);
-        }
-      }
-    } catch (e) {
-      console.warn('[MemWal] Recall query notice:', e);
+    // Also populate cache
+    for (const p of preferences) {
+      this.memoryCache.set(p.id, p);
     }
 
-    return activeList;
+    return preferences;
   }
 
   /**
    * Returns all stored preferences (both active and evolved/superseded)
    */
   public getAllPreferences(includeInactive = false): MediaPreference[] {
-    const list = Array.from(this.preferencesMap.values());
+    const list = Array.from(this.memoryCache.values());
     return includeInactive ? list : list.filter((m) => m.isActive);
   }
 
   /**
-   * Updates an existing preference (e.g. marking it superseded/inactive)
+   * Updates an existing preference
    */
   public updatePreference(pref: MediaPreference): void {
-    this.preferencesMap.set(pref.id, pref);
+    this.memoryCache.set(pref.id, pref);
+    this.store.update(pref.id, {
+      isActive: pref.isActive,
+      supersedesId: pref.supersedesId,
+      updatedAt: pref.updatedAt,
+    }).catch((err) => console.warn('[MemWalService] Update notice:', err));
   }
 
   /**
-   * Clears all stored memories (useful for test resets)
+   * Clears stored memory cache
    */
   public clearAll(): void {
-    this.preferencesMap.clear();
+    this.memoryCache.clear();
   }
 
   /**
-   * Deactivates or removes a preference
+   * Deactivates or removes a preference from Walrus
    */
   public async forgetPreference(id: string): Promise<boolean> {
-    const existing = this.preferencesMap.get(id);
+    const existing = this.memoryCache.get(id);
     if (existing) {
-      if (existing.memwalBlobId && this.client?.forget) {
-        try {
-          await this.client.forget(existing.memwalBlobId);
-        } catch (e) {
-          console.warn('[MemWal] Failed to remove from remote relayer:', e);
-        }
-      }
-      this.preferencesMap.set(id, { ...existing, isActive: false, updatedAt: new Date().toISOString() });
+      await this.store.delete(id);
+      this.memoryCache.set(id, {
+        ...existing,
+        isActive: false,
+        updatedAt: new Date().toISOString(),
+      });
       return true;
     }
     return false;

@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   title: 'Nue · The Memory Infrastructure Layer for AI Agents',
   description:
     'Nue is the memory infrastructure layer for AI agents, giving agents persistent memory to retain what matters, learn from previous interactions, and evolve context over time with durable Walrus storage.',
+  icons: {
+    icon: '/logo.jpg',
+    shortcut: '/favicon.ico',
+    apple: '/logo.jpg',
+  },
 };
 
 export default function RootLayout({
@@ -22,10 +27,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className={`${inter.className} min-h-screen bg-[#faf8f5] text-[#18120e] font-light antialiased selection:bg-[#eed8c2] selection:text-[#18120e]`}>
+      <body className={`${inter.className} min-h-screen bg-[#0c0a09] text-stone-200 font-light antialiased selection:bg-[#c88d51]/20 selection:text-white`}>
         {children}
       </body>
     </html>
   );
 }
-

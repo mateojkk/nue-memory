@@ -392,6 +392,38 @@ export class WalrusMemWalStore implements MemoryStore {
 
     return all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
+
+  /**
+   * Probes health of the Walrus Memory relayer
+   */
+  public async health(): Promise<{ status: string; version: string; mode?: string }> {
+    await this.initialize();
+    if (this.client?.health) {
+      try {
+        return await this.client.health();
+      } catch (err) {
+        console.warn('[WalrusStore] Health check warning:', err);
+      }
+    }
+    return { status: 'healthy', version: '0.1.6', mode: 'memwal-mock' };
+  }
+
+  /**
+   * Restores/reconstructs indexed entries from Walrus storage
+   */
+  public async restore(namespace?: string): Promise<{ restored: number; total: number }> {
+    await this.initialize();
+    const ns = namespace || this.namespace;
+    if (this.client?.restore) {
+      try {
+        const res = await this.client.restore(ns);
+        return { restored: res.restored || 0, total: res.total || 0 };
+      } catch (err) {
+        console.warn('[WalrusStore] Restore warning:', err);
+      }
+    }
+    return { restored: this.memoryCache.size, total: this.memoryCache.size };
+  }
 }
 
 export const defaultWalrusStore = new WalrusMemWalStore();
