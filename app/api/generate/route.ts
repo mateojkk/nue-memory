@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { nue } from '@/lib/nue-memory/sdk';
 import { memWalService } from '@/lib/walrus-memwal/client';
 import { retrieveAndEnrichBrief } from '@/lib/nue-memory/retrieval';
 import { livepeerAgent } from '@/lib/livepeer/agent';
@@ -11,9 +12,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Brief is required' }, { status: 400 });
     }
 
-    // Step 1: Retrieve relevant memories from MemWal (Walrus Memory)
-    await memWalService.initialize();
-    const storedMemories = memWalService.getAllPreferences();
+    // Step 1: Initialize Nue Memory layer and retrieve active preferences from Walrus MemWal
+    await nue.initialize();
+    const storedMemories = memWalService.getAllPreferences(false);
     const { relevantMemories, enrichedBrief, creativeDirectives, summaryTokens } = retrieveAndEnrichBrief(brief, storedMemories);
 
     // Step 2: Send enriched context to Livepeer Agent

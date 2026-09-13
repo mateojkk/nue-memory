@@ -135,7 +135,7 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     category: 'typography',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:(?:captions?|subtitles?|text on screen)\s+.*(?:larger|bigger|readable|small|subtle|remove|none)|(?:make|set)\s+(?:the\s+)?(?:captions?|subtitles?)\s+.*(?:larger|bigger|readable|small|subtle))/i,
+    pattern: /(?:(?:captions?|subtitles?|text on screen)\s+.*(?:larger|large|bigger|readable|small|subtle|remove|none|bold)|(?:make|set|use|prefer|want|like)\s+.*(?:captions?|subtitles?|text on screen)|(?:large|larger|bold|small|subtle|compact|no)\s+(?:captions?|subtitles?|text on screen))/i,
     extract: (text) => {
       const lower = text.toLowerCase();
       if (lower.includes('larger') || lower.includes('large') || lower.includes('bigger') || lower.includes('readable')) {

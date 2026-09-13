@@ -86,9 +86,14 @@ export default function Home() {
   const handleGenerate = async (
     promptText: string,
     versionNumber = 1,
-    feedbackContext?: string
+    feedbackContext?: string,
+    overrideProjectIndex?: number,
+    overrideProjectTitle?: string
   ) => {
     setIsGenerating(true);
+
+    const targetIndex = overrideProjectIndex !== undefined ? overrideProjectIndex : currentProjectIndex;
+    const targetTitle = overrideProjectTitle || projects[targetIndex]?.title || activeProject?.title || 'Media Project';
 
     try {
       const res = await fetch('/api/generate', {
@@ -97,7 +102,7 @@ export default function Home() {
         body: JSON.stringify({
           brief: promptText,
           versionNumber,
-          projectTitle: activeProject.title,
+          projectTitle: targetTitle,
           feedbackContext,
         }),
       });
@@ -109,10 +114,12 @@ export default function Home() {
         // Update Project with new Version
         setProjects((prev) => {
           const updated = [...prev];
-          const proj = { ...updated[currentProjectIndex] };
-          proj.versions = [...proj.versions, newVersion];
-          proj.currentVersionIndex = proj.versions.length - 1;
-          updated[currentProjectIndex] = proj;
+          if (updated[targetIndex]) {
+            const proj = { ...updated[targetIndex] };
+            proj.versions = [...proj.versions, newVersion];
+            proj.currentVersionIndex = proj.versions.length - 1;
+            updated[targetIndex] = proj;
+          }
           return updated;
         });
 
@@ -237,8 +244,8 @@ export default function Home() {
       versions: [],
     };
 
-    setProjects((prev) => [...prev, newProj]);
     const newIndex = projects.length;
+    setProjects((prev) => [...prev, newProj]);
     setCurrentProjectIndex(newIndex);
     setPendingPreferences([]);
 
@@ -252,7 +259,7 @@ export default function Home() {
     ]);
 
     // Immediately trigger generation for Project B
-    handleGenerate(prompt, 1);
+    handleGenerate(prompt, 1, undefined, newIndex, title);
   };
 
   // Forget memory

@@ -33,15 +33,21 @@ export async function POST(request: Request) {
         for (const item of itemsToRemember) {
           const currentPreferences = memWalService.getAllPreferences(true);
           const evolution = evolveMemories(currentPreferences, item);
+          const newId = item.id || `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
           for (const superseded of evolution.supersededMemories) {
-            memWalService.updatePreference(superseded);
-            allSuperseded.push(superseded);
+            const updatedSuperseded: MediaPreference = {
+              ...superseded,
+              isActive: false,
+              updatedAt: new Date().toISOString(),
+            };
+            memWalService.updatePreference(updatedSuperseded);
+            allSuperseded.push(updatedSuperseded);
           }
 
           const preferenceToPersist: MediaPreference = {
             ...item,
-            id: item.id || `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            id: newId,
             createdAt: item.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isActive: true,

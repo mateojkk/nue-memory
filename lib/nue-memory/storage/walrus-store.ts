@@ -369,15 +369,13 @@ export class WalrusMemWalStore implements MemoryStore {
   }
 
   /**
-   * Lists memories according to filters
+   * Synchronously returns cached memories according to filters
    */
-  public async list(filter?: {
+  public listSynchronous(filter?: {
     userId?: string;
     domain?: string;
     activeOnly?: boolean;
-  }): Promise<StructuredMemory[]> {
-    await this.initialize();
-
+  }): StructuredMemory[] {
     let all = Array.from(this.memoryCache.values());
 
     if (filter?.activeOnly) {
@@ -391,6 +389,26 @@ export class WalrusMemWalStore implements MemoryStore {
     }
 
     return all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  /**
+   * Resets all cached memories
+   */
+  public clearAll(): void {
+    this.memoryCache.clear();
+    this.blobToMemoryId.clear();
+  }
+
+  /**
+   * Lists memories according to filters
+   */
+  public async list(filter?: {
+    userId?: string;
+    domain?: string;
+    activeOnly?: boolean;
+  }): Promise<StructuredMemory[]> {
+    await this.initialize();
+    return this.listSynchronous(filter);
   }
 
   /**

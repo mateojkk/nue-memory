@@ -183,11 +183,17 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
                 </div>
                 <div className="p-2.5 rounded bg-[#171411] border border-[#241f1a]">
                   <span className="text-stone-500 block">Confidence / Strength</span>
-                  <span className="text-stone-300">{selectedMemory.strength.toUpperCase()} (0.95)</span>
+                  <span className="text-stone-300">{selectedMemory.strength.toUpperCase()}</span>
                 </div>
                 <div className="p-2.5 rounded bg-[#171411] border border-[#241f1a]">
                   <span className="text-stone-500 block">Persistence Backend</span>
-                  <span className="text-stone-300">Sui Walrus Blob</span>
+                  <span className="text-stone-300">Sui Walrus (MemWal)</span>
+                </div>
+                <div className="p-2.5 rounded bg-[#171411] border border-[#241f1a] col-span-2">
+                  <span className="text-stone-500 block">Walrus Storage Blob ID</span>
+                  <span className="text-[#c88d51] font-mono text-[10px] break-all select-all">
+                    {selectedMemory.memwalBlobId || 'walrus_blob_persisted'}
+                  </span>
                 </div>
               </div>
 
@@ -204,7 +210,7 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
 
               {selectedMemory.supersedesId && (
                 <div className="p-3 rounded bg-[#201815] border border-amber-900/40 text-[11px] text-amber-300">
-                  Evolution: This memory superseded older contradictory record ID: {selectedMemory.supersedesId}
+                  Evolution: This memory superseded older contradictory record ID: <span className="font-mono">{selectedMemory.supersedesId}</span>
                 </div>
               )}
             </div>

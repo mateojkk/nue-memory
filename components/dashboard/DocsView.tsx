@@ -43,6 +43,34 @@ for mem in memories:
     print(f"✓ {mem.category}: {mem.value}")`,
     },
     {
+      name: 'getContext()',
+      signature: 'client.getContext(query, options={"domain": "media", "limit": 6})',
+      description: 'Orchestrates retrieved memories directly into a formatted prompt injection block with confidence scores and category directives for any LLM or Agent.',
+      python: `# Retrieve pre-formatted agent prompt block
+context = client.getContext(
+    query="Create a video promo for our new app",
+    options={"domain": "media", "limit": 6}
+)
+# Inject directly into agent prompt
+prompt = f"{user_task}\\n{context.injectedContextBlock}"
+print(context.injectedContextBlock)`,
+    },
+    {
+      name: 'evolve()',
+      signature: 'client.evolve(old_memory_id, new_memory_data)',
+      description: 'Resolves contradictions by deactivating an older memory record and persisting a newer preference with bidirectional supersession audit links.',
+      python: `# Explicitly supersede an outdated preference
+result = client.evolve(
+    old_memory_id="mem_8f2a1b",
+    new_memory_data={
+        "category": "pacing",
+        "value": "Prefer fast, energetic introductions and brisk cut pacing",
+        "confidence": 0.95
+    }
+)
+print(f"Deactivated: {result.superseded.id} -> Active: {result.active.id}")`,
+    },
+    {
       name: 'get()',
       signature: 'client.get(memory_id)',
       description: 'Fetches the full structured memory record, including confidence scores, origin attribution, and supersession links.',
