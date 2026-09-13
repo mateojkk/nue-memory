@@ -1,19 +1,43 @@
 export type MemoryCategory =
-  | 'pacing'
   | 'visual_style'
-  | 'captions'
+  | 'pacing'
   | 'typography'
   | 'music'
   | 'voice'
+  | 'captions'
   | 'color'
   | 'transitions'
   | 'length'
   | 'aspect_ratio'
+  | 'duration'
   | 'branding'
-  | 'composition';
+  | 'composition'
+  | 'coding_style'
+  | 'tool_preferences'
+  | 'workflow_preferences';
 
 export type PreferenceStrength = 'high' | 'medium' | 'low';
-export type PreferenceScope = 'global' | 'project';
+export type PreferenceScope = 'global' | 'project' | 'media' | 'coding' | 'general';
+
+export interface StructuredMemory {
+  id: string;
+  type: 'preference' | 'rule' | 'fact' | 'pattern';
+  category: string;
+  value: string;
+  strength: PreferenceStrength;
+  confidence: number;
+  source: 'user_feedback' | 'creative_brief' | 'manual_entry' | 'system_inference';
+  scope: PreferenceScope;
+  createdAt: string;
+  updatedAt: string;
+  sourceEvent?: string; // e.g., "User feedback on Product Promo v1"
+  usedInProjects?: string[]; // e.g., ["Launch Video v2"]
+  supersededById?: string;
+  supersedesId?: string;
+  isActive: boolean;
+  memwalBlobId?: string;
+  userId?: string;
+}
 
 export interface MediaPreference {
   id: string;

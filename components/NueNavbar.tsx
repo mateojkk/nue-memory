@@ -1,119 +1,101 @@
 'use client';
 
-import React, { useState } from 'react';
-import { X, ArrowRight, Star, ChevronDown, Database } from 'lucide-react';
+import React from 'react';
+import { ArrowRight, Database } from 'lucide-react';
+import { NueLogo } from './NueLogo';
 
 interface NueNavbarProps {
-  onOpenVault: () => void;
-  activeCount: number;
+  onOpenVault?: () => void;
+  onGetStarted?: () => void;
+  activeCount?: number;
+  currentView?: 'landing' | 'dashboard';
+  onSwitchView?: (view: 'landing' | 'dashboard') => void;
 }
 
-export function NueNavbar({ onOpenVault, activeCount }: NueNavbarProps) {
-  const [showBanner, setShowBanner] = useState(true);
-
+export function NueNavbar({
+  onOpenVault,
+  onGetStarted,
+  activeCount = 0,
+  currentView = 'landing',
+  onSwitchView,
+}: NueNavbarProps) {
   return (
-    <div className="w-full bg-white sticky top-0 z-50 font-light">
-      {/* Top Notification Banner (Exact mem0 Image 1 layout) */}
-      {showBanner && (
-        <div className="bg-[#f5ece4] border-b border-[#e8ded3] px-4 py-2 text-xs text-[#18120e] flex items-center justify-between transition relative">
-          <div className="flex-1 flex items-center justify-center gap-2 flex-wrap font-light">
-            <span className="font-light text-[13px]">
-              Nue now has a way to keep memory accurate as it grows.
-            </span>
-            <a
-              href="#studio"
-              className="px-2.5 py-0.5 rounded-md bg-white border border-[#e2d5c5] text-xs font-medium hover:bg-[#faf6f0] transition shadow-2xs inline-flex items-center gap-1 text-[#18120e]"
-            >
-              <span>Introducing Media Memory!</span>
-            </a>
-          </div>
+    <header className="sticky top-0 z-50 bg-[#0c0a09]/90 backdrop-blur-md border-b border-[#241f1b] px-6 py-3.5 font-light transition-colors">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        {/* Brand: Technical asterisk icon + Nue mark */}
+        <div className="flex items-center gap-6">
           <button
-            onClick={() => setShowBanner(false)}
-            className="p-1 text-[#786152] hover:text-[#18120e] transition"
-            title="Dismiss"
+            onClick={() => onSwitchView?.('landing')}
+            className="flex items-center text-left group"
           >
-            <X className="w-4 h-4" />
+            <NueLogo size={28} showText={true} textSize="text-xl" />
           </button>
-        </div>
-      )}
 
-      {/* Main Navbar */}
-      <header className="border-b border-[#f0f0f0] bg-white px-6 py-3.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          {/* Brand Logo: Clean asterisk flower icon + lowercase 'nue' */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 flex items-center justify-center text-[#18120e]">
-              <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 text-[#18120e]" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="3" fill="currentColor" />
-                <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
-              </svg>
-            </div>
-            <a href="/" className="text-2xl font-medium tracking-tight text-[#18120e] font-sans">
-              nue
+          {/* Minimal Navigation (Section 17: Product | Media Memory | Developers | Docs) */}
+          <nav className="hidden md:flex items-center gap-6 text-[13px] font-medium text-stone-400">
+            <a href="#product" className="hover:text-white transition">
+              Product
             </a>
-          </div>
-
-          {/* Desktop Nav Links (Exact mem0 Image 1 categories) */}
-          <nav className="hidden lg:flex items-center gap-7 text-[13px] font-medium text-[#18120e] tracking-tight">
-            <div className="flex items-center gap-1 cursor-pointer hover:text-[#9c4e1f] transition">
-              <span>DEVELOPERS</span>
-              <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
-            </div>
-            <div className="flex items-center gap-1 cursor-pointer hover:text-[#9c4e1f] transition">
-              <span>RESOURCES</span>
-              <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
-            </div>
-            <a href="#features" className="hover:text-[#9c4e1f] transition">
-              PRICING
+            <a href="#media-memory" className="hover:text-white transition">
+              Media Memory
             </a>
-            <div className="flex items-center gap-1 cursor-pointer hover:text-[#9c4e1f] transition">
-              <span>USECASES</span>
-              <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
-            </div>
-            <div className="flex items-center gap-1 cursor-pointer hover:text-[#9c4e1f] transition">
-              <span>COMPANY</span>
-              <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
-            </div>
+            <a href="#developers" className="hover:text-white transition">
+              Developers
+            </a>
+            <a href="#docs" className="hover:text-white transition">
+              Docs
+            </a>
           </nav>
+        </div>
 
-          {/* Right Controls (Exact mem0 Image 1 layout) */}
-          <div className="flex items-center gap-3">
-            {/* GitHub Star Pill Badge */}
-            <div className="hidden sm:inline-flex items-center rounded-md border border-[#e5e5e5] bg-white text-xs font-medium overflow-hidden shadow-2xs">
-              <span className="flex items-center gap-1.5 px-2.5 py-1.5 border-r border-[#e5e5e5] text-[#18120e]">
-                <Star className="w-3.5 h-3.5 fill-[#18120e]" />
-                <span>Star</span>
-              </span>
-              <span className="px-2.5 py-1.5 font-mono text-[#525252]">65,214</span>
-            </div>
+        {/* Right Controls: GitHub, Walrus Vault, and Get Started */}
+        <div className="flex items-center gap-3">
+          {/* GitHub Link */}
+          <a
+            href="https://github.com/NextMathLabs"
+            target="_blank"
+            rel="noreferrer"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#26211d] bg-[#141210] hover:bg-[#1c1815] text-xs font-medium text-stone-300 hover:text-white transition"
+          >
+            <svg className="w-3.5 h-3.5 text-stone-400 fill-current" viewBox="0 0 24 24">
+              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+            </svg>
+            <span>GitHub</span>
+          </a>
 
-            {/* Walrus Vault Drawer Trigger */}
+          {/* Walrus Vault Drawer Trigger */}
+          {onOpenVault && (
             <button
               onClick={onOpenVault}
-              className="px-3 py-1.5 rounded-md border border-[#e5e5e5] hover:border-[#c88d51] bg-white text-xs font-medium text-[#18120e] flex items-center gap-1.5 transition"
-              title="Open Walrus Memory Vault"
+              className="px-3 py-1.5 rounded-md border border-[#26211d] bg-[#141210] hover:border-[#c88d51]/50 text-xs font-medium text-stone-300 hover:text-white flex items-center gap-1.5 transition"
+              title="Inspect Walrus Memory Vault"
             >
-              <Database className="w-3.5 h-3.5 text-[#9c4e1f]" />
-              <span className="hidden md:inline">Vault</span>
+              <Database className="w-3.5 h-3.5 text-[#c88d51]" />
+              <span className="hidden sm:inline">Vault</span>
               {activeCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[#18120e] text-white text-[9px] font-medium flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-[#c88d51] text-[#0c0a09] text-[9px] font-medium flex items-center justify-center">
                   {activeCount}
                 </span>
               )}
             </button>
+          )}
 
-            {/* Primary Get Started Button (Rectangular) */}
-            <a
-              href="#studio"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#e8d5c4] hover:bg-[#dec2aa] text-[#1a120c] text-xs font-medium transition shadow-sm border border-[#d6beaa]"
-            >
-              <span>Get Started</span>
-              <ArrowRight className="w-3.5 h-3.5 text-[#1a120c]" />
-            </a>
-          </div>
+          {/* Primary CTA: Rectangular Get Started button */}
+          <button
+            onClick={() => {
+              if (onGetStarted) {
+                onGetStarted();
+              } else if (onSwitchView) {
+                onSwitchView('dashboard');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-[#ededed] hover:bg-white text-[#0c0a09] text-xs font-medium transition shadow-sm"
+          >
+            <span>{currentView === 'dashboard' ? 'Dashboard' : 'Get started'}</span>
+            <ArrowRight className="w-3.5 h-3.5 text-[#0c0a09]" />
+          </button>
         </div>
-      </header>
-
-    </div>
+      </div>
+    </header>
   );
 }

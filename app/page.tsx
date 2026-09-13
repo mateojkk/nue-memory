@@ -2,10 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { NueNavbar } from '@/components/NueNavbar';
-import { NueHero } from '@/components/NueHero';
-import { NueDevelopersSection } from '@/components/NueDevelopersSection';
-import { NueHowItWorks } from '@/components/NueHowItWorks';
-import { NueDomainsSection } from '@/components/NueDomainsSection';
+import { HeroSection } from '@/components/landing/HeroSection';
+import { QuickstartSection } from '@/components/landing/QuickstartSection';
+import { DifferentiatorSection } from '@/components/landing/DifferentiatorSection';
+import { LifecycleSection } from '@/components/landing/LifecycleSection';
+import { MemoryObjectsSection } from '@/components/landing/MemoryObjectsSection';
+import { EvolutionSection } from '@/components/landing/EvolutionSection';
+import { MediaMemoryShowcase } from '@/components/landing/MediaMemoryShowcase';
+import { LandingFooter } from '@/components/landing/LandingFooter';
+import { NueDashboard } from '@/components/dashboard/NueDashboard';
 import { MemoryPanel } from '@/components/MemoryPanel';
 import { EnrichedBriefModal } from '@/components/EnrichedBriefModal';
 import {
@@ -14,11 +19,9 @@ import {
   ChatMessage,
   MediaPreference,
 } from '@/lib/types';
-import { Sparkles, ExternalLink } from 'lucide-react';
 
 export default function Home() {
-  // Hero Tab State: 'sdk' | 'studio' | 'pipeline' (defaults to 'sdk' to match Image 1 & 2)
-  const [heroTab, setHeroTab] = useState<'sdk' | 'studio' | 'pipeline'>('sdk');
+  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>('landing');
 
   // Projects State (Demonstrating Media Memory feature under Nue)
   const [projects, setProjects] = useState<CreativeProject[]>([
@@ -266,22 +269,14 @@ export default function Home() {
     }
   };
 
-  return (
-    <div className="flex flex-col min-h-screen bg-white text-[#18120e] font-light selection:bg-[#eed8c2] selection:text-[#18120e]">
-      {/* 1. Navbar */}
-      <NueNavbar
-        onOpenVault={() => setIsMemoryPanelOpen(true)}
-        activeCount={activeMemories.filter((m) => m.isActive).length}
-      />
-
-      {/* 2. Hero, Switcher & Code/Studio Window */}
-      <main className="flex-1">
-        <NueHero
-          activeTab={heroTab}
-          setActiveTab={setHeroTab}
+  if (currentView === 'dashboard') {
+    return (
+      <>
+        <NueDashboard
+          onBackToLanding={() => setCurrentView('landing')}
           activeProject={activeProject}
           activeVersion={activeVersion}
-          allVersions={activeProject.versions}
+          allVersions={activeProject?.versions || []}
           onSelectVersion={(vIdx) => {
             setProjects((prev) => {
               const copy = [...prev];
@@ -293,7 +288,7 @@ export default function Home() {
           messages={messages}
           onSendMessage={handleSendMessage}
           onRegenerate={() => {
-            if (activeProject.initialPrompt) {
+            if (activeProject?.initialPrompt) {
               handleGenerate(
                 activeProject.initialPrompt,
                 activeProject.versions.length + 1
@@ -304,133 +299,80 @@ export default function Home() {
           onConfirmRemember={handleConfirmRemember}
           onDismissPending={() => setPendingPreferences([])}
           isSavingMemory={isSavingMemory}
-          onNewProject={() => handleCreateNewProject()}
+          onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
           activeMemories={activeMemories}
           onOpenVault={() => setIsMemoryPanelOpen(true)}
           onOpenInspector={() => setIsInspectorOpen(true)}
+          onForgetMemory={handleForgetMemory}
+          projects={projects}
+          currentProjectIndex={currentProjectIndex}
+          onSelectProject={(index) => setCurrentProjectIndex(index)}
         />
 
-        {/* 3. Dark "Built for <developers>" Section */}
-        <NueDevelopersSection />
+        {/* Slide-over Walrus Memory Vault Drawer */}
+        <MemoryPanel
+          isOpen={isMemoryPanelOpen}
+          onClose={() => setIsMemoryPanelOpen(false)}
+          memories={activeMemories}
+          onForget={handleForgetMemory}
+        />
 
-        {/* 4. "How It Works" Section with Vertical Stepper */}
-        <NueHowItWorks />
+        {/* Prompt Orchestration Inspector Modal */}
+        {activeVersion && (
+          <EnrichedBriefModal
+            isOpen={isInspectorOpen}
+            onClose={() => setIsInspectorOpen(false)}
+            rawBrief={activeVersion.brief}
+            enrichedBrief={activeVersion.enrichedBrief}
+            appliedMemories={activeVersion.appliedPreferences}
+          />
+        )}
+      </>
+    );
+  }
 
-        {/* 5. "AI Memory That Adapts To Your Domain" Section */}
-        <NueDomainsSection />
+  return (
+    <div className="min-h-screen bg-[#0c0a09] text-stone-200 font-light selection:bg-[#c88d51]/20 selection:text-white flex flex-col">
+      {/* 1. Navbar */}
+      <NueNavbar
+        onOpenVault={() => setIsMemoryPanelOpen(true)}
+        onGetStarted={() => setCurrentView('dashboard')}
+        activeCount={activeMemories.filter((m) => m.isActive).length}
+        currentView={currentView}
+        onSwitchView={(v) => setCurrentView(v)}
+      />
 
-        {/* Call To Action Banner (Nue Vision) */}
-        <section className="py-24 px-4 max-w-7xl mx-auto text-center font-light">
-          <div className="p-10 sm:p-16 rounded-3xl bg-[#faf8f5] border border-[#e5e5e5] relative overflow-hidden shadow-sm">
-            <h2 className="text-3xl sm:text-5xl font-medium text-[#18120e] mb-4 tracking-tight font-sans">
-              Move AI agents from stateless tools to systems with continuity.
-            </h2>
-            <p className="text-sm sm:text-base text-stone-600 max-w-2xl mx-auto mb-8 leading-relaxed font-light">
-              The future of agents is not just &ldquo;What can the agent do?&rdquo; but &ldquo;What does the agent know about me from everything we&apos;ve done before?&rdquo; Nue is the memory layer that makes that possible.
-            </p>
-            <button
-              onClick={() => {
-                setHeroTab('studio');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-md bg-[#18120e] text-white hover:bg-black font-medium text-sm transition shadow-md"
-            >
-              <Sparkles className="w-4 h-4 text-[#c88d51]" />
-              <span>Try Interactive Demo</span>
-            </button>
-          </div>
-        </section>
-      </main>
+      {/* 2. Hero Section */}
+      <HeroSection
+        onGetStarted={() => setCurrentView('dashboard')}
+        onViewDocs={() => setCurrentView('dashboard')}
+      />
 
-      {/* Multi-Column Clean Footer */}
-      <footer className="px-6 py-14 bg-white border-t border-[#f0f0f0] text-xs text-stone-600 font-light">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5 text-[#18120e]" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="3" fill="currentColor" />
-                <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round" />
-              </svg>
-              <span className="font-medium text-[#18120e] text-lg tracking-tight">nue</span>
-            </div>
-            <p className="text-stone-500 text-xs leading-relaxed mb-3 font-light">
-              The memory infrastructure layer for AI agents.
-            </p>
-            <span className="text-[11px] font-mono text-[#9c4e1f] font-medium bg-[#fbf2e9] px-2 py-0.5 rounded border border-[#f0e2d3]">
-              Founded by NextMathLabs
-            </span>
-          </div>
+      {/* 3. Quickstart SDK Code Section */}
+      <QuickstartSection />
 
-          <div>
-            <h4 className="font-medium text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
-              Product
-            </h4>
-            <ul className="space-y-2 text-stone-600 font-light">
-              <li>
-                <button onClick={() => { setHeroTab('studio'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#18120e] transition">
-                  Media Memory (Shipped Feature)
-                </button>
-              </li>
-              <li>
-                <a href="#features" className="hover:text-[#18120e] transition">Memory Compression Engine</a>
-              </li>
-              <li>
-                <a href="#features" className="hover:text-[#18120e] transition">Conflict Evolution</a>
-              </li>
-              <li>
-                <button onClick={() => { setHeroTab('pipeline'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-[#18120e] transition">
-                  Architecture Pipeline
-                </button>
-              </li>
-            </ul>
-          </div>
+      {/* 4. Core Differentiator: Memory vs Conversation Storage */}
+      <DifferentiatorSection />
 
-          <div>
-            <h4 className="font-medium text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
-              Infrastructure
-            </h4>
-            <ul className="space-y-2 text-stone-600 font-light">
-              <li>
-                <a href="https://walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
-                  Sui Walrus Storage <ExternalLink className="w-3 h-3 text-stone-400" />
-                </a>
-              </li>
-              <li>
-                <a href="https://memory.walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
-                  Walrus MemWal SDK <ExternalLink className="w-3 h-3 text-stone-400" />
-                </a>
-              </li>
-              <li>
-                <a href="https://agent.livepeer.org" target="_blank" rel="noreferrer" className="hover:text-[#18120e] transition flex items-center gap-1">
-                  Livepeer Agent MCP <ExternalLink className="w-3 h-3 text-stone-400" />
-                </a>
-              </li>
-            </ul>
-          </div>
+      {/* 5. 7-Stage Memory Lifecycle Architecture */}
+      <LifecycleSection />
 
-          <div>
-            <h4 className="font-medium text-[#18120e] mb-3 uppercase tracking-wider text-[11px] font-mono">
-              Company
-            </h4>
-            <ul className="space-y-2 text-stone-600 font-light">
-              <li className="text-[#18120e] font-medium">NextMathLabs Inc.</li>
-              <li><span className="text-[#9c4e1f]">Livepeer Agent Hackathon</span></li>
-              <li className="text-stone-400">Aug 24 – Sep 21, 2026</li>
-            </ul>
-          </div>
-        </div>
+      {/* 6. Domain-Agnostic Memory Objects & Schema */}
+      <MemoryObjectsSection />
 
-        <div className="max-w-7xl mx-auto pt-6 border-t border-[#f0f0f0] flex flex-col sm:flex-row items-center justify-between text-[11px] text-stone-500 gap-4 font-light">
-          <div>
-            © 2026 Nue · Founded by NextMathLabs. All rights reserved.
-          </div>
-          <div className="flex items-center gap-4 text-stone-600">
-            <span>Powered by Walrus MemWal</span>
-            <span>·</span>
-            <span>Livepeer Agent</span>
-          </div>
-        </div>
-      </footer>
+      {/* 7. Memory Conflict & Evolution */}
+      <EvolutionSection />
+
+      {/* 8. Flagship Shipped Feature: Media Memory Showcase */}
+      <MediaMemoryShowcase
+        onOpenWorkspace={() => setCurrentView('dashboard')}
+      />
+
+      {/* 9. Landing Footer */}
+      <LandingFooter
+        onOpenWorkspace={() => setCurrentView('dashboard')}
+        onOpenDocs={() => setCurrentView('dashboard')}
+      />
 
       {/* Slide-over Walrus Memory Vault Drawer */}
       <MemoryPanel
