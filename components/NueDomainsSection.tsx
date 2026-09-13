@@ -4,112 +4,112 @@ import React, { useState } from 'react';
 import { Sparkles } from 'lucide-react';
 
 export function NueDomainsSection() {
-  const [activeDomain, setActiveDomain] = useState<string>('Coding Agents');
+  const [activeDomain, setActiveDomain] = useState<string>('Healthcare');
 
   const domainTabs = [
-    'Coding Agents',
-    'Research Agents',
-    'Creative Media',
-    'Personal Assistants',
-    'Enterprise CRM',
+    'Healthcare',
+    'Education',
+    'E-commerce',
+    'Customer Support',
+    'Sales & CRM',
   ];
 
   const domainCards: Record<
     string,
     Array<{ title: string; description: string }>
   > = {
-    'Coding Agents': [
+    'Healthcare': [
       {
-        title: 'Project Structure Memory',
+        title: 'Smart Patient Care Assistant',
         description:
-          'Remembers how a developer structures their repositories, monorepos, module boundaries, and folder organization across sessions.',
+          'Remembers patient history, allergies, and treatment preferences across visits therefore providing personalized care that improves with every interaction.',
       },
       {
-        title: 'Stack & Tooling Context',
+        title: 'Chronic Condition Companion',
         description:
-          'Retains language preferences, linter rules, testing frameworks, and dependency requirements without repeated developer prompts.',
+          'Learns what works (and what doesn\'t) for the patient over time, offering thoughtful reminders and insights tailored to each patient\'s journey.',
       },
       {
-        title: 'Architectural Decisions',
+        title: 'Therapy Progress Tracker',
         description:
-          'Builds on past code reviews and architectural decisions, preventing recurring mistakes and adhering to engineering standards.',
-      },
-    ],
-    'Research Agents': [
-      {
-        title: 'Source Credibility Vault',
-        description:
-          'Remembers vetted citations, peer-reviewed sources, and verified data repositories across complex investigation threads.',
-      },
-      {
-        title: 'Investigation Continuity',
-        description:
-          'Carries hypothesis evolution, counter-arguments, and synthesis notes across multi-week research projects seamlessly.',
-      },
-      {
-        title: 'Terminology & Ontology Retainer',
-        description:
-          'Enforces domain-specific vocabulary and taxonomy definitions consistently throughout technical publications.',
+          'Builds on previous sessions to deliver consistent, context-aware mental health support. Creates trust through conversations that remember what matters to each patient.',
       },
     ],
-    'Creative Media': [
+    'Education': [
       {
-        title: 'Media Memory on Livepeer',
+        title: 'Adaptive Learning Mentor',
         description:
-          'Our first shipped capability: applies Nue to AI-generated media, remembering pacing, lighting, camera angles, and soundtrack styles.',
+          'Tracks student learning pace, concept mastery, and preferred problem-solving styles across semesters without starting from scratch.',
       },
       {
-        title: 'Brand Aesthetics Companion',
+        title: 'Curriculum Retention Guide',
         description:
-          'Locks down color palettes, typography scales, and visual guidelines across multiple episodic marketing campaigns.',
+          'Recalls prior test misconceptions to deliver targeted spaced-repetition exercises tailored to the individual learner.',
       },
       {
-        title: 'Cross-Project Recall',
+        title: 'Research Project Companion',
         description:
-          'When starting a new media project, retrieves persistent creative direction rules from Walrus with zero reprompting required.',
-      },
-    ],
-    'Personal Assistants': [
-      {
-        title: 'Routines & Scheduling Memory',
-        description:
-          'Remembers deep-work windows, meeting constraints, preferred travel itineraries, and recurring calendar rules.',
-      },
-      {
-        title: 'Personal Taste & Dietary Profile',
-        description:
-          'Retains culinary preferences, dietary restrictions, and lifestyle habits to guide recommendations naturally over time.',
-      },
-      {
-        title: 'Communication Cadence',
-        description:
-          'Learns how concisely a user likes their summaries delivered and what tone suits different personal and professional contexts.',
+          'Preserves thesis outlines, primary sources, and academic notes across multi-week research workflows.',
       },
     ],
-    'Enterprise CRM': [
+    'E-commerce': [
       {
-        title: 'Stakeholder Relationship Graph',
+        title: 'Personalized Shopping Stylist',
         description:
-          'Retains organizational hierarchies, champion priorities, and decision-maker sentiment across quarterly enterprise sales cycles.',
+          'Remembers sizing, aesthetic preferences, and budget constraints across multi-brand purchases to curate relevant wardrobes.',
       },
       {
-        title: 'Commitment & Objections Ledger',
+        title: 'Post-Purchase Care Concierge',
         description:
-          'Logs contract commitments, compliance stipulations, and technical evaluation criteria across multi-agent account teams.',
+          'Recalls past orders, delivery nuances, and warranty preferences to resolve support requests instantly.',
       },
       {
-        title: 'Historical Deal Continuity',
+        title: 'Household Replenishment Agent',
         description:
-          'Surfaces past negotiation context and pricing benchmarks whenever a customer re-engages for contract renewals.',
+          'Anticipates recurring consumable needs and suggests timely refills based on actual historical consumption patterns.',
+      },
+    ],
+    'Customer Support': [
+      {
+        title: 'Zero-Repetition Resolver',
+        description:
+          'Ensures customers never have to repeat their issue when routed between teams, retaining full conversational history.',
+      },
+      {
+        title: 'Technical Diagnostic Vault',
+        description:
+          'Logs device models, firmware configurations, and previously attempted troubleshooting steps across tickets.',
+      },
+      {
+        title: 'VIP Account Sentiments',
+        description:
+          'Monitors historical customer satisfaction and recurring friction points to prioritize high-touch resolutions.',
+      },
+    ],
+    'Sales & CRM': [
+      {
+        title: 'Deal Intelligence Copilot',
+        description:
+          'Retains stakeholder priorities, buying criteria, and competitor mentions across quarterly enterprise sales calls.',
+      },
+      {
+        title: 'Executive Relationship Ledger',
+        description:
+          'Preserves account history, key milestones, and personal rapport notes across long multi-agent sales cycles.',
+      },
+      {
+        title: 'Pipeline Velocity Booster',
+        description:
+          'Surfaces proven objection-handling strategies and relevant case studies based on similar historical winning deals.',
       },
     ],
   };
 
-  const cards = domainCards[activeDomain] || domainCards['Coding Agents'];
+  const cards = domainCards[activeDomain] || domainCards['Healthcare'];
 
   return (
     <section className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0] font-light">
-      {/* Top Center Black Icon */}
+      {/* Top Center Black Icon (Exact Image 5) */}
       <div className="flex justify-center mb-6">
         <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center shadow-md">
           <div className="relative">
@@ -119,17 +119,17 @@ export function NueDomainsSection() {
         </div>
       </div>
 
-      {/* Main Headline & Subtitle */}
+      {/* Main Headline & Subtitle (Exact Image 5) */}
       <div className="text-center max-w-3xl mx-auto mb-12">
         <h2 className="text-3xl sm:text-5xl font-medium text-[#18120e] tracking-tight mb-4 font-sans">
           AI memory that adapts to your domain
         </h2>
         <p className="text-stone-500 text-base sm:text-lg font-light">
-          Nue is application-agnostic. The memory layer that helps any AI agent remember what matters.
+          Nue helps AI remember what matters.
         </p>
       </div>
 
-      {/* Domain Category Tabs */}
+      {/* Domain Category Tabs (Exact Image 5: Healthcare | Education | E-commerce | Customer Support | Sales & CRM) */}
       <div className="flex items-center justify-center border-b border-[#e5e5e5] mb-12 overflow-x-auto">
         <div className="flex items-center gap-8 sm:gap-12 min-w-max px-4">
           {domainTabs.map((tab) => {
@@ -152,7 +152,7 @@ export function NueDomainsSection() {
         </div>
       </div>
 
-      {/* 3 Domain Cards Side-by-Side */}
+      {/* 3 Domain Cards Side-by-Side (Exact Image 5 Layout) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {cards.map((card) => (
           <div
