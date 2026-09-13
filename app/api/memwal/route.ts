@@ -1,0 +1,83 @@
+import { NextResponse } from 'next/server';
+import { memWalService } from '@/lib/walrus-memwal/client';
+import { evolveMemories } from '@/lib/nue-memory/evolution';
+import { MediaPreference } from '@/lib/types';
+
+export async function GET() {
+  try {
+    await memWalService.initialize();
+    const preferences = memWalService.getAllPreferences(true);
+    return NextResponse.json({
+      success: true,
+      preferences,
+      count: preferences.filter((p) => p.isActive).length,
+      totalCount: preferences.length,
+      storageLayer: 'MemWal (Walrus Memory on Sui)',
+    });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { action, preference, preferences, id } = body;
+
+    if (action === 'remember') {
+      const itemsToRemember: MediaPreference[] = preferences || (preference ? [preference] : []);
+      if (itemsToRemember.length > 0) {
+        const storedItems: { blobId: string; preference: MediaPreference }[] = [];
+        let allSuperseded: MediaPreference[] = [];
+
+        for (const item of itemsToRemember) {
+          const currentPreferences = memWalService.getAllPreferences(true);
+          const evolution = evolveMemories(currentPreferences, item);
+
+          for (const superseded of evolution.supersededMemories) {
+            memWalService.updatePreference(superseded);
+            allSuperseded.push(superseded);
+          }
+
+          const preferenceToPersist: MediaPreference = {
+            ...item,
+            id: item.id || `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            createdAt: item.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isActive: true,
+            supersedesId: evolution.supersededMemories.length > 0 ? evolution.supersededMemories[0].id : undefined,
+          };
+
+          const result = await memWalService.rememberPreference(preferenceToPersist);
+          storedItems.push(result);
+        }
+
+        const activeList = memWalService.getAllPreferences(false);
+
+        return NextResponse.json({
+          success: true,
+          storedPreference: storedItems[storedItems.length - 1]?.preference,
+          storedPreferences: storedItems.map((s) => s.preference),
+          blobId: storedItems[storedItems.length - 1]?.blobId,
+          blobIds: storedItems.map((s) => s.blobId),
+          superseded: allSuperseded,
+          totalActiveCount: activeList.length,
+        });
+      }
+    }
+
+    if (action === 'forget' && id) {
+      await memWalService.forgetPreference(id);
+      return NextResponse.json({ success: true, removedId: id });
+    }
+
+    if (action === 'reset') {
+      memWalService.clearAll();
+      return NextResponse.json({ success: true, message: 'All memories cleared' });
+    }
+
+    return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
