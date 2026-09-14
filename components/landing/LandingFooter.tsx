@@ -59,7 +59,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
           </ul>
         </div>
 
-        {/* Infrastructure Column — single understated mention */}
+        {/* Infrastructure Column: one understated tech mention */}
         <div>
           <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-mono">
             Under the Hood

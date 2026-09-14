@@ -34,7 +34,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
           phrases={[
             'AI media agents can create. Nue lets them remember.',
             'Feedback in. Preferences out.',
-            'Create again — without repeating yourself.',
+            'Create again without repeating yourself.',
           ]}
         />
       </h1>
@@ -42,7 +42,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       {/* Supporting Copy */}
       <Reveal delay={120}>
         <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-          AI agents forget. Nue remembers — durable preferences that persist across sessions and agents.
+          AI agents forget. Nue remembers. Durable preferences that persist across sessions and agents.
         </p>
       </Reveal>
 
@@ -146,7 +146,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
               <div className="text-transparent">_</div>
               <div>client = MemoryClient(api_key=<span className="text-[var(--accent-deep)]">&quot;...&quot;</span>)</div>
               <div className="text-transparent">_</div>
-              <div><span className="text-[var(--fg-faint)]"># Step 2: Store interaction — Nue extracts durable preference</span></div>
+              <div><span className="text-[var(--fg-faint)]"># Step 2: Extract durable preference</span></div>
               <div>client.add(</div>
               <div>    [</div>
               <div>        &#123;</div>

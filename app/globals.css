@@ -227,14 +227,14 @@ h1, h2, h3, h4, h5, h6, b, strong, th {
   56%, 100% { opacity: 0; }
 }
 
-/* Opacity cross-fade for tab/stage switches — never a layout jump */
+/* Opacity cross-fade for tab/stage switches — mem0's exact tween language */
 .nue-fade-swap {
-  animation: nue-fade-swap 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: nue-fade-swap 350ms cubic-bezier(0.12, 0.23, 0.5, 1);
 }
 
 @keyframes nue-fade-swap {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0.001; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

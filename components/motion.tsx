@@ -3,16 +3,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 /**
- * mem0-style motion system.
+ * mem0-style motion system (measured from their production markup):
+ *   - Reveal: opacity 0.001 -> 1, NO translate (x/y stay 0)
+ *   - Tween ease [0.12, 0.23, 0.5, 1], duration 300-400ms
+ *   - Container delay ~0.1s, children staggered by +0.1s steps (0.2/0.3/0.4/0.5)
+ *   - Springs (0.2s, bounce 0.1) only for tiny UI pops
+ *   - Announcement bar: height 0 auto-animate (accordion style)
+ *   - Navbar: blur 12-13px translucent backdrop
  *
- * mem0.ai animation vocabulary (Framer-based, observed from their markup):
- *   - Scroll reveals: fade + 24px rise, ~600ms out-quart-ish ease, 80-150ms stagger
- *   - Once-only triggers (no re-animation on scroll-up)
- *   - Typewriter hero headline with block caret
- *   - Self-advancing demo timers (Timer Wrapper components cycling stages)
- *   - Opacity cross-fades on tab switches, never layout shifts on hover
- *
- * All of it degrades to static content under prefers-reduced-motion.
+ * Our extras (mem0's interactive vocabulary, same timing language):
+ * typewriter headline, auto-advancing demo stages, tab cross-fades.
+ * Everything degrades to static content under prefers-reduced-motion.
  */
 
 function usePrefersReducedMotion(): boolean {
@@ -27,15 +28,22 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+/** mem0 exact reveal tokens */
+export const MEM0_EASE = 'cubic-bezier(0.12, 0.23, 0.5, 1)';
+export const MEM0_REVEAL_MS = 350;
+
 interface RevealProps {
   children: React.ReactNode;
   delay?: number;
-  y?: number;
+  durationMs?: number;
   className?: string;
 }
 
-/** Scroll-triggered fade + rise reveal. Fires once, IntersectionObserver-driven. */
-export function Reveal({ children, delay = 0, y = 24, className = '' }: RevealProps) {
+/**
+ * Scroll-triggered fade-only reveal (mem0 exact: opacity 0.001 -> 1,
+ * no translate, 350ms tween, their ease). Fires once via IntersectionObserver.
+ */
+export function Reveal({ children, delay = 100, durationMs = MEM0_REVEAL_MS, className = '' }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const reduced = usePrefersReducedMotion();
@@ -67,12 +75,11 @@ export function Reveal({ children, delay = 0, y = 24, className = '' }: RevealPr
       ref={ref}
       className={className}
       style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : `translateY(${y}px)`,
+        opacity: visible ? 1 : 0.001,
         transition: reduced
           ? undefined
-          : `opacity 600ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms, transform 600ms cubic-bezier(0.22, 1, 0.36, 1) ${delay}ms`,
-        willChange: visible ? undefined : 'opacity, transform',
+          : `opacity ${durationMs}ms ${MEM0_EASE} ${delay}ms`,
+        willChange: visible ? undefined : 'opacity',
       }}
     >
       {children}
@@ -88,13 +95,13 @@ interface RevealGroupProps {
 
 /**
  * Stagger wrapper: each direct child's reveal is delayed by index × staggerMs.
- * Children must be wrapped in <RevealItem> — or any element works standalone.
+ * mem0 staggers siblings in +100ms steps, so the default matches their rhythm.
  */
-export function RevealGroup({ children, staggerMs = 90, className = '' }: RevealGroupProps) {
+export function RevealGroup({ children, staggerMs = 100, className = '' }: RevealGroupProps) {
   return (
     <div className={className}>
       {React.Children.map(children, (child, i) => (
-        <Reveal delay={i * staggerMs}>{child}</Reveal>
+        <Reveal delay={100 + i * staggerMs}>{child}</Reveal>
       ))}
     </div>
   );

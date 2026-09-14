@@ -1,6 +1,43 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
+/** mem0-style expandable announcement bar ("Introducing …") above the navbar. */
+function AnnouncementBar() {
+  const [open, setOpen] = useState(true);
+  const [render, setRender] = useState(true);
+
+  if (!render) return null;
+
+  return (
+    <div
+      className="overflow-hidden bg-[var(--surface-2)] border-b border-[var(--border)]"
+      style={{
+        maxHeight: open ? 44 : 0,
+        opacity: open ? 1 : 0.001,
+        transition:
+          'max-height 350ms cubic-bezier(0.12, 0.23, 0.5, 1), opacity 350ms cubic-bezier(0.12, 0.23, 0.5, 1)',
+      }}
+    >
+      <div className="max-w-7xl mx-auto px-4 h-11 flex items-center justify-center gap-2 text-xs font-mono text-[var(--fg-muted)]">
+        <span className="text-[var(--accent)]">●</span>
+        <span>
+          Nue Memory keeps agent context accurate as it grows. Introducing Media Memory.
+        </span>
+        <button
+          onClick={() => {
+            setOpen(false);
+            window.setTimeout(() => setRender(false), 380);
+          }}
+          aria-label="Dismiss announcement"
+          className="ml-2 text-[var(--fg-faint)] hover:text-[var(--fg)] transition text-sm leading-none"
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+}
 import { NueNavbar } from '@/components/NueNavbar';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { QuickstartSection } from '@/components/landing/QuickstartSection';
@@ -362,6 +399,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)] font-light selection:bg-[var(--accent)]/20 selection:text-[var(--fg)] flex flex-col">
+      <AnnouncementBar />
+
       {/* 1. Navbar */}
       <NueNavbar
         onOpenVault={() => setIsMemoryPanelOpen(true)}

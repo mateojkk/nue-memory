@@ -74,7 +74,7 @@ export function MemoryObjectsSection() {
           Domain-Agnostic Memory Objects
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
-          Structured, validated memory objects — not messy chat logs.
+          Structured, validated memory objects. Not messy chat logs.
         </p>
       </div>
 
