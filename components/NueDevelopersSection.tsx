@@ -21,7 +21,7 @@ export function NueDevelopersSection() {
         {/* 2-Column Header (Exact mem0 Image 3 layout) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end mb-16">
           <div className="lg:col-span-7">
-            <h2 className="text-3xl sm:text-5xl md:text-[54px] font-medium tracking-tight text-[var(--fg)] leading-[1.12] font-sans">
+            <h2 className="text-3xl sm:text-[40px] md:text-[54px] font-medium tracking-tight text-[var(--fg)] leading-[1.12] font-sans">
               Built for <span className="font-mono text-[var(--accent)]">&lt;developers&gt;</span> <br />
               who want proof, <br />
               not promises

@@ -28,7 +28,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       </div>
 
       {/* Headline: The memory infrastructure layer for AI agents */}
-      <h1 className="text-4xl sm:text-6xl md:text-[68px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans">
+      <h1 className="text-4xl sm:text-6xl md:text-[64px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans">
         The memory infrastructure layer <br className="hidden sm:inline" />
         for AI agents.
       </h1>

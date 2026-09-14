@@ -1,12 +1,28 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Fustat, Fragment_Mono, EB_Garamond } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({
+// mem0.ai exact font stack
+const fustat = Fustat({
   subsets: ['latin'],
-  weight: ['300', '500'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
-  variable: '--font-inter',
+  variable: '--font-fustat',
+});
+
+const fragmentMono = Fragment_Mono({
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
+  variable: '--font-fragment',
+});
+
+const ebGaramond = EB_Garamond({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+  variable: '--font-garamond',
 });
 
 export const metadata: Metadata = {
@@ -26,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={`${fustat.variable} ${fragmentMono.variable} ${ebGaramond.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -34,7 +50,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} min-h-screen bg-[var(--bg)] text-[var(--fg)] font-light antialiased selection:bg-[var(--accent)]/20 selection:text-[var(--fg)]`}>
+      <body className={`${fustat.className} min-h-screen bg-[var(--bg)] text-[var(--fg)] antialiased selection:bg-[var(--accent)]/20 selection:text-[var(--fg)]`}>
         {children}
       </body>
     </html>

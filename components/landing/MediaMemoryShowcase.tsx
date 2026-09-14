@@ -15,7 +15,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Flagship Capability · Built on Nue Memory
         </div>
-        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
+        <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
           Media Memory
         </h2>
         <p className="text-[var(--fg-soft)] text-lg sm:text-xl mt-3 font-normal max-w-3xl">

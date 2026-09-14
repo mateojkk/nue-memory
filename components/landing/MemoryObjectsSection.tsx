@@ -70,7 +70,7 @@ export function MemoryObjectsSection() {
         <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Structured Schema
         </div>
-        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
+        <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
           Domain-Agnostic Memory Objects
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">

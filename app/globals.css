@@ -1,52 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-inter: 'Fustat', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* ---- LIGHT THEME (default): white + neutral grays, brown ONLY as accent ---- */
-  --background: #ffffff;
-  --foreground: #1c1917;
+  /* mem0.ai EXACT COLORS — LIGHT: near-monochrome white/zinc, blue links */
+  --background: #fcfcfc;
+  --foreground: #181818;
 
-  /* Surfaces: pure white canvas, neutral stone cards */
-  --bg: #ffffff;
+  --bg: #fcfcfc;
   --surface: #ffffff;
-  --surface-2: #f5f5f4;
-  --border: #e7e5e4;
+  --surface-2: #f5f5f5;
+  --border: #d9d9d9;
 
-  /* Text: neutral warm-gray scale */
-  --fg: #1c1917;
-  --fg-soft: #44403c;
-  --fg-muted: #78716c;
-  --fg-faint: #a8a29e;
+  --fg: #181818;
+  --fg-soft: #3f3f3f;
+  --fg-muted: #565553;
+  --fg-faint: #a1a1aa;
 
-  /* Brown accent — the ONLY brown on light surfaces */
-  --accent: #a97c50;
-  --accent-bright: #c39a6e;
-  --accent-deep: #7d5a38;
-  --accent-glow: rgba(169, 124, 80, 0.08);
-  --border-accent: rgba(169, 124, 80, 0.3);
+  /* Accent: mem0 link blue on light; lavender lives on dark surfaces */
+  --accent: #0099ff;
+  --accent-bright: #33adff;
+  --accent-deep: #007fd6;
+  --accent-glow: rgba(0, 153, 255, 0.08);
+  --border-accent: rgba(0, 153, 255, 0.35);
+  /* mem0 lavender + yellow (as used on their dark surfaces) */
+  --accent-soft: #cbb2ff;
+  --accent-highlight: #f1c96c;
 }
 
 .dark {
-  /* ---- DARK THEME: neutral black, brown only as accent ---- */
-  --background: #0a0a0a;
-  --foreground: #f5f5f4;
+  /* mem0.ai EXACT COLORS — DARK: zinc-950 canvas, lavender accent */
+  --background: #09090b;
+  --foreground: #fcfcfc;
 
-  --bg: #0a0a0a;
-  --surface: #131312;
-  --surface-2: #1c1b1a;
-  --border: #292827;
+  --bg: #09090b;
+  --surface: #121212;
+  --surface-2: #18181b;
+  --border: #27272a;
 
-  --fg: #f5f5f4;
-  --fg-soft: #d6d3d1;
-  --fg-muted: #a8a29e;
-  --fg-faint: #78716c;
+  --fg: #fcfcfc;
+  --fg-soft: #d4d4d8;
+  --fg-muted: #a1a1aa;
+  --fg-faint: #71717a;
 
-  --accent: #c08a55;
-  --accent-bright: #d8a874;
-  --accent-deep: #96683c;
-  --accent-glow: rgba(192, 138, 85, 0.1);
-  --border-accent: rgba(192, 138, 85, 0.35);
+  --accent: #cbb2ff;
+  --accent-bright: #dccaff;
+  --accent-deep: #b394ff;
+  --accent-glow: rgba(203, 178, 255, 0.1);
+  --border-accent: rgba(203, 178, 255, 0.35);
+  --accent-soft: #cbb2ff;
+  --accent-highlight: #f1c96c;
 }
 
 /* Legacy token aliases (older sections reference these) */
@@ -61,16 +64,28 @@
   --accent-cognac: var(--accent-deep);
 }
 
-/* Strictly Inter font across the app */
+/* mem0 font system: Fustat (sans) everywhere, Fragment Mono for code/labels */
 * {
-  font-family: var(--font-inter), 'Inter', sans-serif !important;
+  font-family: var(--font-fustat), 'Fustat', sans-serif !important;
+}
+
+/* Tailwind's font-mono → Fragment Mono (mem0's mono font) */
+.font-mono, code, pre, kbd, samp {
+  font-family: var(--font-fragment), 'Fragment Mono', monospace !important;
+}
+
+/* mem0 serif italic accents (EB Garamond) — use via .font-serif-accent */
+.font-serif-accent {
+  font-family: var(--font-garamond), 'EB Garamond', serif !important;
+  font-style: italic;
 }
 
 body {
   background-color: var(--bg);
   color: var(--fg);
-  font-family: var(--font-inter), 'Inter', sans-serif !important;
-  font-weight: 300 !important; /* light by default */
+  font-family: var(--font-fustat), 'Fustat', sans-serif !important;
+  font-weight: 400 !important; /* mem0 body weight */
+  line-height: 1.4; /* mem0 line-height */
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -85,43 +100,43 @@ html {
   color-scheme: light;
 }
 
-/* STRICT RULE: Light (300) and Medium (500) only across the entire app */
+/* mem0 type hierarchy: 600 headings w/ -0.02em tracking, 400 body */
 h1, h2, h3, h4, h5, h6, b, strong, th {
-  font-weight: 500 !important; /* medium */
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
 }
 
-/* Remap any bold/semibold/extrabold/black weights strictly to medium (500) */
 .font-bold,
 .font-extrabold,
 .font-semibold,
 .font-black {
-  font-weight: 500 !important;
+  font-weight: 600 !important;
 }
 
 .font-normal,
 .font-light {
-  font-weight: 300 !important;
+  font-weight: 400 !important;
 }
 
 .font-medium {
   font-weight: 500 !important;
 }
 
-code, pre, kbd, samp {
-  font-family: var(--font-inter), 'Inter', monospace !important;
-  font-weight: 300;
-}
-
-/* Nue Grid Background & Ambient Warm Brown Radial Glows */
+/* Neutral grid & glow (mem0-style subtle background) */
 .nue-bg-grid {
   background-size: 32px 32px;
-  background-image: 
-    linear-gradient(to right, rgba(200, 141, 81, 0.05) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(200, 141, 81, 0.05) 1px, transparent 1px);
+  background-image:
+    linear-gradient(to right, rgba(24, 24, 24, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(24, 24, 24, 0.04) 1px, transparent 1px);
+}
+.dark .nue-bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(252, 252, 252, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(252, 252, 252, 0.04) 1px, transparent 1px);
 }
 
 .nue-radial-glow {
-  background: radial-gradient(circle at 50% 0%, rgba(200, 141, 81, 0.12) 0%, rgba(200, 141, 81, 0.03) 45%, transparent 70%);
+  background: radial-gradient(circle at 50% 0%, var(--accent-glow) 0%, transparent 70%);
 }
 
 .nue-card {

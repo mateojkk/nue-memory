@@ -42,7 +42,7 @@ export function DifferentiatorSection() {
         <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           The Core Differentiator
         </div>
-        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans max-w-3xl leading-[1.12]">
+        <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans max-w-3xl leading-[1.12]">
           Memory is more than storing conversations.
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-4 max-w-3xl leading-relaxed font-light">
