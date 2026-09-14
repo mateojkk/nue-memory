@@ -44,19 +44,19 @@ export function HowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="py-24 px-4 max-w-7xl mx-auto border-t border-[#e7e2da] relative">
+    <section id="how-it-works" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--surface-2)] relative">
       <div className="text-center max-w-3xl mx-auto mb-16">
-        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#f5ece4] border border-[#e2d5c5] text-[#78350f] text-xs font-mono font-semibold mb-4">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[var(--surface)] border border-[var(--surface-2)] text-[var(--accent-deep)] text-xs font-mono font-semibold mb-4">
           <RefreshCw className="w-3.5 h-3.5" />
           <span>The Memory Loop</span>
         </div>
-        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[#18120e] mb-4">
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-[var(--surface)] mb-4">
           How Nue Memory{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#9c4e1f] via-[#c88d51] to-[#b45a27]">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--accent-deep)] via-[var(--accent)] to-[var(--accent-deep)]">
             learns and remembers
           </span>
         </h2>
-        <p className="text-sm sm:text-base text-[#786152] leading-relaxed">
+        <p className="text-sm sm:text-base text-[var(--fg-muted)] leading-relaxed">
           From first generation to perpetual creative recall across every project, brand, and media format.
         </p>
       </div>
@@ -67,34 +67,34 @@ export function HowItWorks() {
           return (
             <div
               key={step.number}
-              className="rounded-2xl bg-white border border-[#e7e2da] hover:border-[#c88d51]/50 p-6 flex flex-col justify-between transition-all group relative overflow-hidden shadow-sm hover:shadow-xl hover:shadow-[#c88d51]/5"
+              className="rounded-2xl bg-white border border-[var(--surface-2)] hover:border-[var(--accent)]/50 p-6 flex flex-col justify-between transition-all group relative overflow-hidden shadow-sm hover:shadow-xl hover:shadow-[var(--accent)]/5"
             >
               <div>
                 <div className="flex items-center justify-between mb-6">
-                  <span className="text-2xl font-mono font-bold text-[#ab9482] group-hover:text-[#9c4e1f] transition">
+                  <span className="text-2xl font-mono font-bold text-[var(--fg-faint)] group-hover:text-[var(--accent-deep)] transition">
                     {step.number}
                   </span>
-                  <div className="w-10 h-10 rounded-xl bg-[#f5ece4] border border-[#e2d5c5] flex items-center justify-center text-[#9c4e1f] group-hover:border-[#c88d51]/40 transition">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--surface)] border border-[var(--surface-2)] flex items-center justify-center text-[var(--accent-deep)] group-hover:border-[var(--accent)]/40 transition">
                     <Icon className="w-4 h-4" />
                   </div>
                 </div>
-                <span className="text-[10px] font-mono text-[#9c4e1f] font-bold uppercase tracking-wider block mb-1">
+                <span className="text-[10px] font-mono text-[var(--accent-deep)] font-bold uppercase tracking-wider block mb-1">
                   {step.subtitle}
                 </span>
-                <h3 className="text-lg font-bold text-[#18120e] mb-2.5 group-hover:text-[#9c4e1f] transition">
+                <h3 className="text-lg font-bold text-[var(--surface)] mb-2.5 group-hover:text-[var(--accent-deep)] transition">
                   {step.title}
                 </h3>
-                <p className="text-xs text-[#786152] leading-relaxed mb-6">
+                <p className="text-xs text-[var(--fg-muted)] leading-relaxed mb-6">
                   {step.description}
                 </p>
               </div>
 
-              <div className="pt-4 border-t border-[#e7e2da] flex items-center justify-between">
-                <span className="text-[10px] font-mono text-[#786152] bg-[#f5ece4] px-2.5 py-1 rounded border border-[#e2d5c5]">
+              <div className="pt-4 border-t border-[var(--surface-2)] flex items-center justify-between">
+                <span className="text-[10px] font-mono text-[var(--fg-muted)] bg-[var(--surface)] px-2.5 py-1 rounded border border-[var(--surface-2)]">
                   {step.badge}
                 </span>
                 {idx < steps.length - 1 && (
-                  <ArrowRight className="w-4 h-4 text-[#ab9482] hidden lg:block" />
+                  <ArrowRight className="w-4 h-4 text-[var(--fg-faint)] hidden lg:block" />
                 )}
               </div>
             </div>

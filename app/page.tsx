@@ -361,7 +361,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0c0a09] text-stone-200 font-light selection:bg-[#c88d51]/20 selection:text-white flex flex-col">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)] font-light selection:bg-[var(--accent)]/20 selection:text-[var(--fg)] flex flex-col">
       {/* 1. Navbar */}
       <NueNavbar
         onOpenVault={() => setIsMemoryPanelOpen(true)}

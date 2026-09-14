@@ -108,29 +108,29 @@ export function NueDomainsSection() {
   const cards = domainCards[activeDomain] || domainCards['Coding Agents'];
 
   return (
-    <section className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0] font-light">
+    <section className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[var(--surface)] font-light">
       {/* Top Center Black Icon (Exact Image 5) */}
       <div className="flex justify-center mb-6">
         <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center shadow-md">
           <div className="relative">
-            <Sparkles className="w-6 h-6 text-[#c88d51]" />
-            <div className="absolute inset-0 bg-[#c88d51] blur-md opacity-40" />
+            <Sparkles className="w-6 h-6 text-[var(--accent)]" />
+            <div className="absolute inset-0 bg-[var(--accent)] blur-md opacity-40" />
           </div>
         </div>
       </div>
 
       {/* Main Headline & Subtitle (Exact Image 5) */}
       <div className="text-center max-w-3xl mx-auto mb-12">
-        <h2 className="text-3xl sm:text-5xl font-medium text-[#18120e] tracking-tight mb-4 font-sans">
+        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--surface)] tracking-tight mb-4 font-sans">
           AI memory that adapts to your domain
         </h2>
-        <p className="text-stone-500 text-base sm:text-lg font-light">
+        <p className="text-[var(--fg-faint)] text-base sm:text-lg font-light">
           Nue helps AI remember what matters.
         </p>
       </div>
 
       {/* Domain Category Tabs (Exact Image 5: Healthcare | Education | E-commerce | Customer Support | Sales & CRM) */}
-      <div className="flex items-center justify-center border-b border-[#e5e5e5] mb-12 overflow-x-auto">
+      <div className="flex items-center justify-center border-b border-[var(--surface-2)] mb-12 overflow-x-auto">
         <div className="flex items-center gap-8 sm:gap-12 min-w-max px-4">
           {domainTabs.map((tab) => {
             const isActive = activeDomain === tab;
@@ -139,12 +139,12 @@ export function NueDomainsSection() {
                 key={tab}
                 onClick={() => setActiveDomain(tab)}
                 className={`py-4 text-sm font-medium transition relative whitespace-nowrap ${
-                  isActive ? 'text-[#18120e]' : 'text-stone-500 hover:text-[#18120e] font-light'
+                  isActive ? 'text-[var(--surface)]' : 'text-[var(--fg-faint)] hover:text-[var(--surface)] font-light'
                 }`}
               >
                 <span>{tab}</span>
                 {isActive && (
-                  <span className="absolute bottom-0 inset-x-0 h-[2px] bg-[#18120e]" />
+                  <span className="absolute bottom-0 inset-x-0 h-[2px] bg-[var(--surface)]" />
                 )}
               </button>
             );
@@ -157,14 +157,14 @@ export function NueDomainsSection() {
         {cards.map((card) => (
           <div
             key={card.title}
-            className="rounded-2xl border border-[#e5e5e5] p-8 bg-white min-h-[300px] flex flex-col justify-between hover:shadow-lg transition-all duration-300 group"
+            className="rounded-2xl border border-[var(--surface-2)] p-8 bg-white min-h-[300px] flex flex-col justify-between hover:shadow-lg transition-all duration-300 group"
           >
             <div>
-              <h3 className="text-2xl font-medium text-[#18120e] tracking-tight leading-snug mb-4 group-hover:text-[#9c4e1f] transition font-sans">
+              <h3 className="text-2xl font-medium text-[var(--surface)] tracking-tight leading-snug mb-4 group-hover:text-[var(--accent-deep)] transition font-sans">
                 {card.title}
               </h3>
             </div>
-            <p className="text-stone-500 text-xs sm:text-sm leading-relaxed font-light">
+            <p className="text-[var(--fg-faint)] text-xs sm:text-sm leading-relaxed font-light">
               {card.description}
             </p>
           </div>

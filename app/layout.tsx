@@ -26,8 +26,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className={`${inter.className} min-h-screen bg-[#0c0a09] text-stone-200 font-light antialiased selection:bg-[#c88d51]/20 selection:text-white`}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('nue-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}}catch(e){}})()`,
+          }}
+        />
+      </head>
+      <body className={`${inter.className} min-h-screen bg-[var(--bg)] text-[var(--fg)] font-light antialiased selection:bg-[var(--accent)]/20 selection:text-[var(--fg)]`}>
         {children}
       </body>
     </html>

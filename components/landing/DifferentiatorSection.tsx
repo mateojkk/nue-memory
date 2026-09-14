@@ -36,25 +36,25 @@ export function DifferentiatorSection() {
   const active = examples[selectedExample];
 
   return (
-    <section id="product" className="py-24 px-4 max-w-7xl mx-auto border-t border-[#211b17] font-light">
+    <section id="product" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
       <div className="text-left mb-14">
-        <div className="text-xs font-mono text-[#c88d51] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
           The Core Differentiator
         </div>
-        <h2 className="text-3xl sm:text-5xl font-medium text-white tracking-tight font-sans max-w-3xl leading-[1.12]">
+        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans max-w-3xl leading-[1.12]">
           Memory is more than storing conversations.
         </h2>
-        <p className="text-stone-400 text-sm sm:text-base mt-4 max-w-3xl leading-relaxed font-light">
+        <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-4 max-w-3xl leading-relaxed font-light">
           A naive vector database dumps raw chat history into context windows, resulting in prompt clutter, high token costs, and contradictory rules. Nue provides intelligence around memory: deciding what is worth remembering, filtering temporary instructions, and continuously evolving stored context.
         </p>
       </div>
 
       {/* Interactive Splitter Demonstration */}
-      <div className="rounded-xl bg-[#12100e] border border-[#26211d] p-6 sm:p-10 shadow-2xl space-y-8">
+      <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-10 shadow-2xl space-y-8">
         {/* Example Picker Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#241f1a]">
-          <span className="text-xs font-mono text-stone-500 uppercase tracking-wider mr-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--border)]">
+          <span className="text-xs font-mono text-[var(--fg-faint)] uppercase tracking-wider mr-2">
             Example Input:
           </span>
           {examples.map((ex, idx) => (
@@ -63,8 +63,8 @@ export function DifferentiatorSection() {
               onClick={() => setSelectedExample(idx)}
               className={`px-3 py-1.5 rounded-md text-xs font-mono transition whitespace-nowrap ${
                 selectedExample === idx
-                  ? 'bg-[#2b241e] text-white border border-[#c88d51]/40'
-                  : 'bg-[#171411] text-stone-400 hover:text-white border border-[#241e1a]'
+                  ? 'bg-[var(--border)] text-[var(--fg)] border border-[var(--accent)]/40'
+                  : 'bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)]'
               }`}
             >
               Scenario 0{idx + 1}
@@ -74,11 +74,11 @@ export function DifferentiatorSection() {
 
         {/* Raw Interaction Container */}
         <div>
-          <div className="text-xs font-mono text-stone-400 mb-2 flex items-center justify-between">
+          <div className="text-xs font-mono text-[var(--fg-muted)] mb-2 flex items-center justify-between">
             <span>RAW AGENT INTERACTION STREAM</span>
-            <span className="text-[#c88d51] text-[11px]">Nue Real-Time Parser</span>
+            <span className="text-[var(--accent)] text-[11px]">Nue Real-Time Parser</span>
           </div>
-          <div className="p-4 rounded-lg bg-[#181512] border border-[#2d251f] font-mono text-sm text-stone-100 leading-relaxed shadow-inner">
+          <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] font-mono text-sm text-[var(--fg)] leading-relaxed shadow-inner">
             &ldquo;{active.rawInput}&rdquo;
           </div>
         </div>
@@ -86,36 +86,36 @@ export function DifferentiatorSection() {
         {/* The Visual Split: Temporary vs Persistent */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           {/* Box 1: Temporary Edit */}
-          <div className="p-6 rounded-lg bg-[#161311] border border-red-950/40 relative overflow-hidden flex flex-col justify-between">
+          <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-red-950/40 relative overflow-hidden flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-red-950/40 text-red-400 border border-red-900/40">
                   <X className="w-3 h-3" />
                   TEMPORARY EDIT
                 </span>
-                <span className="text-[11px] font-mono text-stone-500">Filtered Out</span>
+                <span className="text-[11px] font-mono text-[var(--fg-faint)]">Filtered Out</span>
               </div>
 
-              <div className="p-3.5 rounded bg-[#0f0e0c] border border-[#241e1a] font-mono text-xs text-stone-300">
+              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--border)] font-mono text-xs text-[var(--fg-soft)]">
                 &ldquo;{active.temporaryPart}&rdquo;
               </div>
 
-              <p className="text-xs text-stone-400 font-light leading-relaxed">
+              <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed">
                 {active.temporaryExplanation}
               </p>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-[#241e1a] text-[11px] font-mono text-stone-500 flex items-center justify-between">
+            <div className="pt-4 mt-4 border-t border-[var(--border)] text-[11px] font-mono text-[var(--fg-faint)] flex items-center justify-between">
               <span>Status: Used for this task</span>
               <span className="text-red-400/80">Not persisted</span>
             </div>
           </div>
 
           {/* Box 2: Persistent Memory */}
-          <div className="p-6 rounded-lg bg-[#181512] border border-[#c88d51]/40 relative overflow-hidden flex flex-col justify-between shadow-lg shadow-[#c88d51]/5">
+          <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-[var(--accent)]/40 relative overflow-hidden flex flex-col justify-between shadow-lg shadow-[var(--accent)]/5">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-[#c88d51]/20 text-[#c88d51] border border-[#c88d51]/40">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40">
                   <Check className="w-3 h-3" />
                   PERSISTENT MEMORY
                 </span>
@@ -125,39 +125,39 @@ export function DifferentiatorSection() {
                 </span>
               </div>
 
-              <div className="p-3.5 rounded bg-[#0f0e0c] border border-[#332a22] font-mono text-xs text-white">
+              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--accent-deep)] font-mono text-xs text-[var(--fg)]">
                 &ldquo;{active.persistentPart}&rdquo;
               </div>
 
-              <p className="text-xs text-stone-400 font-light leading-relaxed">
+              <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed">
                 {active.persistentExplanation}
               </p>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-[#29221b] text-[11px] font-mono text-stone-400 flex items-center justify-between">
+            <div className="pt-4 mt-4 border-t border-[var(--border)] text-[11px] font-mono text-[var(--fg-muted)] flex items-center justify-between">
               <span>Status: Stored in Nue Memory</span>
-              <span className="text-[#c88d51] font-medium">Available to future tasks</span>
+              <span className="text-[var(--accent)] font-medium">Available to future tasks</span>
             </div>
           </div>
         </div>
 
         {/* Summary Differentiator Checklist */}
-        <div className="pt-6 border-t border-[#241f1a] grid grid-cols-1 sm:grid-cols-3 gap-6 font-mono text-xs">
+        <div className="pt-6 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-3 gap-6 font-mono text-xs">
           <div>
-            <span className="text-[#c88d51] block mb-1">01. What to Remember</span>
-            <p className="text-stone-400 font-sans text-xs font-light">
+            <span className="text-[var(--accent)] block mb-1">01. What to Remember</span>
+            <p className="text-[var(--fg-muted)] font-sans text-xs font-light">
               Distinguishes short-lived feedback from durable user preferences autonomously.
             </p>
           </div>
           <div>
-            <span className="text-[#c88d51] block mb-1">02. Representation</span>
-            <p className="text-stone-400 font-sans text-xs font-light">
+            <span className="text-[var(--accent)] block mb-1">02. Representation</span>
+            <p className="text-[var(--fg-muted)] font-sans text-xs font-light">
               Converts raw chat text into structured, typed memory objects with confidence scores.
             </p>
           </div>
           <div>
-            <span className="text-[#c88d51] block mb-1">03. Conflict Resolution</span>
-            <p className="text-stone-400 font-sans text-xs font-light">
+            <span className="text-[var(--accent)] block mb-1">03. Conflict Resolution</span>
+            <p className="text-[var(--fg-muted)] font-sans text-xs font-light">
               When preferences shift, older records are superseded rather than accumulating contradictions.
             </p>
           </div>

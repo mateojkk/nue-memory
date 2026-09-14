@@ -2,24 +2,63 @@
 
 :root {
   --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --background: #0c0a09;
-  --foreground: #ededed;
-  
-  /* Dark Developer Infrastructure Foundation */
-  --surface-canvas: #0c0a09;
-  --surface-card: #141210;
-  --surface-card-hover: #1c1815;
-  --surface-elevated: #1f1b17;
-  
-  /* Borders */
-  --border-subtle: #241f1b;
-  --border-muted: #2f2823;
-  --border-accent: rgba(200, 141, 81, 0.4);
-  
-  /* Warm Bronze / Amber Accent Spectrum */
-  --accent-amber: #c88d51;
-  --accent-cognac: #9c4e1f;
-  --accent-glow: rgba(200, 141, 81, 0.15);
+
+  /* ---- LIGHT THEME (default): white + very light brown ---- */
+  --background: #ffffff;
+  --foreground: #2b2118;
+
+  /* Surfaces: white canvas, very light brown cards */
+  --bg: #ffffff;
+  --surface: #faf6f1;
+  --surface-2: #f2eae0;
+  --border: #e8ddcf;
+
+  /* Text: warm near-black browns */
+  --fg: #2b2118;
+  --fg-soft: #57493c;
+  --fg-muted: #8a7767;
+  --fg-faint: #ab9c8c;
+
+  /* Brown accent — quiet, not the hero */
+  --accent: #a97c50;
+  --accent-bright: #c39a6e;
+  --accent-deep: #7d5a38;
+  --accent-glow: rgba(169, 124, 80, 0.12);
+  --border-accent: rgba(169, 124, 80, 0.35);
+}
+
+.dark {
+  /* ---- DARK THEME: black + soft brown ---- */
+  --background: #0b0908;
+  --foreground: #f2ece4;
+
+  --bg: #0b0908;
+  --surface: #151110;
+  --surface-2: #1e1815;
+  --border: #2c241e;
+
+  --fg: #f2ece4;
+  --fg-soft: #d9cec2;
+  --fg-muted: #a3938a;
+  --fg-faint: #7d6f66;
+
+  --accent: #c08a55;
+  --accent-bright: #d8a874;
+  --accent-deep: #96683c;
+  --accent-glow: rgba(192, 138, 85, 0.14);
+  --border-accent: rgba(192, 138, 85, 0.4);
+}
+
+/* Legacy token aliases (older sections reference these) */
+:root {
+  --surface-canvas: var(--bg);
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--surface-2);
+  --surface-elevated: var(--surface-2);
+  --border-subtle: var(--border);
+  --border-muted: var(--border);
+  --accent-amber: var(--accent);
+  --accent-cognac: var(--accent-deep);
 }
 
 /* Strictly Inter font across the app */
@@ -28,13 +67,22 @@
 }
 
 body {
-  background-color: #0c0a09;
-  color: #ededed;
+  background-color: var(--bg);
+  color: var(--fg);
   font-family: var(--font-inter), 'Inter', sans-serif !important;
   font-weight: 300 !important; /* light by default */
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+/* Respect stored / system theme before React hydrates */
+html.dark {
+  color-scheme: dark;
+}
+html {
+  color-scheme: light;
 }
 
 /* STRICT RULE: Light (300) and Medium (500) only across the entire app */

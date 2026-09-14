@@ -34,19 +34,19 @@ export function NueHowItWorks() {
   ];
 
   return (
-    <section id="how-it-works" className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[#f0f0f0] font-light">
+    <section id="how-it-works" className="py-24 px-4 max-w-7xl mx-auto bg-white border-t border-[var(--surface)] font-light">
       {/* Section Label & Headline (Exact mem0 Image 4 Layout) */}
       <div className="mb-14 text-left">
-        <h3 className="text-xl sm:text-2xl font-medium text-stone-400 mb-2 font-sans">
+        <h3 className="text-xl sm:text-2xl font-medium text-[var(--fg-muted)] mb-2 font-sans">
           How it works
         </h3>
-        <h2 className="text-3xl sm:text-5xl font-medium text-[#18120e] tracking-tight font-sans">
+        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--surface)] tracking-tight font-sans">
           Add anything. Nue learns preferences
         </h2>
       </div>
 
       {/* Main Stepper Card */}
-      <div className="rounded-3xl border border-[#e5e5e5] bg-white p-6 sm:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+      <div className="rounded-3xl border border-[var(--surface-2)] bg-white p-6 sm:p-12 shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
         {/* Left Column: Vertical Timeline */}
         <div className="lg:col-span-5 space-y-8 relative pl-2">
           {steps.map((step, idx) => {
@@ -61,7 +61,7 @@ export function NueHowItWorks() {
                 {idx < steps.length - 1 && (
                   <div
                     className={`absolute left-[13px] top-[26px] bottom-[-26px] w-[2px] transition-colors ${
-                      activeStep > idx ? 'bg-[#9c4e1f]' : 'bg-stone-200'
+                      activeStep > idx ? 'bg-[var(--accent-deep)]' : 'bg-stone-200'
                     }`}
                   />
                 )}
@@ -70,8 +70,8 @@ export function NueHowItWorks() {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center transition shrink-0 z-10 ${
                     isActive
-                      ? 'bg-[#c88d51] text-white shadow-md ring-4 ring-[#f5ece4]'
-                      : 'bg-stone-200 text-stone-400 group-hover:bg-stone-300'
+                      ? 'bg-[var(--accent)] text-[var(--fg)] shadow-md ring-4 ring-[var(--surface)]'
+                      : 'bg-stone-200 text-[var(--fg-muted)] group-hover:bg-stone-300'
                   }`}
                 >
                   <span className="w-2 h-2 rounded-full bg-white" />
@@ -82,15 +82,15 @@ export function NueHowItWorks() {
                   <h4
                     className={`text-xl font-medium transition font-sans ${
                       isActive
-                        ? 'text-[#18120e]'
-                        : 'text-stone-400 group-hover:text-stone-600'
+                        ? 'text-[var(--surface)]'
+                        : 'text-[var(--fg-muted)] group-hover:text-[var(--fg-faint)]'
                     }`}
                   >
                     {step.title}
                   </h4>
                   <p
                     className={`text-xs sm:text-sm mt-1 leading-relaxed transition font-light ${
-                      isActive ? 'text-[#736357]' : 'text-stone-400'
+                      isActive ? 'text-[var(--fg-muted)]' : 'text-[var(--fg-muted)]'
                     }`}
                   >
                     {step.description}
@@ -103,7 +103,7 @@ export function NueHowItWorks() {
 
         {/* Right Column: Warm Gradient Card */}
         <div className="lg:col-span-7">
-          <div className="rounded-3xl bg-gradient-to-br from-[#d49b6a] via-[#a85a2a] to-[#45220f] p-6 sm:p-10 text-white relative overflow-hidden shadow-xl min-h-[320px] flex flex-col justify-center">
+          <div className="rounded-3xl bg-gradient-to-br from-[var(--accent-bright)] via-[var(--accent)] to-[var(--accent-deep)] p-6 sm:p-10 text-[var(--fg)] relative overflow-hidden shadow-xl min-h-[320px] flex flex-col justify-center">
             <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/10 blur-2xl pointer-events-none" />
 
             <div className="opacity-40 text-[11px] font-mono mb-4 text-center font-light">
@@ -111,20 +111,20 @@ export function NueHowItWorks() {
             </div>
 
             <div className="flex items-center justify-between text-xs font-medium mb-4 px-2">
-              <span className="inline-flex items-center gap-1.5 text-white/95 font-medium">
+              <span className="inline-flex items-center gap-1.5 text-[var(--fg)]/95 font-medium">
                 <Check className="w-4 h-4 text-amber-200" />
                 <span>{steps[activeStep].badgeText}</span>
               </span>
-              <span className="text-white/60 font-mono text-[11px] font-light">Now</span>
+              <span className="text-[var(--fg)]/60 font-mono text-[11px] font-light">Now</span>
             </div>
 
-            <div className="rounded-2xl bg-white text-[#18120e] p-4 sm:p-5 shadow-lg mb-3">
+            <div className="rounded-2xl bg-white text-[var(--surface)] p-4 sm:p-5 shadow-lg mb-3">
               <p className="text-sm sm:text-base font-medium font-sans">
                 {steps[activeStep].userMessage}
               </p>
             </div>
 
-            <div className="rounded-xl bg-black/25 backdrop-blur-md text-white/90 p-3.5 text-xs sm:text-sm border border-white/10 font-light">
+            <div className="rounded-xl bg-black/25 backdrop-blur-md text-[var(--fg)]/90 p-3.5 text-xs sm:text-sm border border-white/10 font-light">
               <p>{steps[activeStep].agentResponse}</p>
             </div>
           </div>

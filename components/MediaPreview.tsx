@@ -57,18 +57,18 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   };
 
   return (
-    <div className="rounded-2xl bg-white border border-[#e7e2da] shadow-sm flex flex-col overflow-hidden h-full">
+    <div className="rounded-2xl bg-white border border-[var(--surface-2)] shadow-sm flex flex-col overflow-hidden h-full">
       {/* Top Media Info Bar */}
-      <div className="px-4 py-3 bg-[#faf6f0] border-b border-[#e7e2da] flex items-center justify-between">
+      <div className="px-4 py-3 bg-[var(--surface)] border-b border-[var(--surface-2)] flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#9c4e1f]" />
-            <span className="text-xs font-medium text-[#18120e]">
+            <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent-deep)]" />
+            <span className="text-xs font-medium text-[var(--surface)]">
               {version ? `Version ${version.versionNumber}` : 'Workspace Canvas'}
             </span>
           </div>
           {version && (
-            <span className="text-[11px] font-mono text-[#786152] bg-[#f5ece4] px-2 py-0.5 rounded border border-[#e2d5c5]">
+            <span className="text-[11px] font-mono text-[var(--fg-muted)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--surface-2)]">
               {version.visualTheme}
             </span>
           )}
@@ -77,13 +77,13 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         <div className="flex items-center gap-2">
           {/* Display Mode: Video vs Keyframe */}
           {version?.thumbnailUrl && (
-            <div className="flex bg-[#f5ece4] p-0.5 rounded-md border border-[#e2d5c5] text-xs font-medium">
+            <div className="flex bg-[var(--surface)] p-0.5 rounded-md border border-[var(--surface-2)] text-xs font-medium">
               <button
                 onClick={() => setDisplayMode('video')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-sm transition ${
                   displayMode === 'video'
-                    ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
-                    : 'text-[#786152] hover:text-[#18120e]'
+                    ? 'bg-white text-[var(--surface)] font-medium shadow-2xs border border-[var(--surface-2)]'
+                    : 'text-[var(--fg-muted)] hover:text-[var(--surface)]'
                 }`}
               >
                 <Video className="w-3 h-3" />
@@ -93,8 +93,8 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
                 onClick={() => setDisplayMode('keyframe')}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-sm transition ${
                   displayMode === 'keyframe'
-                    ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
-                    : 'text-[#786152] hover:text-[#18120e]'
+                    ? 'bg-white text-[var(--surface)] font-medium shadow-2xs border border-[var(--surface-2)]'
+                    : 'text-[var(--fg-muted)] hover:text-[var(--surface)]'
                 }`}
               >
                 <ImageIcon className="w-3 h-3" />
@@ -104,13 +104,13 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
           )}
 
           {/* Aspect Ratio Switcher */}
-          <div className="flex bg-[#f5ece4] p-0.5 rounded-md border border-[#e2d5c5] text-xs font-mono">
+          <div className="flex bg-[var(--surface)] p-0.5 rounded-md border border-[var(--surface-2)] text-xs font-mono">
             <button
               onClick={() => setAspectMode('16:9')}
               className={`px-2.5 py-1 rounded-sm transition ${
                 aspectMode === '16:9'
-                  ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
-                  : 'text-[#786152] hover:text-[#18120e]'
+                  ? 'bg-white text-[var(--surface)] font-medium shadow-2xs border border-[var(--surface-2)]'
+                  : 'text-[var(--fg-muted)] hover:text-[var(--surface)]'
               }`}
             >
               16:9
@@ -119,8 +119,8 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
               onClick={() => setAspectMode('9:16')}
               className={`px-2.5 py-1 rounded-sm transition ${
                 aspectMode === '9:16'
-                  ? 'bg-white text-[#18120e] font-medium shadow-2xs border border-[#e2d5c5]'
-                  : 'text-[#786152] hover:text-[#18120e]'
+                  ? 'bg-white text-[var(--surface)] font-medium shadow-2xs border border-[var(--surface-2)]'
+                  : 'text-[var(--fg-muted)] hover:text-[var(--surface)]'
               }`}
             >
               9:16
@@ -130,18 +130,18 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       </div>
 
       {/* Main Video/Image Viewport */}
-      <div className="relative flex-1 bg-[#120d0a] flex items-center justify-center overflow-hidden min-h-[380px]">
+      <div className="relative flex-1 bg-[var(--border)] flex items-center justify-center overflow-hidden min-h-[380px]">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center gap-3.5 text-center px-6">
             <div className="relative">
-              <div className="w-14 h-14 rounded-full border-2 border-[#c88d51]/20 border-t-[#dda15e] animate-spin" />
-              <Sparkles className="w-5 h-5 text-[#dda15e] absolute inset-0 m-auto animate-pulse" />
+              <div className="w-14 h-14 rounded-full border-2 border-[var(--accent)]/20 border-t-[var(--accent-bright)] animate-spin" />
+              <Sparkles className="w-5 h-5 text-[var(--accent-bright)] absolute inset-0 m-auto animate-pulse" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-white tracking-tight">
+              <h3 className="text-sm font-medium text-[var(--fg)] tracking-tight">
                 Livepeer Agent Synthesizing Media
               </h3>
-              <p className="text-xs text-[#ab9482] mt-1 max-w-sm font-mono">
+              <p className="text-xs text-[var(--fg-faint)] mt-1 max-w-sm font-mono">
                 Executing MCP tool · Applying MemWal creative preferences...
               </p>
             </div>
@@ -150,7 +150,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
           <div
             className={`relative transition-all duration-300 flex items-center justify-center ${
               aspectMode === '9:16'
-                ? 'w-[250px] h-[440px] rounded-xl overflow-hidden border border-[#c88d51]/30 shadow-2xl'
+                ? 'w-[250px] h-[440px] rounded-xl overflow-hidden border border-[var(--accent)]/30 shadow-2xl'
                 : 'w-full h-full'
             }`}
           >
@@ -167,7 +167,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
                   href={version.thumbnailUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute bottom-3 right-3 z-30 px-2.5 py-1 rounded-md bg-black/80 hover:bg-black text-[11px] font-mono text-[#dda15e] hover:text-white border border-[#c88d51]/30 flex items-center gap-1.5 backdrop-blur-md transition"
+                  className="absolute bottom-3 right-3 z-30 px-2.5 py-1 rounded-md bg-black/80 hover:bg-black text-[11px] font-mono text-[var(--accent-bright)] hover:text-[var(--fg)] border border-[var(--accent)]/30 flex items-center gap-1.5 backdrop-blur-md transition"
                 >
                   <span>Open Livepeer Asset</span>
                   <ExternalLink className="w-3 h-3" />
@@ -188,16 +188,16 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
 
             {/* Overlays reflecting applied preferences */}
             {/* Pacing Badge */}
-            <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-[#c88d51]/30 text-[11px] font-mono text-[#f5f2eb]">
-              <Zap className="w-3 h-3 text-[#dda15e]" />
+            <div className="absolute top-3.5 left-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-[var(--accent)]/30 text-[11px] font-mono text-[var(--surface)]">
+              <Zap className="w-3 h-3 text-[var(--accent-bright)]" />
               <span>
                 {version.pacing === 'fast' ? 'Fast Pacing (0-5s Intro)' : 'Cinematic Pacing'}
               </span>
             </div>
 
             {/* Audio Stem Badge */}
-            <div className="absolute top-3.5 right-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-[#c88d51]/30 text-[11px] font-mono text-[#dda15e]">
-              <Volume2 className="w-3 h-3 text-[#c88d51]" />
+            <div className="absolute top-3.5 right-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-[var(--accent)]/30 text-[11px] font-mono text-[var(--accent-bright)]">
+              <Volume2 className="w-3 h-3 text-[var(--accent)]" />
               <span className="truncate max-w-[150px]">{version.audioStyle.style}</span>
             </div>
 
@@ -207,14 +207,14 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
                 <div
                   className={`transition-all duration-200 uppercase font-medium tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] ${
                     version.captionStyle.size === 'large'
-                      ? 'text-lg sm:text-2xl text-[#fef08a] bg-[#140e0b]/90 px-4 py-1.5 rounded-md border border-[#c88d51]/50'
-                      : 'text-xs sm:text-sm text-white bg-black/60 px-3 py-1 rounded border border-white/20'
+                      ? 'text-lg sm:text-2xl text-[#fef08a] bg-[var(--border)]/90 px-4 py-1.5 rounded-md border border-[var(--accent)]/50'
+                      : 'text-xs sm:text-sm text-[var(--fg)] bg-black/60 px-3 py-1 rounded border border-white/20'
                   }`}
                 >
                   {version.captionStyle.highlight}
                 </div>
                 <div
-                  className={`mt-1 font-medium text-white/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${
+                  className={`mt-1 font-medium text-[var(--fg)]/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${
                     version.captionStyle.size === 'large' ? 'text-xs sm:text-sm' : 'text-[11px] text-zinc-300'
                   }`}
                 >
@@ -227,40 +227,40 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             {displayMode === 'video' && (
               <button
                 onClick={togglePlay}
-                className="absolute inset-0 m-auto w-12 h-12 rounded-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[#c88d51]/30 flex items-center justify-center text-[#fbf7ee] opacity-0 hover:opacity-100 transition-opacity z-30"
+                className="absolute inset-0 m-auto w-12 h-12 rounded-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[var(--accent)]/30 flex items-center justify-center text-[var(--surface)] opacity-0 hover:opacity-100 transition-opacity z-30"
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 translate-x-0.5" />}
               </button>
             )}
           </div>
         ) : (
-          <div className="text-center text-[#ab9482] text-xs font-mono">
+          <div className="text-center text-[var(--fg-faint)] text-xs font-mono">
             No media generated yet. Submit a creative brief to begin.
           </div>
         )}
       </div>
 
       {/* Video Control Scrubber */}
-      <div className="px-4 py-3 bg-[#faf6f0] border-t border-[#e7e2da] flex flex-col gap-2">
+      <div className="px-4 py-3 bg-[var(--surface)] border-t border-[var(--surface-2)] flex flex-col gap-2">
         <div className="flex items-center gap-3">
           <button
             onClick={togglePlay}
-            className="p-1 rounded-md text-[#786152] hover:text-[#18120e] hover:bg-white transition"
+            className="p-1 rounded-md text-[var(--fg-muted)] hover:text-[var(--surface)] hover:bg-[var(--surface-2)] transition"
           >
             {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
           </button>
 
           {/* Progress Bar with Amber/Honey Caramel Gradient */}
-          <div className="flex-1 h-2 bg-[#e7e2da] rounded-full overflow-hidden relative cursor-pointer">
+          <div className="flex-1 h-2 bg-[var(--surface-2)] rounded-full overflow-hidden relative cursor-pointer">
             <div
-              className="h-full bg-gradient-to-r from-[#9c4e1f] via-[#c88d51] to-[#dda15e] rounded-full transition-all duration-100"
+              className="h-full bg-gradient-to-r from-[var(--accent-deep)] via-[var(--accent)] to-[var(--accent-bright)] rounded-full transition-all duration-100"
               style={{ width: `${progress}%` }}
             />
           </div>
 
           <button
             onClick={toggleMute}
-            className="p-1 rounded-md text-[#786152] hover:text-[#18120e] hover:bg-white transition"
+            className="p-1 rounded-md text-[var(--fg-muted)] hover:text-[var(--surface)] hover:bg-[var(--surface-2)] transition"
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -268,22 +268,22 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
 
         {/* Applied Preferences Bar */}
         {version && version.appliedPreferences.length > 0 && (
-          <div className="flex items-center justify-between text-xs pt-2 border-t border-[#e7e2da] text-[#786152]">
+          <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--surface-2)] text-[var(--fg-muted)]">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="flex items-center gap-1 text-[#78350f] font-medium text-[11px]">
-                <Sparkles className="w-3 h-3 text-[#9c4e1f]" />
+              <span className="flex items-center gap-1 text-[var(--accent-deep)] font-medium text-[11px]">
+                <Sparkles className="w-3 h-3 text-[var(--accent-deep)]" />
                 Walrus Memories Applied:
               </span>
               {version.appliedPreferences.map((pref) => (
                 <span
                   key={pref.id}
-                  className="px-2 py-0.5 rounded-md bg-[#f5ece4] border border-[#e2d5c5] text-[#78350f] text-[10px] font-mono font-medium"
+                  className="px-2 py-0.5 rounded-md bg-[var(--surface)] border border-[var(--surface-2)] text-[var(--accent-deep)] text-[10px] font-mono font-medium"
                 >
                   {pref.category}: {pref.preference.slice(0, 26)}...
                 </span>
               ))}
             </div>
-            <span className="text-[#786152] font-mono text-[10px]">
+            <span className="text-[var(--fg-muted)] font-mono text-[10px]">
               {version.generationDurationSeconds}s · {version.livepeerCapability}
             </span>
           </div>
@@ -291,8 +291,8 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       </div>
 
       {/* Version History Tabs */}
-      <div className="px-4 py-2.5 bg-white border-t border-[#e7e2da] flex items-center gap-2 overflow-x-auto">
-        <span className="text-[11px] font-mono text-[#786152] uppercase tracking-wider flex items-center gap-1 mr-1">
+      <div className="px-4 py-2.5 bg-white border-t border-[var(--surface-2)] flex items-center gap-2 overflow-x-auto">
+        <span className="text-[11px] font-mono text-[var(--fg-muted)] uppercase tracking-wider flex items-center gap-1 mr-1">
           <Layers className="w-3 h-3" />
           Versions:
         </span>
@@ -302,13 +302,13 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             onClick={() => onSelectVersion(idx)}
             className={`px-3 py-1 rounded-md text-xs font-medium transition flex items-center gap-1.5 border ${
               selectedVersionIndex === idx
-                ? 'bg-[#1a120c] border-[#1a120c] text-white shadow-2xs'
-                : 'bg-[#faf6f0] border-[#e7e2da] text-[#786152] hover:text-[#18120e] hover:border-[#c88d51]/40'
+                ? 'bg-[var(--surface-2)] border-[var(--surface-2)] text-[var(--fg)] shadow-2xs'
+                : 'bg-[var(--surface)] border-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--surface)] hover:border-[var(--accent)]/40'
             }`}
           >
             <span>v{v.versionNumber}</span>
             {v.appliedPreferences.length > 0 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#dda15e]" title="Applied persistent memory" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-bright)]" title="Applied persistent memory" />
             )}
             <span className="text-[10px] font-mono opacity-80">
               {new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

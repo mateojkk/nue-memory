@@ -35,7 +35,7 @@ export function NueLogo({
         />
       </div>
       {showText && (
-        <span className={`${textSize} font-medium tracking-tight text-white font-sans`}>
+        <span className={`${textSize} font-medium tracking-tight text-[var(--fg)] font-sans`}>
           Nue
         </span>
       )}

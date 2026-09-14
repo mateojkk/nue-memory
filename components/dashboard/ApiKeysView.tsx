@@ -36,22 +36,22 @@ export function ApiKeysView() {
 
   return (
     <div className="space-y-8 font-light text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#241f1a]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
         <div>
-          <div className="text-xs font-mono text-[#c88d51] uppercase tracking-wider mb-1">
+          <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-1">
             Authentication
           </div>
-          <h2 className="text-2xl sm:text-3xl font-medium text-white tracking-tight font-sans">
+          <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
             Developer API Keys
           </h2>
-          <p className="text-stone-400 text-xs sm:text-sm mt-1">
+          <p className="text-[var(--fg-muted)] text-xs sm:text-sm mt-1">
             API keys authenticate your agent runtimes with the Nue Memory intelligence engine and Walrus storage.
           </p>
         </div>
 
         <button
           onClick={handleGenerate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#ededed] hover:bg-white text-[#0c0a09] text-xs font-medium transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-xs font-medium transition shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Key</span>
@@ -59,37 +59,37 @@ export function ApiKeysView() {
       </div>
 
       {/* Key Table */}
-      <div className="rounded-xl bg-[#141210] border border-[#26211d] overflow-hidden shadow-xl">
-        <div className="p-4 bg-[#181512] border-b border-[#241f1a] flex items-center justify-between text-xs font-mono text-stone-400">
+      <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden shadow-xl">
+        <div className="p-4 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between text-xs font-mono text-[var(--fg-muted)]">
           <span>ACTIVE API KEYS</span>
           <button
             onClick={() => setRevealed(!revealed)}
-            className="flex items-center gap-1 text-[#c88d51] hover:text-white transition"
+            className="flex items-center gap-1 text-[var(--accent)] hover:text-[var(--fg)] transition"
           >
             {revealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             <span>{revealed ? 'Hide Keys' : 'Reveal Keys'}</span>
           </button>
         </div>
 
-        <div className="divide-y divide-[#211b17]">
+        <div className="divide-y divide-[var(--border)]">
           {keys.map((k) => (
             <div key={k.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
               <div className="space-y-1">
-                <div className="text-white font-medium flex items-center gap-2">
-                  <Key className="w-3.5 h-3.5 text-[#c88d51]" />
+                <div className="text-[var(--fg)] font-medium flex items-center gap-2">
+                  <Key className="w-3.5 h-3.5 text-[var(--accent)]" />
                   <span>{k.name}</span>
                 </div>
-                <div className="text-stone-400 text-[11px]">
+                <div className="text-[var(--fg-muted)] text-[11px]">
                   {revealed ? k.key : `${k.key.slice(0, 12)}••••••••••••••••`}
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 text-stone-500 text-[11px]">
+              <div className="flex items-center gap-4 text-[var(--fg-faint)] text-[11px]">
                 <span>Created: {k.createdAt}</span>
                 <span>Last used: {k.lastUsed}</span>
                 <button
                   onClick={() => handleCopy(k.key)}
-                  className="p-1.5 rounded hover:bg-[#241e1a] text-stone-300 hover:text-white transition"
+                  className="p-1.5 rounded hover:bg-[var(--border)] text-[var(--fg-soft)] hover:text-[var(--fg)] transition"
                   title="Copy Key"
                 >
                   {copiedKey === k.key ? (

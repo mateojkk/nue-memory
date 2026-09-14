@@ -65,15 +65,15 @@ export function MemoryObjectsSection() {
   };
 
   return (
-    <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[#211b17] font-light">
+    <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       <div className="text-left mb-12">
-        <div className="text-xs font-mono text-[#c88d51] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
           Structured Schema
         </div>
-        <h2 className="text-3xl sm:text-5xl font-medium text-white tracking-tight font-sans">
+        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
           Domain-Agnostic Memory Objects
         </h2>
-        <p className="text-stone-400 text-sm sm:text-base mt-2 max-w-2xl font-light">
+        <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
           Nue avoids dumping messy conversation logs into agent prompts. Interactions are parsed into structured, validated memory representations with schema safety.
         </p>
       </div>
@@ -81,7 +81,7 @@ export function MemoryObjectsSection() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Category Selector Chips */}
         <div className="lg:col-span-5 space-y-4">
-          <span className="text-xs font-mono uppercase tracking-wider text-stone-400 font-medium block">
+          <span className="text-xs font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium block">
             Ontology Categories ({categories.length})
           </span>
           <div className="flex flex-wrap gap-2">
@@ -91,34 +91,34 @@ export function MemoryObjectsSection() {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`px-3 py-1.5 rounded-md text-xs font-mono transition flex items-center gap-1.5 border ${
                   activeCategory === cat.id
-                    ? 'bg-[#2b241e] text-[#c88d51] border-[#c88d51]/50 shadow-sm'
-                    : 'bg-[#141210] text-stone-400 hover:text-white border-[#241f1a]'
+                    ? 'bg-[var(--border)] text-[var(--accent)] border-[var(--accent)]/50 shadow-sm'
+                    : 'bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] border-[var(--border)]'
                 }`}
               >
                 <span>{cat.name}</span>
-                <span className="text-[9px] text-stone-500 uppercase">{cat.domain}</span>
+                <span className="text-[9px] text-[var(--fg-faint)] uppercase">{cat.domain}</span>
               </button>
             ))}
           </div>
 
-          <p className="text-xs text-stone-400 font-light leading-relaxed pt-3 border-t border-[#211b17]">
+          <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed pt-3 border-t border-[var(--border)]">
             While Media Memory initially demonstrates creative parameters (visual style, pacing, captions, audio), Nue&apos;s underlying memory representation supports coding agents, research assistants, and custom enterprise ontologies.
           </p>
         </div>
 
         {/* Right Column: Interactive JSON Viewer */}
-        <div className="lg:col-span-7 rounded-xl bg-[#12100e] border border-[#26211d] shadow-2xl overflow-hidden">
-          <div className="px-5 py-3 bg-[#171411] border-b border-[#241f1a] flex items-center justify-between">
+        <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl overflow-hidden">
+          <div className="px-5 py-3 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Code2 className="w-3.5 h-3.5 text-[#c88d51]" />
-              <span className="text-xs font-mono text-stone-300">
+              <Code2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+              <span className="text-xs font-mono text-[var(--fg-soft)]">
                 memory_object_{activeCategory}.json
               </span>
             </div>
 
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#211b17] hover:bg-[#2b241e] text-stone-300 text-xs font-mono border border-[#332b24] transition"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--border)] hover:bg-[var(--border)] text-[var(--fg-soft)] text-xs font-mono border border-[var(--border)] transition"
             >
               {copiedJson ? (
                 <>
@@ -127,14 +127,14 @@ export function MemoryObjectsSection() {
                 </>
               ) : (
                 <>
-                  <Copy className="w-3 h-3 text-stone-400" />
+                  <Copy className="w-3 h-3 text-[var(--fg-muted)]" />
                   <span>Copy JSON</span>
                 </>
               )}
             </button>
           </div>
 
-          <div className="p-6 font-mono text-xs leading-relaxed text-stone-300 overflow-x-auto bg-[#0f0e0c]">
+          <div className="p-6 font-mono text-xs leading-relaxed text-[var(--fg-soft)] overflow-x-auto bg-[var(--surface)]">
             <pre className="text-emerald-400">
               <code>{formattedJson}</code>
             </pre>

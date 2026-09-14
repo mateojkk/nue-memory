@@ -97,28 +97,28 @@ client.delete("mem_8f2a1b")`,
 
   return (
     <div className="space-y-10 font-light text-left">
-      <div className="pb-6 border-b border-[#241f1a]">
-        <div className="text-xs font-mono text-[#c88d51] uppercase tracking-wider mb-1">
+      <div className="pb-6 border-b border-[var(--border)]">
+        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-1">
           Developer Reference
         </div>
-        <h2 className="text-2xl sm:text-3xl font-medium text-white tracking-tight font-sans">
+        <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
           Nue Memory SDK API
         </h2>
-        <p className="text-stone-400 text-xs sm:text-sm mt-1">
+        <p className="text-[var(--fg-muted)] text-xs sm:text-sm mt-1">
           Simple, drop-in agent memory primitives designed to work with any agent framework (LangChain, LlamaIndex, CrewAI, AutoGen, Livepeer).
         </p>
       </div>
 
       {/* Installation Block */}
-      <div className="p-6 rounded-xl bg-[#141210] border border-[#26211d] space-y-3">
-        <span className="text-xs font-mono text-stone-400 uppercase tracking-wider block">
+      <div className="p-6 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-3">
+        <span className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider block">
           Installation
         </span>
-        <div className="flex items-center justify-between p-3 rounded-md bg-[#0f0e0c] border border-[#241f1a] font-mono text-xs text-stone-200">
+        <div className="flex items-center justify-between p-3 rounded-md bg-[var(--surface)] border border-[var(--border)] font-mono text-xs text-[var(--fg)]">
           <span>pip install nue-ai</span>
           <button
             onClick={() => handleCopy('pip', 'pip install nue-ai')}
-            className="p-1 text-stone-400 hover:text-white transition"
+            className="p-1 text-[var(--fg-muted)] hover:text-[var(--fg)] transition"
           >
             {copiedSection === 'pip' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
@@ -128,15 +128,15 @@ client.delete("mem_8f2a1b")`,
       {/* Method Reference */}
       <div className="space-y-8">
         {methods.map((m) => (
-          <div key={m.name} className="p-6 rounded-xl bg-[#141210] border border-[#26211d] space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#211b17]">
+          <div key={m.name} className="p-6 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2 font-mono text-sm">
-                <span className="text-[#c88d51] font-medium">{m.name}</span>
-                <span className="text-stone-500 text-xs hidden sm:inline">{m.signature}</span>
+                <span className="text-[var(--accent)] font-medium">{m.name}</span>
+                <span className="text-[var(--fg-faint)] text-xs hidden sm:inline">{m.signature}</span>
               </div>
               <button
                 onClick={() => handleCopy(m.name, m.python)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1f1a16] hover:bg-[#28211b] text-stone-300 text-xs font-mono border border-[#30261f] transition"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] text-[var(--fg-soft)] text-xs font-mono border border-[var(--accent-deep)] transition"
               >
                 {copiedSection === m.name ? (
                   <>
@@ -145,18 +145,18 @@ client.delete("mem_8f2a1b")`,
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3 h-3 text-stone-400" />
+                    <Copy className="w-3 h-3 text-[var(--fg-muted)]" />
                     <span>Copy Snippet</span>
                   </>
                 )}
               </button>
             </div>
 
-            <p className="text-xs text-stone-400 leading-relaxed font-light font-sans">
+            <p className="text-xs text-[var(--fg-muted)] leading-relaxed font-light font-sans">
               {m.description}
             </p>
 
-            <div className="p-4 rounded-md bg-[#0f0e0c] border border-[#241f1a] font-mono text-xs text-stone-300 overflow-x-auto leading-relaxed">
+            <div className="p-4 rounded-md bg-[var(--surface)] border border-[var(--border)] font-mono text-xs text-[var(--fg-soft)] overflow-x-auto leading-relaxed">
               <pre>{m.python}</pre>
             </div>
           </div>

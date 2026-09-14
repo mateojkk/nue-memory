@@ -33,23 +33,23 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
       />
 
       {/* Drawer */}
-      <div className="relative w-full max-w-md bg-[#faf8f5] h-full shadow-2xl flex flex-col z-10 border-l border-[#e7e2da] animate-slideLeft">
+      <div className="relative w-full max-w-md bg-[var(--surface)] h-full shadow-2xl flex flex-col z-10 border-l border-[var(--surface-2)] animate-slideLeft">
         {/* Header */}
-        <div className="px-6 py-4 bg-white border-b border-[#e7e2da] flex items-center justify-between">
+        <div className="px-6 py-4 bg-white border-b border-[var(--surface-2)] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#f5ece4] border border-[#e2d5c5] flex items-center justify-center text-[#9c4e1f]">
+            <div className="w-8 h-8 rounded-xl bg-[var(--surface)] border border-[var(--surface-2)] flex items-center justify-center text-[var(--accent-deep)]">
               <Database className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-[#18120e]">Walrus Memory Vault</h3>
-              <p className="text-[10px] font-mono text-[#786152]">
+              <h3 className="text-sm font-medium text-[var(--surface)]">Walrus Memory Vault</h3>
+              <p className="text-[10px] font-mono text-[var(--fg-muted)]">
                 Sui Walrus decentralized creative preference store
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-md text-stone-400 hover:text-[#18120e] hover:bg-[#faf6f0] transition"
+            className="p-1.5 rounded-md text-[var(--fg-muted)] hover:text-[var(--surface)] hover:bg-[var(--surface)] transition"
           >
             <X className="w-5 h-5" />
           </button>
@@ -60,19 +60,19 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           {/* Active Memories */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-mono font-medium uppercase tracking-wider text-[#18120e] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#9c4e1f]" />
+              <span className="text-xs font-mono font-medium uppercase tracking-wider text-[var(--surface)] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--accent-deep)]" />
                 Active Preferences ({activeMemories.length})
               </span>
-              <span className="text-[10px] font-mono text-[#9c4e1f] font-medium bg-[#f5ece4] px-2 py-0.5 rounded border border-[#e2d5c5]">
+              <span className="text-[10px] font-mono text-[var(--accent-deep)] font-medium bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--surface-2)]">
                 Auto-Injected in Prompts
               </span>
             </div>
 
             {activeMemories.length === 0 ? (
-              <div className="text-center py-10 px-4 rounded-2xl bg-white border border-[#e7e2da] text-stone-400 text-xs">
+              <div className="text-center py-10 px-4 rounded-2xl bg-white border border-[var(--surface-2)] text-[var(--fg-muted)] text-xs">
                 <p className="mb-1">No active preferences found on Walrus.</p>
-                <p className="text-[10px] text-stone-400">
+                <p className="text-[10px] text-[var(--fg-muted)]">
                   Direct the agent in Studio and confirm memories to persist them here.
                 </p>
               </div>
@@ -81,30 +81,30 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
                 {activeMemories.map((pref) => (
                   <div
                     key={pref.id}
-                    className="p-4 rounded-2xl bg-white border border-[#e7e2da] hover:border-[#c88d51]/40 transition shadow-2xs group"
+                    className="p-4 rounded-2xl bg-white border border-[var(--surface-2)] hover:border-[var(--accent)]/40 transition shadow-2xs group"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[9px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[#f5ece4] text-[#78350f]">
+                      <span className="text-[9px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[var(--surface)] text-[var(--accent-deep)]">
                         {pref.category}
                       </span>
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-mono text-stone-400 bg-[#faf6f0] px-2 py-0.5 rounded border border-[#e7e2da]">
+                        <span className="text-[9px] font-mono text-[var(--fg-muted)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--surface-2)]">
                           {pref.memwalBlobId || 'walrus-blob'}
                         </span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       </div>
                     </div>
 
-                    <p className="text-xs text-[#18120e] font-medium mb-3 leading-relaxed">
+                    <p className="text-xs text-[var(--surface)] font-medium mb-3 leading-relaxed">
                       {pref.preference}
                     </p>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-[#e7e2da] text-[10px] font-mono text-[#786152]">
+                    <div className="flex items-center justify-between pt-2 border-t border-[var(--surface-2)] text-[10px] font-mono text-[var(--fg-muted)]">
                       <span>Strength: {pref.strength}</span>
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => setInspectPref(pref)}
-                          className="p-1 rounded text-[#786152] hover:text-[#18120e] hover:bg-[#faf6f0] transition"
+                          className="p-1 rounded text-[var(--fg-muted)] hover:text-[var(--surface)] hover:bg-[var(--surface)] transition"
                           title="Inspect raw payload"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -128,23 +128,23 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
           {supersededMemories.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono font-medium uppercase tracking-wider text-stone-500">
+                <span className="text-xs font-mono font-medium uppercase tracking-wider text-[var(--fg-faint)]">
                   Superseded &amp; Evolved ({supersededMemories.length})
                 </span>
-                <span className="text-[10px] font-mono text-stone-400">Audit History</span>
+                <span className="text-[10px] font-mono text-[var(--fg-muted)]">Audit History</span>
               </div>
 
               <div className="space-y-2">
                 {supersededMemories.map((pref) => (
                   <div
                     key={pref.id}
-                    className="p-3 rounded-xl bg-white/70 border border-[#e7e2da] opacity-60 text-xs"
+                    className="p-3 rounded-xl bg-white/70 border border-[var(--surface-2)] opacity-60 text-xs"
                   >
-                    <div className="flex items-center justify-between mb-1 text-[10px] font-mono text-stone-400">
+                    <div className="flex items-center justify-between mb-1 text-[10px] font-mono text-[var(--fg-muted)]">
                       <span className="uppercase">{pref.category}</span>
                       <span>Superseded</span>
                     </div>
-                    <p className="line-through text-stone-400 text-xs">{pref.preference}</p>
+                    <p className="line-through text-[var(--fg-muted)] text-xs">{pref.preference}</p>
                   </div>
                 ))}
               </div>
@@ -153,32 +153,32 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-white border-t border-[#e7e2da] flex items-center justify-between text-xs font-mono text-[#786152]">
+        <div className="p-4 bg-white border-t border-[var(--surface-2)] flex items-center justify-between text-xs font-mono text-[var(--fg-muted)]">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>MemWal Active on Sui Walrus</span>
           </div>
-          <span className="text-[10px] text-stone-400">Nue Decentralized Vault</span>
+          <span className="text-[10px] text-[var(--fg-muted)]">Nue Decentralized Vault</span>
         </div>
       </div>
 
       {/* Raw Payload Modal */}
       {inspectPref && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-[#140e0b] border border-[#2e2016] rounded-2xl max-w-lg w-full p-6 text-white font-mono shadow-2xl">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#2e2016]">
+          <div className="bg-[var(--border)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 text-[var(--fg)] font-mono shadow-2xl">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
-                <Code2 className="w-4 h-4 text-[#dda15e]" />
+                <Code2 className="w-4 h-4 text-[var(--accent-bright)]" />
                 <span className="text-xs font-medium">Walrus Raw Blob Inspection</span>
               </div>
               <button
                 onClick={() => setInspectPref(null)}
-                className="p-1 rounded text-stone-400 hover:text-white"
+                className="p-1 rounded text-[var(--fg-muted)] hover:text-[var(--fg)]"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            <pre className="p-4 rounded-xl bg-black border border-[#2e2016] text-[#cbbba8] text-xs overflow-x-auto max-h-80 leading-relaxed">
+            <pre className="p-4 rounded-xl bg-black border border-[var(--border)] text-[var(--accent-bright)] text-xs overflow-x-auto max-h-80 leading-relaxed">
               {JSON.stringify(inspectPref, null, 2)}
             </pre>
           </div>

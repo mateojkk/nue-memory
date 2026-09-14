@@ -9,6 +9,7 @@ import { ApiKeysView } from './ApiKeysView';
 import { DocsView } from './DocsView';
 import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
 import { NueLogo } from '../NueLogo';
+import { ThemeToggle } from '../ThemeToggle';
 import {
   ArrowLeft,
   LayoutDashboard,
@@ -86,20 +87,20 @@ export function NueDashboard({
   ];
 
   return (
-    <div className="min-h-screen bg-[#0c0a09] text-stone-200 font-light flex flex-col">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)] font-light flex flex-col">
       {/* Dashboard Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-[#0c0a09]/95 backdrop-blur-md border-b border-[#241f1a] px-4 sm:px-6 py-3">
+      <header className="sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--border)] px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={onBackToLanding}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#141210] hover:bg-[#1a1714] text-xs font-mono text-stone-400 hover:text-white border border-[#241f1a] transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)] transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Home</span>
             </button>
 
-            <div className="h-4 w-px bg-[#26211d] hidden sm:block" />
+            <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />
 
             <NueLogo size={24} showText={true} textSize="text-sm" />
           </div>
@@ -107,14 +108,16 @@ export function NueDashboard({
           {/* Walrus Vault Quick Trigger */}
           <button
             onClick={onOpenVault}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#141210] hover:border-[#c88d51]/50 text-xs font-mono text-stone-300 hover:text-white border border-[#241f1a] transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--surface)] hover:border-[var(--accent)]/50 text-xs font-mono text-[var(--fg-soft)] hover:text-[var(--fg)] border border-[var(--border)] transition"
           >
-            <Database className="w-3.5 h-3.5 text-[#c88d51]" />
+            <Database className="w-3.5 h-3.5 text-[var(--accent)]" />
             <span className="hidden sm:inline">Walrus Vault</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#241e1a] text-stone-400">
+            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--border)] text-[var(--fg-muted)]">
               {activeMemories.filter((m) => m.isActive).length}
             </span>
           </button>
+
+          <ThemeToggle />
         </div>
 
         {/* Dashboard Sub-navigation Tabs (Section 21) */}
@@ -128,14 +131,14 @@ export function NueDashboard({
                 onClick={() => setActiveTab(item.id)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#1c1815] text-white border border-[#c88d51]/40 font-medium'
-                    : 'text-stone-400 hover:text-stone-200 hover:bg-[#141210] border border-transparent'
+                    ? 'bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--accent)]/40 font-medium'
+                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface)] border border-transparent'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#c88d51]' : 'text-stone-500'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--accent)]' : 'text-[var(--fg-faint)]'}`} />
                 <span>{item.label}</span>
                 {item.badge !== undefined && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/40 text-stone-400">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/40 text-[var(--fg-muted)]">
                     {item.badge}
                   </span>
                 )}

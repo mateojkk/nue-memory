@@ -57,16 +57,16 @@ export function LifecycleSection() {
   ];
 
   return (
-    <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[#211b17] font-light">
+    <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
       <div className="text-left mb-16">
-        <div className="text-xs font-mono text-[#c88d51] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
           Technical Pipeline
         </div>
-        <h2 className="text-3xl sm:text-5xl font-medium text-white tracking-tight font-sans">
+        <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
           The Memory Lifecycle
         </h2>
-        <p className="text-stone-400 text-sm sm:text-base mt-2 max-w-2xl font-light">
+        <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
           From interaction ingestion to durable retrieval and continuous evolution: how Nue powers agent continuity end-to-end.
         </p>
       </div>
@@ -77,33 +77,33 @@ export function LifecycleSection() {
           {stages.map((st, idx) => (
             <div
               key={st.name}
-              className="p-5 rounded-lg bg-[#12100e] border border-[#241f1a] hover:border-[#c88d51]/40 transition flex flex-col justify-between group min-h-[260px] shadow-lg relative"
+              className="p-5 rounded-lg bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition flex flex-col justify-between group min-h-[260px] shadow-lg relative"
             >
               <div>
-                <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#211b17]">
-                  <span className="text-[11px] font-mono text-[#c88d51] font-medium">
+                <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
+                  <span className="text-[11px] font-mono text-[var(--accent)] font-medium">
                     {st.step}
                   </span>
-                  <span className="text-[9px] font-mono text-stone-500 uppercase px-1.5 py-0.5 rounded bg-[#1a1613]">
+                  <span className="text-[9px] font-mono text-[var(--fg-faint)] uppercase px-1.5 py-0.5 rounded bg-[var(--border)]">
                     {st.tag}
                   </span>
                 </div>
 
-                <h3 className="text-sm font-medium text-white font-mono uppercase tracking-tight mb-2 group-hover:text-[#c88d51] transition">
+                <h3 className="text-sm font-medium text-[var(--fg)] font-mono uppercase tracking-tight mb-2 group-hover:text-[var(--accent)] transition">
                   {st.name}
                 </h3>
-                <h4 className="text-xs text-stone-300 font-medium mb-2 leading-snug">
+                <h4 className="text-xs text-[var(--fg-soft)] font-medium mb-2 leading-snug">
                   {st.title}
                 </h4>
-                <p className="text-[11px] text-stone-400 font-light leading-relaxed">
+                <p className="text-[11px] text-[var(--fg-muted)] font-light leading-relaxed">
                   {st.description}
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-[#1f1a16] text-[10px] font-mono text-stone-600 flex items-center justify-between">
+              <div className="pt-3 border-t border-[var(--surface-2)] text-[10px] font-mono text-[var(--fg-faint)] flex items-center justify-between">
                 <span>Stage {st.step}</span>
                 {idx < stages.length - 1 ? (
-                  <span className="text-stone-500">→</span>
+                  <span className="text-[var(--fg-faint)]">→</span>
                 ) : (
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                 )}

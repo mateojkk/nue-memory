@@ -49,16 +49,16 @@ export function MediaMemoryWorkspace({
   return (
     <div className="space-y-6 font-light text-left">
       {/* Workspace Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#241f1a]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)]">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-mono text-[#c88d51] uppercase tracking-wider">
+            <span className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider">
               Creative Studio
             </span>
-            <span className="text-stone-500 text-xs">&middot;</span>
-            <span className="text-xs font-mono text-stone-400">{activeProject.title}</span>
+            <span className="text-[var(--fg-faint)] text-xs">&middot;</span>
+            <span className="text-xs font-mono text-[var(--fg-muted)]">{activeProject.title}</span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-medium text-white tracking-tight font-sans">
+          <h2 className="text-xl sm:text-2xl font-medium text-[var(--fg)] tracking-tight font-sans">
             Media Memory with Livepeer Agent
           </h2>
         </div>
@@ -68,7 +68,7 @@ export function MediaMemoryWorkspace({
           {/* Simulate Cross-Project Recall (Step 5 of Demo Flow) */}
           <button
             onClick={() => onNewProject('Project B - Launch Video', 'Create a launch video for my new product.')}
-            className="px-3 py-1.5 rounded-md bg-[#1f1a16] hover:bg-[#28211b] text-[#c88d51] text-xs font-mono font-medium flex items-center gap-1.5 border border-[#382d23] transition shadow-sm"
+            className="px-3 py-1.5 rounded-md bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] text-[var(--accent)] text-xs font-mono font-medium flex items-center gap-1.5 border border-[var(--accent-deep)] transition shadow-sm"
             title="Start new project without repeating preferences"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -78,9 +78,9 @@ export function MediaMemoryWorkspace({
           {/* Context Inspector */}
           <button
             onClick={onOpenInspector}
-            className="px-3 py-1.5 rounded-md bg-[#141210] hover:bg-[#1a1714] text-stone-300 text-xs font-mono font-medium flex items-center gap-1.5 border border-[#26211d] transition"
+            className="px-3 py-1.5 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--fg-soft)] text-xs font-mono font-medium flex items-center gap-1.5 border border-[var(--border)] transition"
           >
-            <Layers className="w-3.5 h-3.5 text-[#c88d51]" />
+            <Layers className="w-3.5 h-3.5 text-[var(--accent)]" />
             <span>Inspect Context</span>
           </button>
         </div>
@@ -88,7 +88,7 @@ export function MediaMemoryWorkspace({
 
       {/* Memory Applied Banner (Visibly displays when memories are active in current project) */}
       {activeVersion && activeVersion.appliedPreferences.length > 0 && (
-        <div className="p-3.5 rounded-md bg-[#161c16] border border-emerald-900/50 text-xs font-mono text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+        <div className="p-3.5 rounded-md bg-[var(--surface-2)] border border-emerald-900/50 text-xs font-mono text-emerald-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="flex items-center gap-1.5 text-emerald-400 font-medium">
               <Check className="w-4 h-4 text-emerald-400" />
@@ -106,7 +106,7 @@ export function MediaMemoryWorkspace({
             </div>
           </div>
 
-          <span className="text-[10px] text-stone-400 shrink-0">
+          <span className="text-[10px] text-[var(--fg-muted)] shrink-0">
             Retrieved from Walrus MemWal
           </span>
         </div>
