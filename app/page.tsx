@@ -218,8 +218,19 @@ export default function Home() {
         const getRes = await fetch('/api/memwal');
         const getData = await getRes.json();
         if (getData.success && getData.preferences) {
-          setActiveMemories(getData.preferences.filter((p: MediaPreference) => p.isActive));
+          setActiveMemories(getData.preferences);
         }
+
+        const blobSummary = data.blobIds?.length ? ` (Blob: ${data.blobIds[0]})` : '';
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-saved-${Date.now()}`,
+            sender: 'agent',
+            content: `✨ Saved ${pendingPreferences.length} preference(s) to Walrus Memory Vault${blobSummary}. These will automatically persist and enrich all future agent generations.`,
+            timestamp: new Date().toISOString(),
+          },
+        ]);
       }
 
       setPendingPreferences([]);
@@ -304,7 +315,18 @@ export default function Home() {
           }}
           pendingPreferences={pendingPreferences}
           onConfirmRemember={handleConfirmRemember}
-          onDismissPending={() => setPendingPreferences([])}
+          onDismissPending={() => {
+            setPendingPreferences([]);
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `msg-dismiss-${Date.now()}`,
+                sender: 'agent',
+                content: 'Noted. These adjustments will apply to this project only and will not be persisted to your permanent Walrus memory.',
+                timestamp: new Date().toISOString(),
+              },
+            ]);
+          }}
           isSavingMemory={isSavingMemory}
           onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
           activeMemories={activeMemories}
