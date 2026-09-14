@@ -164,7 +164,7 @@ export function TypewriterHeadline({
 }
 
 /**
- * Self-advancing stage timer (mirrors mem0's demo "Timer Wrapper" pattern).
+ * Self-advancing stage timer (mem0's "Timer Wrapper" pattern).
  * Cycles an index 0..count-1 every intervalMs, pausable via the returned setter.
  */
 export function useAutoStage(count: number, intervalMs = 4200): [number, (i: number) => void, boolean] {
@@ -185,4 +185,81 @@ export function useAutoStage(count: number, intervalMs = 4200): [number, (i: num
   };
 
   return [stage, select, paused];
+}
+
+/**
+ * mem0-style animated tab switcher (bento card vocabulary).
+ *
+ * Matches mem0's Efficiency / Visibility / Control card:
+ *   - Small tab strip: first tab is a dark pill (#181818 bg, white text),
+ *     inactive tabs are plain muted labels with no background.
+ *   - Content pane: icon chip, title, one-line description, then a media
+ *     window (rounded 8px, object-fit cover) with a caption bar.
+ *   - Stages auto-advance on a timer (mem0's "Timer Wrapper" pattern);
+ *     clicking a tab selects it and pauses auto-advance briefly.
+ *   - Switching is a fade-only cross-fade in mem0's exact tween language.
+ */
+
+interface AnimatedTabStage {
+  label: string;
+  title: string;
+  description: string;
+  media?: React.ReactNode;
+  caption: string;
+}
+
+export function AnimatedTabs({
+  stages,
+  intervalMs = 5000,
+}: {
+  stages: AnimatedTabStage[];
+  intervalMs?: number;
+}) {
+  const [active, select] = useAutoStage(stages.length, intervalMs);
+  const stage = stages[active];
+
+  return (
+    <div>
+      {/* Tab strip — mem0 style: dark active pill, plain muted inactive */}
+      <div className="flex items-center gap-1 mb-6" role="tablist">
+        {stages.map((s, i) => (
+          <button
+            key={s.label}
+            role="tab"
+            aria-selected={i === active}
+            onClick={() => select(i)}
+            className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition-all duration-300 ${
+              i === active
+                ? 'bg-[var(--fg)] text-[var(--bg)]'
+                : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content pane */}
+      {stage && (
+        <div key={active} className="nue-fade-swap grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-5 space-y-3">
+            <h3 className="text-xl font-medium text-[var(--fg)] tracking-tight">
+              {stage.title}
+            </h3>
+            <p className="text-sm text-[var(--fg-muted)] leading-relaxed">
+              {stage.description}
+            </p>
+          </div>
+          <div className="lg:col-span-7">
+            <div className="rounded-lg overflow-hidden border border-[var(--border)] bg-[var(--surface-2)]">
+              {stage.media}
+            </div>
+            <p className="mt-2 text-[11px] font-mono text-[var(--fg-faint)]">
+              {stage.caption}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

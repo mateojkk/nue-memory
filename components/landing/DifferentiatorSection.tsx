@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ArrowRight, Check, X, Split, Database, Sparkles } from 'lucide-react';
-import { Reveal } from '@/components/motion';
+import { Reveal, useAutoStage } from '@/components/motion';
 
 export function DifferentiatorSection() {
-  const [selectedExample, setSelectedExample] = useState<number>(0);
+  // mem0-style self-advancing demo scenarios (pauses briefly on manual pick)
+  const [selectedExample, selectExample] = useAutoStage(3, 6000);
 
   const examples = [
     {
@@ -55,19 +56,21 @@ export function DifferentiatorSection() {
 
       {/* Interactive Splitter Demonstration */}
       <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-10 space-y-8">
-        {/* Example Picker Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--border)]">
+        {/* mem0-style tab strip: dark active pill, plain muted inactive */}
+        <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-[var(--border)]" role="tablist">
           <span className="text-xs font-mono text-[var(--fg-faint)] uppercase tracking-wider mr-2">
             Example Input:
           </span>
           {examples.map((ex, idx) => (
             <button
               key={idx}
-              onClick={() => setSelectedExample(idx)}
-              className={`px-3 py-1.5 rounded-md text-xs font-mono transition whitespace-nowrap ${
+              role="tab"
+              aria-selected={selectedExample === idx}
+              onClick={() => selectExample(idx)}
+              className={`px-3.5 py-1.5 rounded-md text-xs font-mono transition whitespace-nowrap ${
                 selectedExample === idx
-                  ? 'bg-[var(--border)] text-[var(--fg)] border border-[var(--accent)]/40'
-                  : 'bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)]'
+                  ? 'bg-[var(--fg)] text-[var(--bg)] font-medium'
+                  : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
               }`}
             >
               Scenario 0{idx + 1}
@@ -75,8 +78,8 @@ export function DifferentiatorSection() {
           ))}
         </div>
 
-        {/* Raw Interaction Container */}
-        <div>
+        {/* Raw Interaction Container — cross-fades on scenario switch */}
+        <div key={selectedExample} className="nue-fade-swap">
           <div className="text-xs font-mono text-[var(--fg-muted)] mb-2 flex items-center justify-between">
             <span>RAW AGENT INTERACTION STREAM</span>
             <span className="text-[var(--fg-muted)] text-[11px]">Nue Real-Time Parser</span>
@@ -86,8 +89,8 @@ export function DifferentiatorSection() {
           </div>
         </div>
 
-        {/* The Visual Split: Temporary vs Persistent */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+        {/* The Visual Split: Temporary vs Persistent — cross-fades with scenario */}
+        <div key={`split-${selectedExample}`} className="nue-fade-swap grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           {/* Box 1: Temporary Edit */}
           <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-red-950/40 relative overflow-hidden flex flex-col justify-between">
             <div className="space-y-3">
