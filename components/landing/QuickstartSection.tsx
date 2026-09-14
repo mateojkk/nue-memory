@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Copy, Check, ArrowRight, Code2 } from 'lucide-react';
 import { Reveal } from '@/components/motion';
+import { MemoryCompressionVisual } from './MemoryCompressionVisual';
 
 export function QuickstartSection() {
   const [copiedPip, setCopiedPip] = useState(false);
@@ -131,53 +132,8 @@ export function QuickstartSection() {
             </div>
           </div>
 
-          {/* Simple Workflow Flow */}
-          <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-4">
-            <span className="text-xs font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium block mb-2">
-              Execution Workflow
-            </span>
-
-            <div className="space-y-3 font-mono text-xs">
-              <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
-                  1
-                </span>
-                <span className="text-[var(--fg-soft)]">add memory</span>
-              </div>
-              <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
-
-              <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
-                  2
-                </span>
-                <span className="text-[var(--fg-soft)]">Nue extracts what matters</span>
-              </div>
-              <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
-
-              <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
-                  3
-                </span>
-                <span className="text-[var(--fg-soft)]">memory persisted</span>
-              </div>
-              <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
-
-              <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
-                  4
-                </span>
-                <span className="text-[var(--fg-soft)]">search later</span>
-              </div>
-              <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
-
-              <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
-                  5
-                </span>
-                <span className="text-emerald-400">relevant context returned</span>
-              </div>
-            </div>
-          </div>
+          {/* Live product visual: animated compression loop (no video file) */}
+          <MemoryCompressionVisual />
         </div>
       </div>
     </section>
