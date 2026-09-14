@@ -3,50 +3,50 @@
 :root {
   --font-inter: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* ---- LIGHT THEME (default): white + very light brown ---- */
+  /* ---- LIGHT THEME (default): white + neutral grays, brown ONLY as accent ---- */
   --background: #ffffff;
-  --foreground: #2b2118;
+  --foreground: #1c1917;
 
-  /* Surfaces: white canvas, very light brown cards */
+  /* Surfaces: pure white canvas, neutral stone cards */
   --bg: #ffffff;
-  --surface: #faf6f1;
-  --surface-2: #f2eae0;
-  --border: #e8ddcf;
+  --surface: #ffffff;
+  --surface-2: #f5f5f4;
+  --border: #e7e5e4;
 
-  /* Text: warm near-black browns */
-  --fg: #2b2118;
-  --fg-soft: #57493c;
-  --fg-muted: #8a7767;
-  --fg-faint: #ab9c8c;
+  /* Text: neutral warm-gray scale */
+  --fg: #1c1917;
+  --fg-soft: #44403c;
+  --fg-muted: #78716c;
+  --fg-faint: #a8a29e;
 
-  /* Brown accent — quiet, not the hero */
+  /* Brown accent — the ONLY brown on light surfaces */
   --accent: #a97c50;
   --accent-bright: #c39a6e;
   --accent-deep: #7d5a38;
-  --accent-glow: rgba(169, 124, 80, 0.12);
-  --border-accent: rgba(169, 124, 80, 0.35);
+  --accent-glow: rgba(169, 124, 80, 0.08);
+  --border-accent: rgba(169, 124, 80, 0.3);
 }
 
 .dark {
-  /* ---- DARK THEME: black + soft brown ---- */
-  --background: #0b0908;
-  --foreground: #f2ece4;
+  /* ---- DARK THEME: neutral black, brown only as accent ---- */
+  --background: #0a0a0a;
+  --foreground: #f5f5f4;
 
-  --bg: #0b0908;
-  --surface: #151110;
-  --surface-2: #1e1815;
-  --border: #2c241e;
+  --bg: #0a0a0a;
+  --surface: #131312;
+  --surface-2: #1c1b1a;
+  --border: #292827;
 
-  --fg: #f2ece4;
-  --fg-soft: #d9cec2;
-  --fg-muted: #a3938a;
-  --fg-faint: #7d6f66;
+  --fg: #f5f5f4;
+  --fg-soft: #d6d3d1;
+  --fg-muted: #a8a29e;
+  --fg-faint: #78716c;
 
   --accent: #c08a55;
   --accent-bright: #d8a874;
   --accent-deep: #96683c;
-  --accent-glow: rgba(192, 138, 85, 0.14);
-  --border-accent: rgba(192, 138, 85, 0.4);
+  --accent-glow: rgba(192, 138, 85, 0.1);
+  --border-accent: rgba(192, 138, 85, 0.35);
 }
 
 /* Legacy token aliases (older sections reference these) */
