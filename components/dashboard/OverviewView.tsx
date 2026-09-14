@@ -3,6 +3,7 @@
 import React from 'react';
 import { Database, Cpu, ShieldCheck, Zap, Layers, Sparkles, ArrowRight } from 'lucide-react';
 import { MediaPreference } from '@/lib/types';
+import { useSystemHealth, connectionIndicator } from '@/lib/hooks/useSystemHealth';
 
 interface OverviewViewProps {
   memories: MediaPreference[];
@@ -11,8 +12,12 @@ interface OverviewViewProps {
 }
 
 export function OverviewView({ memories, onOpenWorkspace, onOpenMemories }: OverviewViewProps) {
+  const { health, isLoading } = useSystemHealth();
   const activeCount = memories.filter((m) => m.isActive).length;
   const supersededCount = memories.filter((m) => !m.isActive).length;
+  const persistedCount = memories.filter((m) => m.memwalBlobId).length;
+  const walrus = connectionIndicator(health.walrus.state, isLoading);
+  const livepeer = connectionIndicator(health.livepeer.state, isLoading);
 
   return (
     <div className="space-y-8 font-light text-left">
@@ -34,22 +39,22 @@ export function OverviewView({ memories, onOpenWorkspace, onOpenMemories }: Over
         <div className="p-5 rounded-xl bg-[#141210] border border-[#26211d] space-y-2">
           <div className="flex items-center justify-between text-xs font-mono text-stone-500">
             <span>STORAGE BACKEND</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className={walrus.dotClass} title={health.walrus.message} />
           </div>
           <div className="text-lg font-medium text-white font-sans">Sui Walrus (MemWal)</div>
-          <div className="text-xs text-stone-400 font-light">
-            Decentralized blob persistence active · Zero model lock-in
+          <div className={`text-xs font-light ${health.walrus.state === 'connected' ? 'text-stone-400' : 'text-red-400'}`}>
+            {health.walrus.message || 'Decentralized blob persistence · Zero model lock-in'}
           </div>
         </div>
 
         <div className="p-5 rounded-xl bg-[#141210] border border-[#26211d] space-y-2">
           <div className="flex items-center justify-between text-xs font-mono text-stone-500">
             <span>MEDIA EXECUTION</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className={livepeer.dotClass} title={health.livepeer.message} />
           </div>
           <div className="text-lg font-medium text-white font-sans">Livepeer Agent MCP</div>
-          <div className="text-xs text-stone-400 font-light">
-            Remote MCP tool connected · Context-augmented generation
+          <div className={`text-xs font-light ${health.livepeer.state === 'configured' ? 'text-stone-400' : 'text-red-400'}`}>
+            {health.livepeer.message || 'Remote MCP tool · Context-augmented generation'}
           </div>
         </div>
 
@@ -91,8 +96,14 @@ export function OverviewView({ memories, onOpenWorkspace, onOpenMemories }: Over
               <span className="text-[11px] text-stone-400 block mt-1">Superseded Records</span>
             </div>
             <div className="p-4 rounded-lg bg-[#181512] border border-[#29221b]">
-              <span className="text-2xl font-medium text-emerald-400 block">100%</span>
-              <span className="text-[11px] text-stone-400 block mt-1">Durable Walrus Blobs</span>
+              <span
+                className={`text-2xl font-medium block ${
+                  persistedCount === memories.length && memories.length > 0 ? 'text-emerald-400' : 'text-stone-300'
+                }`}
+              >
+                {persistedCount}/{memories.length}
+              </span>
+              <span className="text-[11px] text-stone-400 block mt-1">Walrus-Persisted Records</span>
             </div>
           </div>
 

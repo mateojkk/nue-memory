@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Database, Clock, Eye, Trash2, X, Check, ShieldCheck, ArrowRight } from 'lucide-react';
 import { MediaPreference, StructuredMemory } from '@/lib/types';
+import { useSystemHealth, connectionIndicator } from '@/lib/hooks/useSystemHealth';
 
 interface MemoriesViewProps {
   memories: MediaPreference[];
@@ -13,6 +14,8 @@ interface MemoriesViewProps {
 export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewProps) {
   const [selectedMemory, setSelectedMemory] = useState<MediaPreference | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'superseded'>('all');
+  const { health, isLoading } = useSystemHealth();
+  const walrusIndicator = connectionIndicator(health.walrus.state, isLoading);
 
   const activeMemories = memories.filter((m) => m.isActive);
   const supersededMemories = memories.filter((m) => !m.isActive);
@@ -38,6 +41,23 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
           <p className="text-stone-400 text-xs sm:text-sm mt-1">
             Inspect what Nue remembered, why it was extracted, source attributions, and audit supersessions.
           </p>
+        </div>
+
+        {/* Walrus Connection Indicator */}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-[#141210] border border-[#26211d] text-xs font-mono self-start">
+          <span className={walrusIndicator.dotClass} title={health.walrus.message} />
+          <span className="text-stone-500 uppercase tracking-wider">Walrus Relayer</span>
+          <span
+            className={
+              health.walrus.state === 'connected'
+                ? 'text-emerald-400 font-medium'
+                : health.walrus.state === 'missing_keys' || health.walrus.state === 'error'
+                ? 'text-red-400 font-medium'
+                : 'text-amber-400 font-medium'
+            }
+          >
+            {walrusIndicator.label}
+          </span>
         </div>
 
         {/* Filter Tabs */}
@@ -191,9 +211,15 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
                 </div>
                 <div className="p-2.5 rounded bg-[#171411] border border-[#241f1a] col-span-2">
                   <span className="text-stone-500 block">Walrus Storage Blob ID</span>
-                  <span className="text-[#c88d51] font-mono text-[10px] break-all select-all">
-                    {selectedMemory.memwalBlobId || 'walrus_blob_persisted'}
-                  </span>
+                  {selectedMemory.memwalBlobId ? (
+                    <span className="text-[#c88d51] font-mono text-[10px] break-all select-all">
+                      {selectedMemory.memwalBlobId}
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 font-mono text-[10px]">
+                      Not yet persisted to Walrus — remember this memory to obtain a blob ID
+                    </span>
+                  )}
                 </div>
               </div>
 
