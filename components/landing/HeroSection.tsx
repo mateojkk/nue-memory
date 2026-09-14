@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ArrowRight, Check, Copy, Terminal, Shield } from 'lucide-react';
-import { Reveal, TypewriterHeadline } from '@/components/motion';
+import { Reveal } from '@/components/motion';
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -28,15 +28,9 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
         Nue Memory <span className="text-[var(--fg-muted)]">·</span> NextMathLabs
       </div>
 
-      {/* Headline: mem0-style typewriter over agent-memory outcomes */}
-      <h1 className="text-4xl sm:text-6xl md:text-[64px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans min-h-[1.2em]">
-        <TypewriterHeadline
-          phrases={[
-            'AI media agents can create. Nue lets them remember.',
-            'Feedback in. Preferences out.',
-            'Create again without repeating yourself.',
-          ]}
-        />
+      {/* Headline: static, mem0-style */}
+      <h1 className="text-4xl sm:text-6xl md:text-[64px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans">
+        AI media agents can create. Nue lets them remember.
       </h1>
 
       {/* Supporting Copy */}
