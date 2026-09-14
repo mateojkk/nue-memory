@@ -35,7 +35,14 @@ export async function POST(request: Request) {
       summaryTokens,
       retrievalCount: relevantMemories.length,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    const err = error as Error & { code?: string };
+    if (err?.code === 'walrus_config_missing') {
+      return NextResponse.json(
+        { success: false, error: 'configuration_required', message: err.message },
+        { status: 503 }
+      );
+    }
+    return NextResponse.json({ success: false, error: err?.message || String(error) }, { status: 500 });
   }
 }

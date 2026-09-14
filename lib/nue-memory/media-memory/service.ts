@@ -76,6 +76,23 @@ export class MemWalService {
   }
 
   /**
+   * Honest connection state for UI indicators: Disconnected / Missing Keys
+   * vs. Walrus Relayer (Connected).
+   */
+  public async getConnectionState(): Promise<{ state: string; message: string }> {
+    try {
+      await this.store.initialize();
+      return this.store.getConnectionState();
+    } catch (err) {
+      const conn = this.store.getConnectionState();
+      return conn.state !== 'uninitialized' ? conn : {
+        state: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  /**
    * Persists a structured MediaPreference to Walrus Memory via MemWal
    */
   public async rememberPreference(
@@ -96,7 +113,7 @@ export class MemWalService {
     };
 
     this.memoryCache.set(updatedPref.id, updatedPref);
-    return { blobId: updatedPref.memwalBlobId || 'walrus_blob', preference: updatedPref };
+    return { blobId: updatedPref.memwalBlobId as string, preference: updatedPref };
   }
 
   /**

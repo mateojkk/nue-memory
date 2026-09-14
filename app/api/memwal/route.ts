@@ -3,19 +3,36 @@ import { memWalService } from '@/lib/walrus-memwal/client';
 import { evolveMemories } from '@/lib/nue-memory/evolution';
 import { MediaPreference } from '@/lib/types';
 
+/**
+ * Maps Walrus configuration failures to an explicit 503 so the UI can render
+ * a "Configuration Required" state instead of a generic 500.
+ */
+function errorResponse(error: unknown) {
+  const err = error as Error & { code?: string };
+  if (err?.code === 'walrus_config_missing') {
+    return NextResponse.json(
+      { success: false, error: 'configuration_required', message: err.message },
+      { status: 503 }
+    );
+  }
+  return NextResponse.json({ success: false, error: err?.message || String(error) }, { status: 500 });
+}
+
 export async function GET() {
   try {
     await memWalService.initialize();
     const preferences = memWalService.getAllPreferences(true);
+    const connection = await memWalService.getConnectionState();
     return NextResponse.json({
       success: true,
       preferences,
       count: preferences.filter((p) => p.isActive).length,
       totalCount: preferences.length,
       storageLayer: 'MemWal (Walrus Memory on Sui)',
+      connection,
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return errorResponse(error);
   }
 }
 
@@ -83,7 +100,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  } catch (error) {
+    return errorResponse(error);
   }
 }

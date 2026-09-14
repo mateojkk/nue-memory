@@ -6,7 +6,6 @@ async function runStoreTest() {
 
   const store = new WalrusMemWalStore({
     namespace: 'nue-test-suite',
-    forceMock: true,
   });
 
   await store.initialize();

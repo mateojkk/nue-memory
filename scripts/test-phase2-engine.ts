@@ -39,7 +39,7 @@ async function runPhase2Test() {
   // Test 2: Storage & Ingestion with Walrus MemWal
   // ----------------------------------------------------------------------
   console.log('--- Test 2: Ingest & Persist to Walrus MemWal ---');
-  const store = new WalrusMemWalStore({ namespace: 'phase2-test-ns', forceMock: true });
+  const store = new WalrusMemWalStore({ namespace: 'phase2-test-ns' });
   await store.initialize();
 
   const savedMemories: StructuredMemory[] = [];

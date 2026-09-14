@@ -10,7 +10,22 @@ export interface WalrusStoreConfig {
   serverUrl?: string;
   privateKey?: string;
   accountId?: string;
-  forceMock?: boolean;
+}
+
+export type WalrusConnectionState = 'uninitialized' | 'connected' | 'missing_keys' | 'error';
+
+/**
+ * Thrown when Walrus MemWal cannot be used because live credentials
+ * (MEMWAL_PRIVATE_KEY / MEMWAL_ACCOUNT_ID) are not configured.
+ *
+ * Per project rules: NO MOCKING. We never silently simulate persistence.
+ */
+export class WalrusConfigError extends Error {
+  public readonly code = 'walrus_config_missing';
+  constructor(message = 'Walrus MemWal is not configured: MEMWAL_PRIVATE_KEY and MEMWAL_ACCOUNT_ID are required for live decentralized persistence.') {
+    super(message);
+    this.name = 'WalrusConfigError';
+  }
 }
 
 const META_DELIMITER = '__NUE_META__';
@@ -109,14 +124,19 @@ export function decodeMemoryPayload(
 
 /**
  * Storage adapter connecting Nue Memory to Walrus MemWal.
- * Supports production MemWal with Sui Ed25519 delegate keys,
- * and seamlessly falls back to MemWalMock for zero-config offline operations.
+ *
+ * STRICT LIVE-ONLY MODE (per project rules — NO MOCKING):
+ * Requires real Sui Ed25519 delegate keys via MEMWAL_PRIVATE_KEY and
+ * MEMWAL_ACCOUNT_ID. Missing credentials raise WalrusConfigError instead
+ * of silently degrading to an in-memory mock.
  */
 export class WalrusMemWalStore implements MemoryStore {
   private namespace: string;
   private client: any = null;
   private isInitialized = false;
   private config: WalrusStoreConfig;
+  private connectionState: WalrusConnectionState = 'uninitialized';
+  private initError: Error | null = null;
   private memoryCache: Map<string, StructuredMemory> = new Map();
   private blobToMemoryId: Map<string, string> = new Map();
 
@@ -125,12 +145,40 @@ export class WalrusMemWalStore implements MemoryStore {
     this.namespace = config.namespace || 'nue-memory';
   }
 
+  /**
+   * Reports the current Walrus connection state so the UI/API can display
+   * honest status instead of fabricated "healthy" responses.
+   */
+  public getConnectionState(): { state: WalrusConnectionState; message: string } {
+    switch (this.connectionState) {
+      case 'connected':
+        return { state: 'connected', message: `Walrus Relayer connected (namespace: ${this.namespace}).` };
+      case 'missing_keys':
+        return {
+          state: 'missing_keys',
+          message: 'Missing MEMWAL_PRIVATE_KEY / MEMWAL_ACCOUNT_ID — live Walrus persistence unavailable.',
+        };
+      case 'error':
+        return { state: 'error', message: this.initError?.message || 'Walrus initialization failed.' };
+      default:
+        return { state: 'uninitialized', message: 'Walrus store not initialized yet.' };
+    }
+  }
+
+  private async requireClient(): Promise<any> {
+    await this.initialize();
+    if (!this.client) {
+      throw this.initError || new WalrusConfigError();
+    }
+    return this.client;
+  }
+
   public async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
     try {
       const memwalModule = await import('@mysten-incubation/memwal');
-      const { MemWal, MemWalMock } = memwalModule;
+      const { MemWal } = memwalModule;
 
       const privateKey = this.config.privateKey || process.env.MEMWAL_PRIVATE_KEY;
       const accountId = this.config.accountId || process.env.MEMWAL_ACCOUNT_ID;
@@ -139,23 +187,33 @@ export class WalrusMemWalStore implements MemoryStore {
         process.env.MEMWAL_SERVER_URL ||
         'https://relayer.memory.walrus.xyz';
 
-      if (!this.config.forceMock && privateKey && accountId) {
-        this.client = MemWal.create({
-          key: privateKey,
-          accountId,
-          serverUrl,
-          namespace: this.namespace,
-        });
-      } else {
-        this.client = MemWalMock.create({
-          namespace: this.namespace,
-        });
+      if (!privateKey || !accountId) {
+        // STRICT: never fall back to MemWalMock. Fail fast with a clear error.
+        this.connectionState = 'missing_keys';
+        this.initError = new WalrusConfigError();
+        throw this.initError;
       }
 
+      this.client = MemWal.create({
+        key: privateKey,
+        accountId,
+        serverUrl,
+        namespace: this.namespace,
+      });
+
+      this.connectionState = 'connected';
+      this.initError = null;
       this.isInitialized = true;
     } catch (err) {
-      console.warn('[WalrusStore] Warning during MemWal initialization:', err);
+      this.initError = err instanceof Error ? err : new Error(String(err));
+      if (this.connectionState !== 'missing_keys') {
+        this.connectionState = 'error';
+      }
+      // Initialization is lazy and idempotent: methods using the client must
+      // call requireClient() and surface the failure instead of silently
+      // degrading to fake local state.
       this.isInitialized = true;
+      throw this.initError;
     }
   }
 
@@ -165,20 +223,22 @@ export class WalrusMemWalStore implements MemoryStore {
   public async save(
     memory: StructuredMemory
   ): Promise<{ blobId?: string; memory: StructuredMemory }> {
-    await this.initialize();
+    const client = await this.requireClient();
 
     const payloadText = encodeMemoryPayload(memory);
-    let blobId: string = memory.storageBlobId || `walrus_mock_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
+    let blobId: string;
     try {
-      if (this.client?.rememberAndWait) {
-        const res = await this.client.rememberAndWait(payloadText, this.namespace);
-        if (res?.blob_id || res?.id) {
-          blobId = res.blob_id || res.id;
-        }
+      const res = await client.rememberAndWait(payloadText, this.namespace);
+      const returnedId = res?.blob_id || res?.id;
+      if (!returnedId) {
+        throw new Error('Walrus MemWal did not return a blob ID — persistence not confirmed.');
       }
+      blobId = returnedId;
     } catch (error) {
-      console.error('[WalrusStore] Error during rememberAndWait:', error);
+      // STRICT: never fabricate a blob ID on failure. Surface the real error.
+      console.error('[WalrusStore] rememberAndWait failed:', error);
+      throw error instanceof Error ? error : new Error(String(error));
     }
 
     const persisted: StructuredMemory = {
@@ -205,13 +265,13 @@ export class WalrusMemWalStore implements MemoryStore {
    * Performs semantic query against MemWal and applies domain-level filters and ranking
    */
   public async search(query: MemoryQuery): Promise<MemorySearchResult[]> {
-    await this.initialize();
+    const client = await this.requireClient();
 
     let recalledBlobs: Array<{ blob_id: string; text: string; distance: number; created_at?: string }> = [];
 
     try {
-      if (this.client?.recall) {
-        const recallRes = await this.client.recall({
+      if (client?.recall) {
+        const recallRes = await client.recall({
           query: query.query,
           topK: (query.limit || 10) * 2, // oversample to allow filtering
           maxDistance: 1.5,
@@ -352,11 +412,16 @@ export class WalrusMemWalStore implements MemoryStore {
     const existing = this.memoryCache.get(id);
     if (!existing) return false;
 
-    if (existing.storageBlobId && this.client?.forget) {
-      try {
-        await this.client.forget(existing.storageBlobId);
-      } catch (err) {
-        console.warn('[WalrusStore] Notice on forget:', err);
+    if (existing.storageBlobId) {
+      const client = await this.requireClient();
+      if (client?.forget) {
+        try {
+          await client.forget(existing.storageBlobId);
+        } catch (err) {
+          // Surface real deletion failures instead of pretending success.
+          console.error('[WalrusStore] Forget failed:', err);
+          throw err instanceof Error ? err : new Error(String(err));
+        }
       }
     }
 
@@ -415,32 +480,42 @@ export class WalrusMemWalStore implements MemoryStore {
    * Probes health of the Walrus Memory relayer
    */
   public async health(): Promise<{ status: string; version: string; mode?: string }> {
-    await this.initialize();
-    if (this.client?.health) {
-      try {
-        return await this.client.health();
-      } catch (err) {
-        console.warn('[WalrusStore] Health check warning:', err);
+    try {
+      const client = await this.requireClient();
+      if (client?.health) {
+        try {
+          return await client.health();
+        } catch (err) {
+          console.warn('[WalrusStore] Health check warning:', err);
+          return { status: 'relayer_unreachable', version: '0.1.6', mode: 'live' };
+        }
       }
+      return { status: 'healthy', version: '0.1.6', mode: 'live' };
+    } catch (err) {
+      // Honest failure state — never fabricate a "healthy" response.
+      const connection = this.getConnectionState();
+      return { status: connection.state, version: '0.1.6', mode: 'live', detail: connection.message } as any;
     }
-    return { status: 'healthy', version: '0.1.6', mode: 'memwal-mock' };
   }
 
   /**
    * Restores/reconstructs indexed entries from Walrus storage
    */
   public async restore(namespace?: string): Promise<{ restored: number; total: number }> {
-    await this.initialize();
+    const client = await this.requireClient();
     const ns = namespace || this.namespace;
-    if (this.client?.restore) {
+    if (client?.restore) {
       try {
-        const res = await this.client.restore(ns);
+        const res = await client.restore(ns);
         return { restored: res.restored || 0, total: res.total || 0 };
       } catch (err) {
         console.warn('[WalrusStore] Restore warning:', err);
+        throw err instanceof Error ? err : new Error(String(err));
       }
     }
-    return { restored: this.memoryCache.size, total: this.memoryCache.size };
+    // No restore capability on this client: report honest zero counts instead
+    // of pretending cached entries were restored from Walrus.
+    return { restored: 0, total: 0 };
   }
 }
 
