@@ -468,7 +468,7 @@ LIVEPEER_API_KEY=your_livepeer_api_key
 LIVEPEER_AGENT_MCP_URL=https://agent.livepeer.org/api/mcp/creative
 ```
 
-> **Note on Mock Mode**: When `MEMWAL_PRIVATE_KEY` is not provided, the SDK initializes `MemWalMock` locally in memory for offline development. To ensure live network verification, always provide valid Walrus keys.
+> **Note on Mock Mode (REMOVED)**: Mock/offline mode is **NOT supported**. Per `rules.md` §3 ("NO MOCKING"), the silent `MemWalMock` fallback has been removed from `lib/nue-memory/storage/walrus-store.ts`. Without valid Walrus keys the store raises `WalrusConfigError`, and the API routes return **503 `configuration_required`** with an explicit message. No fabricated blob IDs or fake "healthy" statuses are ever produced. To enable live decentralized persistence, always provide valid Walrus keys.
 
 ### 3. Build & Run
 ```bash
