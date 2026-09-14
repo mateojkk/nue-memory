@@ -318,7 +318,7 @@ lib/nue-memory/media-memory/
 
 Implemented in [`lib/nue-memory/media-memory/livepeer-agent.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/livepeer-agent.ts):
 
-* **Endpoint**: `https://agent.livepeer.org/api/mcp/creative`
+* **Endpoint**: `https://agent.livepeer.org/api/mcp`
 * **Protocol**: Model Context Protocol (MCP) JSON-RPC 2.0 over HTTP.
 * **Tool Invocation**: `create_media` tool:
   ```json
@@ -465,7 +465,7 @@ MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
 
 # --- Livepeer Agent (Required for Remote MCP Media Synthesis) ---
 LIVEPEER_API_KEY=your_livepeer_api_key
-LIVEPEER_AGENT_MCP_URL=https://agent.livepeer.org/api/mcp/creative
+LIVEPEER_AGENT_MCP_URL=https://agent.livepeer.org/api/mcp
 ```
 
 > **Note on Mock Mode (REMOVED)**: Mock/offline mode is **NOT supported**. Per `rules.md` §3 ("NO MOCKING"), the silent `MemWalMock` fallback has been removed from `lib/nue-memory/storage/walrus-store.ts`. Without valid Walrus keys the store raises `WalrusConfigError`, and the API routes return **503 `configuration_required`** with an explicit message. No fabricated blob IDs or fake "healthy" statuses are ever produced. To enable live decentralized persistence, always provide valid Walrus keys.

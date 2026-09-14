@@ -6,7 +6,8 @@ export class LivepeerMediaAgent {
   private isInitialized = false;
 
   constructor() {
-    this.endpoint = process.env.LIVEPEER_AGENT_MCP_URL || 'https://agent.livepeer.org/api/mcp/creative';
+    this.endpoint =
+      process.env.LIVEPEER_AGENT_MCP_URL || 'https://agent.livepeer.org/api/mcp';
     this.bearer = process.env.LIVEPEER_API_KEY || process.env.LIVEPEER_AGENT_KEY;
   }
 
@@ -139,20 +140,27 @@ export class LivepeerMediaAgent {
           if (mcpData.result.structuredContent.capability) {
             livepeerCapability = mcpData.result.structuredContent.capability;
           }
+        } else if (mcpData.error) {
+          console.error('[LivepeerAgent] MCP create_media error:', mcpData.error);
         }
+      } else {
+        console.error('[LivepeerAgent] MCP create_media HTTP failure:', mcpCallRes.status, await mcpCallRes.text().catch(() => ''));
       }
     } catch (err) {
-      console.warn('[LivepeerAgent] MCP generate call fallback:', err);
+      console.error('[LivepeerAgent] MCP generate call failed:', err);
     }
 
-    // Default dynamic media streams if remote inference timed out or for video loops
-    let fallbackVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-    if (visualTheme.includes('Apparel')) {
-      fallbackVideoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4';
+    // STRICT: never substitute a stock clip for a real Livepeer render.
+    // If the remote render failed, report the failure honestly instead of
+    // returning a placeholder URL masquerading as generated media.
+    if (!realMediaUrl) {
+      throw new Error(
+        'Livepeer Agent did not return generated media. The MCP create_media call failed or returned no URL — no placeholder is substituted (per rules.md NO MOCKING).'
+      );
     }
 
-    const finalMediaUrl = fallbackVideoUrl;
-    const finalImageUrl = realMediaUrl || undefined;
+    const finalMediaUrl = realMediaUrl;
+    const finalImageUrl = realMediaUrl;
 
     const appliedSummary = appliedPreferences.length > 0
       ? `Applied ${appliedPreferences.length} remembered preferences from Nue Memory: ${appliedPreferences.map((p) => p.category).join(', ')}.`
