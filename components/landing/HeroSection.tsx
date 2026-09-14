@@ -24,7 +24,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
 
       {/* Eyebrow: NUE MEMORY */}
       <div className="text-xs font-mono text-[var(--fg-faint)] uppercase tracking-[0.2em] mb-8">
-        Nue Memory <span className="text-[var(--accent)]">·</span> NextMathLabs
+        Nue Memory <span className="text-[var(--fg-muted)]">·</span> NextMathLabs
       </div>
 
       {/* Headline: The memory infrastructure layer for AI agents */}
@@ -35,7 +35,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
 
       {/* Supporting Copy */}
       <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-        AI agents can reason, use tools, and complete tasks, but they often treat every interaction as a new beginning. Nue gives agents persistent memory to retain what matters, learn from previous interactions, and evolve over time.
+        AI agents forget. Nue remembers — durable preferences that persist across sessions and agents.
       </p>
 
       {/* Dual Rectangular CTAs */}
@@ -64,7 +64,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
             <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium">
               Architecture Pipeline
             </span>
-            <span className="text-[10px] font-mono text-[var(--accent)] flex items-center gap-1">
+            <span className="text-[10px] font-mono text-[var(--fg-muted)] flex items-center gap-1">
               <Shield className="w-3 h-3" />
               Decoupled
             </span>
@@ -77,18 +77,18 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
             </div>
 
             <div className="h-6 w-px bg-[var(--accent)]/50 relative">
-              <div className="absolute bottom-0 -left-1 text-[10px] text-[var(--accent)]">▼</div>
+              <div className="absolute bottom-0 -left-1 text-[10px] text-[var(--fg-muted)]">▼</div>
             </div>
 
             <div className="w-full max-w-[240px] p-4 rounded-md bg-[var(--surface-2)] border border-[var(--accent)]/40 text-center shadow-inner">
               <span className="text-[var(--fg)] font-medium block">NUE MEMORY</span>
-              <span className="text-[10px] text-[var(--accent)] block mt-1">
+              <span className="text-[10px] text-[var(--fg-muted)] block mt-1">
                 retrieve / remember / evolve
               </span>
             </div>
 
             <div className="h-6 w-px bg-[var(--accent)]/50 relative">
-              <div className="absolute bottom-0 -left-1 text-[10px] text-[var(--accent)]">▼</div>
+              <div className="absolute bottom-0 -left-1 text-[10px] text-[var(--fg-muted)]">▼</div>
             </div>
 
             <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] border border-emerald-900/50 text-center text-emerald-400 font-medium">
@@ -117,7 +117,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
               onClick={handleCopyPip}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--border)] hover:bg-[var(--border)] text-[var(--fg-soft)] text-xs font-mono border border-[var(--border)] transition"
             >
-              <Terminal className="w-3 h-3 text-[var(--accent)]" />
+              <Terminal className="w-3 h-3 text-[var(--fg-muted)]" />
               <span>pip install nue-ai</span>
               {copiedPip ? (
                 <Check className="w-3 h-3 text-emerald-400 ml-1" />
@@ -131,25 +131,25 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
           <div className="p-5 font-mono text-xs leading-relaxed text-[var(--fg-soft)] overflow-x-auto bg-[var(--surface)] flex-1">
             <pre className="space-y-1">
               <div><span className="text-[var(--fg-faint)]"># Step 1: Initialize Nue Memory client</span></div>
-              <div><span className="text-[var(--accent)]">from</span> nue <span className="text-[var(--accent)]">import</span> MemoryClient</div>
+              <div><span className="text-[var(--fg-muted)]">from</span> nue <span className="text-[var(--fg-muted)]">import</span> MemoryClient</div>
               <div className="text-transparent">_</div>
-              <div>client = MemoryClient(api_key=<span className="text-amber-200">&quot;...&quot;</span>)</div>
+              <div>client = MemoryClient(api_key=<span className="text-[var(--accent-deep)]">&quot;...&quot;</span>)</div>
               <div className="text-transparent">_</div>
               <div><span className="text-[var(--fg-faint)]"># Step 2: Store interaction — Nue extracts durable preference</span></div>
               <div>client.add(</div>
               <div>    [</div>
               <div>        &#123;</div>
-              <div>            <span className="text-amber-200">&quot;role&quot;</span>: <span className="text-amber-200">&quot;user&quot;</span>,</div>
-              <div>            <span className="text-amber-200">&quot;content&quot;</span>: <span className="text-emerald-400">&quot;I prefer bright, minimal visual aesthetics.&quot;</span></div>
+              <div>            <span className="text-[var(--accent-deep)]">&quot;role&quot;</span>: <span className="text-[var(--accent-deep)]">&quot;user&quot;</span>,</div>
+              <div>            <span className="text-[var(--accent-deep)]">&quot;content&quot;</span>: <span className="text-emerald-400">&quot;I prefer bright, minimal visual aesthetics.&quot;</span></div>
               <div>        &#125;</div>
               <div>    ],</div>
-              <div>    user_id=<span className="text-amber-200">&quot;agent_123&quot;</span></div>
+              <div>    user_id=<span className="text-[var(--accent-deep)]">&quot;agent_123&quot;</span></div>
               <div>)</div>
               <div className="text-transparent">_</div>
               <div><span className="text-[var(--fg-faint)]"># Step 3: Search relevant context across future sessions</span></div>
               <div>memories = client.search(</div>
               <div>    <span className="text-emerald-400">&quot;What are this user&apos;s visual preferences?&quot;</span>,</div>
-              <div>    filters=&#123;<span className="text-amber-200">&quot;user_id&quot;</span>: <span className="text-amber-200">&quot;agent_123&quot;</span>&#125;</div>
+              <div>    filters=&#123;<span className="text-[var(--accent-deep)]">&quot;user_id&quot;</span>: <span className="text-[var(--accent-deep)]">&quot;agent_123&quot;</span>&#125;</div>
               <div>)</div>
             </pre>
           </div>

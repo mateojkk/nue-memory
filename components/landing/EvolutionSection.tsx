@@ -9,14 +9,14 @@ export function EvolutionSection() {
   return (
     <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       <div className="text-left mb-12">
-        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Dynamic Lifecycle
         </div>
         <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
           Continuous Memory Evolution
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
-          Preferences change. Naive memory layers accumulate contradictions indefinitely. Nue resolves conflicting memories autonomously through supersession relationships.
+          Preferences change. Nue supersedes conflicts instead of accumulating them.
         </p>
       </div>
 
@@ -38,7 +38,7 @@ export function EvolutionSection() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[var(--accent)]">Session 01 (Initial)</span>
+                  <span className="text-[var(--fg-muted)]">Session 01 (Initial)</span>
                   <Clock className="w-3.5 h-3.5 text-[var(--fg-faint)]" />
                 </div>
                 <div>&ldquo;I prefer dark, high-contrast interfaces.&rdquo;</div>
@@ -53,7 +53,7 @@ export function EvolutionSection() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[var(--accent)]">Session 04 (Updated)</span>
+                  <span className="text-[var(--fg-muted)]">Session 04 (Updated)</span>
                   <RefreshCw className="w-3.5 h-3.5 text-emerald-400" />
                 </div>
                 <div>&ldquo;I&apos;ve changed my mind. Use light interfaces from now on.&rdquo;</div>
@@ -61,7 +61,7 @@ export function EvolutionSection() {
             </div>
 
             <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed pt-3 border-t border-[var(--border)]">
-              Instead of returning both contradictory memories to the agent prompt, Nue creates a directed supersession pointer from Memory A to Memory B.
+              Nue creates a supersession pointer instead of returning both memories.
             </p>
           </div>
         </div>
@@ -113,7 +113,7 @@ export function EvolutionSection() {
           {/* Supersession Connector */}
           {activeStage === 'updated' && (
             <div className="flex flex-col items-center py-1">
-              <div className="text-[10px] text-[var(--accent)] flex items-center gap-1">
+              <div className="text-[10px] text-[var(--fg-muted)] flex items-center gap-1">
                 <span>↓ superseded_by (Pointer: 0x9B8C)</span>
               </div>
             </div>
@@ -125,11 +125,11 @@ export function EvolutionSection() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-[var(--fg)] font-medium">Memory 0x9B8C</span>
-                  <span className="text-[10px] text-[var(--accent)] uppercase px-1.5 py-0.5 rounded bg-[var(--border)]">
+                  <span className="text-[10px] text-[var(--fg-muted)] uppercase px-1.5 py-0.5 rounded bg-[var(--border)]">
                     Category: UI_THEME
                   </span>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40">
+                <span className="px-2 py-0.5 rounded text-[10px] bg-[var(--accent)]/20 text-[var(--fg-muted)] border border-[var(--accent)]/40">
                   CURRENT EFFECTIVE PREFERENCE
                 </span>
               </div>

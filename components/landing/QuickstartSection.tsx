@@ -16,14 +16,14 @@ export function QuickstartSection() {
   return (
     <section id="developers" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       <div className="text-left mb-12">
-        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Developer Quickstart
         </div>
         <h2 className="text-3xl sm:text-4xl font-medium text-[var(--fg)] tracking-tight font-sans">
           Give your agents memory in minutes.
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
-          A drop-in memory infrastructure layer designed for any existing AI agent or framework without rebuilding your pipeline.
+          Drop-in memory infrastructure for any agent framework.
         </p>
       </div>
 
@@ -67,38 +67,38 @@ export function QuickstartSection() {
           <div className="p-6 font-mono text-xs leading-relaxed text-[var(--fg-soft)] overflow-x-auto bg-[var(--surface)]">
             {activeTab === 'python' ? (
               <pre className="space-y-1">
-                <div><span className="text-[var(--accent)]">from</span> nue <span className="text-[var(--accent)]">import</span> MemoryClient</div>
+                <div><span className="text-[var(--fg-muted)]">from</span> nue <span className="text-[var(--fg-muted)]">import</span> MemoryClient</div>
                 <div className="text-transparent">_</div>
-                <div>client = MemoryClient(api_key=<span className="text-amber-200">&quot;...&quot;</span>)</div>
+                <div>client = MemoryClient(api_key=<span className="text-[var(--accent-deep)]">&quot;...&quot;</span>)</div>
                 <div className="text-transparent">_</div>
                 <div>client.add(</div>
                 <div>    [</div>
                 <div>        &#123;</div>
-                <div>            <span className="text-amber-200">&quot;role&quot;</span>: <span className="text-amber-200">&quot;user&quot;</span>,</div>
-                <div>            <span className="text-amber-200">&quot;content&quot;</span>: <span className="text-emerald-400">&quot;I prefer bright, minimal visual aesthetics.&quot;</span></div>
+                <div>            <span className="text-[var(--accent-deep)]">&quot;role&quot;</span>: <span className="text-[var(--accent-deep)]">&quot;user&quot;</span>,</div>
+                <div>            <span className="text-[var(--accent-deep)]">&quot;content&quot;</span>: <span className="text-emerald-400">&quot;I prefer bright, minimal visual aesthetics.&quot;</span></div>
                 <div>        &#125;</div>
                 <div>    ],</div>
-                <div>    user_id=<span className="text-amber-200">&quot;agent_123&quot;</span></div>
+                <div>    user_id=<span className="text-[var(--accent-deep)]">&quot;agent_123&quot;</span></div>
                 <div>)</div>
                 <div className="text-transparent">_</div>
                 <div>memories = client.search(</div>
                 <div>    <span className="text-emerald-400">&quot;What are this user&apos;s visual preferences?&quot;</span>,</div>
-                <div>    filters=&#123;<span className="text-amber-200">&quot;user_id&quot;</span>: <span className="text-amber-200">&quot;agent_123&quot;</span>&#125;</div>
+                <div>    filters=&#123;<span className="text-[var(--accent-deep)]">&quot;user_id&quot;</span>: <span className="text-[var(--accent-deep)]">&quot;agent_123&quot;</span>&#125;</div>
                 <div>)</div>
               </pre>
             ) : (
               <pre className="space-y-1">
-                <div><span className="text-[var(--accent)]">import</span> &#123; MemoryClient &#125; <span className="text-[var(--accent)]">from</span> <span className="text-amber-200">&quot;@nue-memory/sdk&quot;</span>;</div>
+                <div><span className="text-[var(--fg-muted)]">import</span> &#123; MemoryClient &#125; <span className="text-[var(--fg-muted)]">from</span> <span className="text-[var(--accent-deep)]">&quot;@nue-memory/sdk&quot;</span>;</div>
                 <div className="text-transparent">_</div>
-                <div><span className="text-[var(--accent)]">const</span> client = <span className="text-[var(--accent)]">new</span> MemoryClient(&#123; apiKey: process.env.NUE_API_KEY &#125;);</div>
+                <div><span className="text-[var(--fg-muted)]">const</span> client = <span className="text-[var(--fg-muted)]">new</span> MemoryClient(&#123; apiKey: process.env.NUE_API_KEY &#125;);</div>
                 <div className="text-transparent">_</div>
-                <div><span className="text-[var(--accent)]">await</span> client.add([</div>
-                <div>  &#123; role: <span className="text-amber-200">&quot;user&quot;</span>, content: <span className="text-emerald-400">&quot;I prefer bright, minimal visual aesthetics.&quot;</span> &#125;</div>
-                <div>], &#123; userId: <span className="text-amber-200">&quot;agent_123&quot;</span> &#125;);</div>
+                <div><span className="text-[var(--fg-muted)]">await</span> client.add([</div>
+                <div>  &#123; role: <span className="text-[var(--accent-deep)]">&quot;user&quot;</span>, content: <span className="text-emerald-400">&quot;I prefer bright, minimal visual aesthetics.&quot;</span> &#125;</div>
+                <div>], &#123; userId: <span className="text-[var(--accent-deep)]">&quot;agent_123&quot;</span> &#125;);</div>
                 <div className="text-transparent">_</div>
-                <div><span className="text-[var(--accent)]">const</span> memories = <span className="text-[var(--accent)]">await</span> client.search(</div>
+                <div><span className="text-[var(--fg-muted)]">const</span> memories = <span className="text-[var(--fg-muted)]">await</span> client.search(</div>
                 <div>  <span className="text-emerald-400">&quot;What are this user&apos;s visual preferences?&quot;</span>,</div>
-                <div>  &#123; filters: &#123; userId: <span className="text-amber-200">&quot;agent_123&quot;</span> &#125; &#125;</div>
+                <div>  &#123; filters: &#123; userId: <span className="text-[var(--accent-deep)]">&quot;agent_123&quot;</span> &#125; &#125;</div>
                 <div>);</div>
               </pre>
             )}
@@ -136,7 +136,7 @@ export function QuickstartSection() {
 
             <div className="space-y-3 font-mono text-xs">
               <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--accent)] flex items-center justify-center text-[10px]">
+                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
                   1
                 </span>
                 <span className="text-[var(--fg-soft)]">add memory</span>
@@ -144,7 +144,7 @@ export function QuickstartSection() {
               <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
 
               <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--accent)] flex items-center justify-center text-[10px]">
+                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
                   2
                 </span>
                 <span className="text-[var(--fg-soft)]">Nue extracts what matters</span>
@@ -152,7 +152,7 @@ export function QuickstartSection() {
               <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
 
               <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--accent)] flex items-center justify-center text-[10px]">
+                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
                   3
                 </span>
                 <span className="text-[var(--fg-soft)]">memory persisted to Walrus</span>
@@ -160,7 +160,7 @@ export function QuickstartSection() {
               <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
 
               <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--accent)] flex items-center justify-center text-[10px]">
+                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
                   4
                 </span>
                 <span className="text-[var(--fg-soft)]">search later</span>
@@ -168,7 +168,7 @@ export function QuickstartSection() {
               <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
 
               <div className="flex items-center gap-3">
-                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--accent)] flex items-center justify-center text-[10px]">
+                <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
                   5
                 </span>
                 <span className="text-emerald-400">relevant context returned</span>

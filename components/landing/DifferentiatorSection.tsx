@@ -39,14 +39,14 @@ export function DifferentiatorSection() {
     <section id="product" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
       <div className="text-left mb-14">
-        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           The Core Differentiator
         </div>
         <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans max-w-3xl leading-[1.12]">
           Memory is more than storing conversations.
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-4 max-w-3xl leading-relaxed font-light">
-          A naive vector database dumps raw chat history into context windows, resulting in prompt clutter, high token costs, and contradictory rules. Nue provides intelligence around memory: deciding what is worth remembering, filtering temporary instructions, and continuously evolving stored context.
+          Chat logs in a vector DB is not memory. Nue decides what is worth remembering, filters noise, and evolves stored context.
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export function DifferentiatorSection() {
         <div>
           <div className="text-xs font-mono text-[var(--fg-muted)] mb-2 flex items-center justify-between">
             <span>RAW AGENT INTERACTION STREAM</span>
-            <span className="text-[var(--accent)] text-[11px]">Nue Real-Time Parser</span>
+            <span className="text-[var(--fg-muted)] text-[11px]">Nue Real-Time Parser</span>
           </div>
           <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] font-mono text-sm text-[var(--fg)] leading-relaxed shadow-inner">
             &ldquo;{active.rawInput}&rdquo;
@@ -115,7 +115,7 @@ export function DifferentiatorSection() {
           <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-[var(--accent)]/40 relative overflow-hidden flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-[var(--accent)]/20 text-[var(--fg-muted)] border border-[var(--accent)]/40">
                   <Check className="w-3 h-3" />
                   PERSISTENT MEMORY
                 </span>
@@ -136,7 +136,7 @@ export function DifferentiatorSection() {
 
             <div className="pt-4 mt-4 border-t border-[var(--border)] text-[11px] font-mono text-[var(--fg-muted)] flex items-center justify-between">
               <span>Status: Stored in Nue Memory</span>
-              <span className="text-[var(--accent)] font-medium">Available to future tasks</span>
+              <span className="text-[var(--fg-muted)] font-medium">Available to future tasks</span>
             </div>
           </div>
         </div>
@@ -144,19 +144,19 @@ export function DifferentiatorSection() {
         {/* Summary Differentiator Checklist */}
         <div className="pt-6 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-3 gap-6 font-mono text-xs">
           <div>
-            <span className="text-[var(--accent)] block mb-1">01. What to Remember</span>
+            <span className="text-[var(--fg-muted)] block mb-1">01. What to Remember</span>
             <p className="text-[var(--fg-muted)] font-sans text-xs font-light">
               Distinguishes short-lived feedback from durable user preferences autonomously.
             </p>
           </div>
           <div>
-            <span className="text-[var(--accent)] block mb-1">02. Representation</span>
+            <span className="text-[var(--fg-muted)] block mb-1">02. Representation</span>
             <p className="text-[var(--fg-muted)] font-sans text-xs font-light">
               Converts raw chat text into structured, typed memory objects with confidence scores.
             </p>
           </div>
           <div>
-            <span className="text-[var(--accent)] block mb-1">03. Conflict Resolution</span>
+            <span className="text-[var(--fg-muted)] block mb-1">03. Conflict Resolution</span>
             <p className="text-[var(--fg-muted)] font-sans text-xs font-light">
               When preferences shift, older records are superseded rather than accumulating contradictions.
             </p>

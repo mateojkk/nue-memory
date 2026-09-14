@@ -67,14 +67,14 @@ export function MemoryObjectsSection() {
   return (
     <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       <div className="text-left mb-12">
-        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Structured Schema
         </div>
         <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
           Domain-Agnostic Memory Objects
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
-          Nue avoids dumping messy conversation logs into agent prompts. Interactions are parsed into structured, validated memory representations with schema safety.
+          Structured, validated memory objects — not messy chat logs.
         </p>
       </div>
 
@@ -91,7 +91,7 @@ export function MemoryObjectsSection() {
                 onClick={() => setActiveCategory(cat.id)}
                 className={`px-3 py-1.5 rounded-md text-xs font-mono transition flex items-center gap-1.5 border ${
                   activeCategory === cat.id
-                    ? 'bg-[var(--border)] text-[var(--accent)] border-[var(--accent)]/50 shadow-sm'
+                    ? 'bg-[var(--border)] text-[var(--fg-muted)] border-[var(--accent)]/50 shadow-sm'
                     : 'bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] border-[var(--border)]'
                 }`}
               >
@@ -102,7 +102,7 @@ export function MemoryObjectsSection() {
           </div>
 
           <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed pt-3 border-t border-[var(--border)]">
-            While Media Memory initially demonstrates creative parameters (visual style, pacing, captions, audio), Nue&apos;s underlying memory representation supports coding agents, research assistants, and custom enterprise ontologies.
+            One schema works for media, coding agents, research, and custom ontologies.
           </p>
         </div>
 
@@ -110,7 +110,7 @@ export function MemoryObjectsSection() {
         <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden">
           <div className="px-5 py-3 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Code2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+              <Code2 className="w-3.5 h-3.5 text-[var(--fg-muted)]" />
               <span className="text-xs font-mono text-[var(--fg-soft)]">
                 memory_object_{activeCategory}.json
               </span>

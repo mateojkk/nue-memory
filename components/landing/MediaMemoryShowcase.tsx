@@ -12,7 +12,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
     <section id="media-memory" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
       <div className="text-left mb-14">
-        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Flagship Capability · Built on Nue Memory
         </div>
         <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
@@ -32,7 +32,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col justify-between shadow-xl">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <span className="text-xs font-mono text-[var(--accent)] font-medium">PROJECT 01</span>
+              <span className="text-xs font-mono text-[var(--fg-muted)] font-medium">PROJECT 01</span>
               <span className="text-[11px] font-mono text-[var(--fg-faint)]">SaaS App Promo</span>
             </div>
 
@@ -54,7 +54,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
 
           <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-mono text-[var(--fg-faint)] flex items-center justify-between">
             <span>Feedback parsed</span>
-            <span className="text-[var(--accent)]">Extracted →</span>
+            <span className="text-[var(--fg-muted)]">Extracted →</span>
           </div>
         </div>
 
@@ -63,7 +63,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
               <span className="text-xs font-mono text-[var(--fg)] font-medium flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <Sparkles className="w-3.5 h-3.5 text-[var(--fg-muted)]" />
                 NUE MEMORY
               </span>
               <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
@@ -78,15 +78,15 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
               </span>
               <div className="space-y-2 font-mono text-xs">
                 <div className="p-2.5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg)] flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-[var(--fg-muted)] shrink-0" />
                   <span>Large, high-contrast captions</span>
                 </div>
                 <div className="p-2.5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg)] flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-[var(--fg-muted)] shrink-0" />
                   <span>Avoid dramatic music; rhythm beds</span>
                 </div>
                 <div className="p-2.5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg)] flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                  <Check className="w-3.5 h-3.5 text-[var(--fg-muted)] shrink-0" />
                   <span>Minimal visual aesthetic</span>
                 </div>
               </div>

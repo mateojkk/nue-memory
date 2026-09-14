@@ -60,14 +60,14 @@ export function LifecycleSection() {
     <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
       <div className="text-left mb-16">
-        <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Technical Pipeline
         </div>
         <h2 className="text-3xl sm:text-5xl font-medium text-[var(--fg)] tracking-tight font-sans">
           The Memory Lifecycle
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
-          From interaction ingestion to durable retrieval and continuous evolution: how Nue powers agent continuity end-to-end.
+          Seven deterministic stages, from raw interaction to durable recall.
         </p>
       </div>
 
@@ -77,11 +77,11 @@ export function LifecycleSection() {
           {stages.map((st, idx) => (
             <div
               key={st.name}
-              className="p-5 rounded-lg bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--accent)]/40 transition flex flex-col justify-between group min-h-[260px] shadow-lg relative"
+              className="p-5 rounded-lg bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-accent)] transition flex flex-col justify-between group min-h-[220px] relative"
             >
               <div>
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
-                  <span className="text-[11px] font-mono text-[var(--accent)] font-medium">
+                  <span className="text-[11px] font-mono text-[var(--fg-muted)] font-medium">
                     {st.step}
                   </span>
                   <span className="text-[9px] font-mono text-[var(--fg-faint)] uppercase px-1.5 py-0.5 rounded bg-[var(--border)]">
@@ -89,7 +89,7 @@ export function LifecycleSection() {
                   </span>
                 </div>
 
-                <h3 className="text-sm font-medium text-[var(--fg)] font-mono uppercase tracking-tight mb-2 group-hover:text-[var(--accent)] transition">
+                <h3 className="text-sm font-medium text-[var(--fg)] font-mono uppercase tracking-tight mb-2 group-hover:text-[var(--fg-muted)] transition">
                   {st.name}
                 </h3>
                 <h4 className="text-xs text-[var(--fg-soft)] font-medium mb-2 leading-snug">
