@@ -59,46 +59,14 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
           </ul>
         </div>
 
-        {/* Infrastructure Column */}
+        {/* Infrastructure Column — single understated mention */}
         <div>
           <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-mono">
-            Infrastructure
+            Under the Hood
           </h4>
-          <ul className="space-y-2 text-[var(--fg-muted)] font-light">
-            <li>
-              <a
-                href="https://walrus.xyz"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-[var(--fg)] transition inline-flex items-center gap-1"
-              >
-                <span>Walrus</span>
-                <ExternalLink className="w-3 h-3 text-[var(--fg-faint)]" />
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://memory.walrus.xyz"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-[var(--fg)] transition inline-flex items-center gap-1"
-              >
-                <span>MemWal</span>
-                <ExternalLink className="w-3 h-3 text-[var(--fg-faint)]" />
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://agent.livepeer.org"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-[var(--fg)] transition inline-flex items-center gap-1"
-              >
-                <span>Livepeer Agent</span>
-                <ExternalLink className="w-3 h-3 text-[var(--fg-faint)]" />
-              </a>
-            </li>
-          </ul>
+          <p className="text-[var(--fg-faint)] font-light text-xs leading-relaxed">
+            Durable storage by <a href="https://walrus.xyz" target="_blank" rel="noreferrer" className="hover:text-[var(--fg)] transition underline underline-offset-2">Walrus</a> · media execution by <a href="https://agent.livepeer.org" target="_blank" rel="noreferrer" className="hover:text-[var(--fg)] transition underline underline-offset-2">Livepeer Agent</a>.
+          </p>
         </div>
 
         {/* Developers & Hackathon */}
@@ -143,10 +111,8 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
         <div>
           &copy; 2026 Nue &middot; Founded by NextMathLabs. All rights reserved.
         </div>
-        <div className="flex items-center gap-4 text-[var(--fg-muted)] font-mono text-[10px]">
-          <span>WALRUS MEMWAL</span>
-          <span>&middot;</span>
-          <span>LIVEPEER AGENT MCP</span>
+        <div className="flex items-center gap-4 text-[var(--fg-faint)] font-mono text-[10px]">
+          <span>BUILT FOR AGENTS WITH MEMORY</span>
         </div>
       </div>
     </footer>

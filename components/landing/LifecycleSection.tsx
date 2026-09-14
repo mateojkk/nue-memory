@@ -36,9 +36,9 @@ export function LifecycleSection() {
     {
       step: '05',
       name: 'PERSISTENCE',
-      title: 'Store Durable Cryptographic Blobs',
-      description: 'Nue commits structured memory records to Sui Walrus decentralized storage, decoupled from any single LLM runtime.',
-      tag: 'Walrus MemWal',
+      title: 'Persist to Durable Storage',
+      description: 'Nue commits structured memory records to durable, encrypted storage.',
+      tag: 'Persistence',
     },
     {
       step: '06',

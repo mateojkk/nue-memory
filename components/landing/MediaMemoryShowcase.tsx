@@ -22,7 +22,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
           &ldquo;Your creative agent should remember how you work.&rdquo;
         </p>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-3xl font-light">
-          Create once. Give feedback. Let Nue remember what matters. Then start another project without repeating yourself. Powered by Livepeer Agent for media execution and Sui Walrus for persistence.
+          Create once. Give feedback. Let Nue remember what matters. Then start another project without repeating yourself.
         </p>
       </div>
 
@@ -48,7 +48,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             </div>
 
             <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed">
-              Livepeer Agent updates Version 2 for this project while Nue intercepts the interaction stream.
+              Nue updates Version 2 for this project while intercepting the interaction stream.
             </p>
           </div>
 
@@ -68,7 +68,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
               </span>
               <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
                 <Database className="w-3 h-3" />
-                Walrus MemWal
+                Memory Store
               </span>
             </div>
 
@@ -98,7 +98,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
           </div>
 
           <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-mono text-[var(--fg-muted)] flex items-center justify-between">
-            <span>Decoupled Walrus storage</span>
+            <span>Durable encrypted storage</span>
             <span className="text-emerald-400">Durable →</span>
           </div>
         </div>
@@ -130,7 +130,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             </div>
 
             <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed">
-              Livepeer Agent generates the video incorporating remembered preferences without the user repeating themselves.
+              Nue generates the video incorporating remembered preferences without the user repeating themselves.
             </p>
           </div>
 
@@ -148,7 +148,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             Experience Media Memory in the Live Studio
           </h3>
           <p className="text-xs text-[var(--fg-muted)] font-light">
-            Generate with Livepeer Agent, review with feedback, and experience cross-project memory recall.
+            Generate, review, and experience cross-project memory recall.
           </p>
         </div>
 

@@ -155,7 +155,7 @@ export function QuickstartSection() {
                 <span className="w-5 h-5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg-muted)] flex items-center justify-center text-[10px]">
                   3
                 </span>
-                <span className="text-[var(--fg-soft)]">memory persisted to Walrus</span>
+                <span className="text-[var(--fg-soft)]">memory persisted</span>
               </div>
               <div className="w-px h-3 bg-[var(--border)] ml-2.5" />
 

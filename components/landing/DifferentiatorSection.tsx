@@ -21,7 +21,7 @@ export function DifferentiatorSection() {
       temporaryExplanation: 'Local pacing tweak · Discarded from agent memory after export',
       persistentPart: 'Make all captions much larger.',
       persistentCategory: 'typography',
-      persistentExplanation: 'Global styling directive · Persisted to Walrus · Applied across all new projects',
+      persistentExplanation: 'Global styling directive · Persisted durably · Applied across all new projects',
     },
     {
       rawInput: 'Fix the syntax error in line 42, and enforce strict typing without any across this repo.',
@@ -121,7 +121,7 @@ export function DifferentiatorSection() {
                 </span>
                 <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
                   <Database className="w-3 h-3" />
-                  Walrus Blob
+                  Durable Memory
                 </span>
               </div>
 

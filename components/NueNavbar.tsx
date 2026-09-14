@@ -49,7 +49,7 @@ export function NueNavbar({
           </nav>
         </div>
 
-        {/* Right Controls: GitHub, Walrus Vault, and Get Started */}
+        {/* Right Controls: GitHub, Memory Vault, and Get Started */}
         <div className="flex items-center gap-3">
           {/* GitHub Link */}
           <a
@@ -64,12 +64,12 @@ export function NueNavbar({
             <span>GitHub</span>
           </a>
 
-          {/* Walrus Vault Drawer Trigger */}
+          {/* Memory Vault Drawer Trigger */}
           {onOpenVault && (
             <button
               onClick={onOpenVault}
               className="px-3 py-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] hover:border-[var(--accent)]/50 text-xs font-medium text-[var(--fg-soft)] hover:text-[var(--fg)] flex items-center gap-1.5 transition"
-              title="Inspect Walrus Memory Vault"
+              title="Inspect Memory Vault"
             >
               <Database className="w-3.5 h-3.5 text-[var(--accent)]" />
               <span className="hidden sm:inline">Vault</span>

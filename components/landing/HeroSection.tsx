@@ -92,12 +92,12 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
             </div>
 
             <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] border border-emerald-900/50 text-center text-emerald-400 font-medium">
-              WALRUS
+              DURABLE STORE
             </div>
           </div>
 
           <div className="pt-4 border-t border-[var(--border)] text-xs text-[var(--fg-muted)] font-light flex items-center justify-between">
-            <span>Storage: Sui Walrus Blobs</span>
+            <span>Storage: durable encrypted blobs</span>
             <span className="text-[var(--fg-faint)] font-mono text-[10px]">Zero Model Lock-in</span>
           </div>
         </div>

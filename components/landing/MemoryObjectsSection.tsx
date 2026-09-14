@@ -53,7 +53,7 @@ export function MemoryObjectsSection() {
     scope: sample.scope,
     created_at: '2026-09-13T12:00:00Z',
     updated_at: '2026-09-13T12:00:00Z',
-    memwal_blob_id: 'walrus://0x8f2a...c4b1',
+    blob_id: 'nue://store/0x8f2a...c4b1',
   };
 
   const formattedJson = JSON.stringify(memoryJson, null, 2);
