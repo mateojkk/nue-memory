@@ -7,7 +7,7 @@ export class LivepeerMediaAgent {
 
   constructor() {
     this.endpoint =
-      process.env.LIVEPEER_AGENT_MCP_URL || 'https://agent.livepeer.org/api/mcp';
+      process.env.LIVEPEER_AGENT_MCP_URL || 'https://agent.livepeer.org/api/mcp/creative';
     this.bearer = process.env.LIVEPEER_API_KEY || process.env.LIVEPEER_AGENT_KEY;
   }
 
