@@ -35,7 +35,7 @@ export function NueDevelopersSection() {
         </div>
 
         {/* macOS Dark Window */}
-        <div className="rounded-2xl bg-[var(--surface)] border border-stone-800 shadow-2xl overflow-hidden">
+        <div className="rounded-2xl bg-[var(--surface)] border border-stone-800 overflow-hidden">
           {/* Window Title Bar */}
           <div className="px-5 py-3.5 bg-[var(--surface-2)] border-b border-stone-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export function NueDevelopersSection() {
                 {/* TAB 2: VISIBILITY (Decoupled Architecture: Agent -> Nue -> Walrus) */}
                 {activeTab === 'visibility' && (
                   <div className="w-full max-w-sm rounded-xl bg-[var(--surface-2)] border border-stone-800 p-5 shadow-xl relative z-10 space-y-3 font-mono text-xs">
-                    <div className="p-3 rounded-lg bg-[var(--accent-deep)] border border-[var(--accent-deep)] text-center">
+                    <div className="p-3 rounded-lg bg-[var(--accent-deep)] border border-[var(--border)] text-center">
                       <span className="text-[var(--fg-muted)] text-[10px] block">RUNTIME INGESTION</span>
                       <span className="text-[var(--fg)] font-medium">AI AGENT (OpenAI / Claude / Livepeer)</span>
                     </div>

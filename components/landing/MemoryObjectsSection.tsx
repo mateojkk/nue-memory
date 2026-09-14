@@ -107,7 +107,7 @@ export function MemoryObjectsSection() {
         </div>
 
         {/* Right Column: Interactive JSON Viewer */}
-        <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl overflow-hidden">
+        <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden">
           <div className="px-5 py-3 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Code2 className="w-3.5 h-3.5 text-[var(--accent)]" />

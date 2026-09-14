@@ -150,7 +150,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
           <div
             className={`relative transition-all duration-300 flex items-center justify-center ${
               aspectMode === '9:16'
-                ? 'w-[250px] h-[440px] rounded-xl overflow-hidden border border-[var(--accent)]/30 shadow-2xl'
+                ? 'w-[250px] h-[440px] rounded-xl overflow-hidden border border-[var(--accent)]/30'
                 : 'w-full h-full'
             }`}
           >

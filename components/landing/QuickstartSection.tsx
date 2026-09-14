@@ -42,7 +42,7 @@ export function QuickstartSection() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="inline-flex bg-[var(--surface-2)] p-0.5 rounded border border-[var(--accent-deep)] text-[11px] font-mono">
+              <div className="inline-flex bg-[var(--surface-2)] p-0.5 rounded border border-[var(--border)] text-[11px] font-mono">
                 <button
                   onClick={() => setActiveTab('python')}
                   className={`px-2 py-0.5 rounded-sm transition ${

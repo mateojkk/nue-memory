@@ -33,7 +33,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
       />
 
       {/* Drawer */}
-      <div className="relative w-full max-w-md bg-[var(--surface)] h-full shadow-2xl flex flex-col z-10 border-l border-[var(--surface-2)] animate-slideLeft">
+      <div className="relative w-full max-w-md bg-[var(--surface)] h-full flex flex-col z-10 border-l border-[var(--surface-2)] animate-slideLeft">
         {/* Header */}
         <div className="px-6 py-4 bg-white border-b border-[var(--surface-2)] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -165,7 +165,7 @@ export const MemoryPanel: React.FC<MemoryPanelProps> = ({
       {/* Raw Payload Modal */}
       {inspectPref && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-[var(--border)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 text-[var(--fg)] font-mono shadow-2xl">
+          <div className="bg-[var(--border)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 text-[var(--fg)] font-mono">
             <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
               <div className="flex items-center gap-2">
                 <Code2 className="w-4 h-4 text-[var(--accent-bright)]" />

@@ -52,7 +52,7 @@ export function ProjectsView({
               className={`p-6 rounded-xl border transition flex flex-col justify-between shadow-lg ${
                 isSelected
                   ? 'bg-[var(--surface-2)] border-[var(--accent)]/50'
-                  : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent-deep)]'
+                  : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--border)]'
               }`}
             >
               <div className="space-y-3">

@@ -20,12 +20,11 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
   return (
     <section className="relative pt-20 pb-28 px-4 max-w-7xl mx-auto text-center font-light overflow-hidden">
       {/* Background ambient radial glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[var(--accent)]/5 blur-[120px] pointer-events-none rounded-full" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[var(--accent)]/40 pointer-events-none rounded-full blur-3xl" />
 
       {/* Eyebrow: NUE MEMORY */}
-      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-[var(--border)] border border-[var(--accent-deep)] text-xs font-mono text-[var(--accent)] mb-8">
-        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-        <span className="tracking-wider uppercase text-[11px] font-medium">Nue Memory</span>
+      <div className="text-xs font-mono text-[var(--fg-faint)] uppercase tracking-[0.2em] mb-8">
+        Nue Memory <span className="text-[var(--accent)]">·</span> NextMathLabs
       </div>
 
       {/* Headline: The memory infrastructure layer for AI agents */}
@@ -60,7 +59,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       {/* Hero Visual: Memory Flow + SDK Preview Window */}
       <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch text-left">
         {/* Left Column: Visual Flow Diagram (5 cols) */}
-        <div className="lg:col-span-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-7 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+        <div className="lg:col-span-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
             <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium">
               Architecture Pipeline
@@ -73,7 +72,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
 
           {/* ASCII Memory Flow Diagram */}
           <div className="py-6 flex flex-col items-center justify-center font-mono text-xs">
-            <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] border border-[var(--accent-deep)] text-center text-[var(--fg)] font-medium">
+            <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-center text-[var(--fg)] font-medium">
               AGENT
             </div>
 
@@ -104,7 +103,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
         </div>
 
         {/* Right Column: Code Snippet (7 cols) */}
-        <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl overflow-hidden flex flex-col">
+        <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden flex flex-col">
           {/* Window Title Bar */}
           <div className="px-5 py-3.5 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">

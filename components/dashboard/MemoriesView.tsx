@@ -122,7 +122,7 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
               <div className="space-y-3">
                 {/* Header Badge */}
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[var(--border)] text-[var(--accent)] border border-[var(--accent-deep)]">
+                  <span className="text-[10px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[var(--border)] text-[var(--accent)] border border-[var(--border)]">
                     {mem.category}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -162,7 +162,7 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
       {/* Slide-over Inspection Modal (Section 21/22: Memory Transparency) */}
       {selectedMemory && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
-          <div className="bg-[var(--surface)] border border-[var(--accent-deep)] rounded-xl max-w-lg w-full p-6 text-[var(--fg)] shadow-2xl relative font-light">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl max-w-lg w-full p-6 text-[var(--fg)] relative font-light">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-4 border-b border-[var(--border)] mb-5">
               <div className="flex items-center gap-2">

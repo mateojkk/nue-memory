@@ -61,7 +61,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         {/* Central Nue Memory Layer */}
         <div className="lg:col-span-4 rounded-xl bg-[var(--border)] border border-[var(--accent)]/40 p-6 flex flex-col justify-between shadow-xl shadow-[var(--accent)]/5 relative overflow-hidden">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--accent-deep)]">
+            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
               <span className="text-xs font-mono text-[var(--fg)] font-medium flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
                 NUE MEMORY
@@ -97,7 +97,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             </p>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-[var(--accent-deep)] text-xs font-mono text-[var(--fg-muted)] flex items-center justify-between">
+          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-mono text-[var(--fg-muted)] flex items-center justify-between">
             <span>Decoupled Walrus storage</span>
             <span className="text-emerald-400">Durable →</span>
           </div>

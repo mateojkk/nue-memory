@@ -68,7 +68,7 @@ export function MediaMemoryWorkspace({
           {/* Simulate Cross-Project Recall (Step 5 of Demo Flow) */}
           <button
             onClick={() => onNewProject('Project B - Launch Video', 'Create a launch video for my new product.')}
-            className="px-3 py-1.5 rounded-md bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] text-[var(--accent)] text-xs font-mono font-medium flex items-center gap-1.5 border border-[var(--accent-deep)] transition shadow-sm"
+            className="px-3 py-1.5 rounded-md bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] text-[var(--accent)] text-xs font-mono font-medium flex items-center gap-1.5 border border-[var(--border)] transition shadow-sm"
             title="Start new project without repeating preferences"
           >
             <Plus className="w-3.5 h-3.5" />

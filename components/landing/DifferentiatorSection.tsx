@@ -51,7 +51,7 @@ export function DifferentiatorSection() {
       </div>
 
       {/* Interactive Splitter Demonstration */}
-      <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-10 shadow-2xl space-y-8">
+      <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-10 space-y-8">
         {/* Example Picker Tabs */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--border)]">
           <span className="text-xs font-mono text-[var(--fg-faint)] uppercase tracking-wider mr-2">
@@ -112,7 +112,7 @@ export function DifferentiatorSection() {
           </div>
 
           {/* Box 2: Persistent Memory */}
-          <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-[var(--accent)]/40 relative overflow-hidden flex flex-col justify-between shadow-lg shadow-[var(--accent)]/5">
+          <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-[var(--accent)]/40 relative overflow-hidden flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/40">
@@ -125,7 +125,7 @@ export function DifferentiatorSection() {
                 </span>
               </div>
 
-              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--accent-deep)] font-mono text-xs text-[var(--fg)]">
+              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--border)] font-mono text-xs text-[var(--fg)]">
                 &ldquo;{active.persistentPart}&rdquo;
               </div>
 

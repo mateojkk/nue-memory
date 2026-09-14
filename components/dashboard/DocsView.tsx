@@ -136,7 +136,7 @@ client.delete("mem_8f2a1b")`,
               </div>
               <button
                 onClick={() => handleCopy(m.name, m.python)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] text-[var(--fg-soft)] text-xs font-mono border border-[var(--accent-deep)] transition"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] text-[var(--fg-soft)] text-xs font-mono border border-[var(--border)] transition"
               >
                 {copiedSection === m.name ? (
                   <>

@@ -170,7 +170,7 @@ export function OverviewView({ memories, onOpenWorkspace, onOpenMemories }: Over
             )}
           </div>
 
-          <div className="p-6 rounded-xl bg-[var(--surface-2)] border border-[var(--accent)]/40 flex flex-col justify-between shadow-lg shadow-[var(--accent)]/5">
+          <div className="p-6 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex flex-col justify-between shadow-lg shadow-[var(--accent)]/5">
             <div className="space-y-2">
               <span className="text-[11px] font-mono text-[var(--accent)] uppercase tracking-wider block">
                 Flagship Feature

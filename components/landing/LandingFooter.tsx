@@ -21,7 +21,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
             The memory infrastructure layer for AI agents.
           </p>
           <div className="pt-1">
-            <span className="text-[11px] font-mono text-[var(--accent)] bg-[var(--border)] px-2.5 py-1 rounded border border-[var(--accent-deep)]">
+            <span className="text-[11px] font-mono text-[var(--accent)] bg-[var(--border)] px-2.5 py-1 rounded border border-[var(--border)]">
               Founded by NextMathLabs
             </span>
           </div>
