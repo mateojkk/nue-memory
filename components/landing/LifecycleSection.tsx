@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ArrowDown, CheckCircle2 } from 'lucide-react';
+import { Reveal } from '@/components/motion';
 
 export function LifecycleSection() {
   const stages = [
@@ -59,7 +60,8 @@ export function LifecycleSection() {
   return (
     <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
-      <div className="text-left mb-16">
+      <Reveal>
+        <div className="text-left mb-16">
         <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Technical Pipeline
         </div>
@@ -69,16 +71,17 @@ export function LifecycleSection() {
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
           Seven deterministic stages, from raw interaction to durable recall.
         </p>
-      </div>
+        </div>
+      </Reveal>
 
       {/* Vertical / Horizontal Technical Flow */}
       <div className="relative">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
           {stages.map((st, idx) => (
-            <div
-              key={st.name}
-              className="p-5 rounded-lg bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-accent)] transition flex flex-col justify-between group min-h-[220px] relative"
-            >
+            <Reveal key={st.name} delay={idx * 80}>
+              <div
+                className="p-5 rounded-lg bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-accent)] transition flex flex-col justify-between group min-h-[220px] relative"
+              >
               <div>
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
                   <span className="text-[11px] font-mono text-[var(--fg-muted)] font-medium">
@@ -108,7 +111,8 @@ export function LifecycleSection() {
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                 )}
               </div>
-            </div>
+              </div>
+            </Reveal>
           ))}
         </div>
       </div>

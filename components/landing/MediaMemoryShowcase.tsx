@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Sparkles, ArrowRight, Play, Check, Database, Video } from 'lucide-react';
+import { Reveal } from '@/components/motion';
 
 interface MediaMemoryShowcaseProps {
   onOpenWorkspace: () => void;
@@ -11,7 +12,8 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
   return (
     <section id="media-memory" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
-      <div className="text-left mb-14">
+      <Reveal>
+        <div className="text-left mb-14">
         <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Flagship Capability · Built on Nue Memory
         </div>
@@ -24,10 +26,12 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-3xl font-light">
           Create once. Give feedback. Let Nue remember what matters. Then start another project without repeating yourself.
         </p>
-      </div>
+        </div>
+      </Reveal>
 
       {/* 2-Project Side-by-Side Flow (Exact Section 19 Specification) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mb-14">
+      <Reveal delay={120}>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mb-14">
         {/* Project 01 Card */}
         <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col justify-between shadow-xl">
           <div className="space-y-4">
@@ -139,10 +143,12 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             <span>Zero Re-prompting</span>
           </div>
         </div>
-      </div>
+        </div>
+      </Reveal>
 
       {/* Try Interactive Media Memory CTA */}
-      <div className="p-8 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-6">
+      <Reveal delay={120}>
+        <div className="p-8 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="text-left space-y-1">
           <h3 className="text-lg font-medium text-[var(--fg)] font-sans">
             Experience Media Memory in the Live Studio
@@ -160,7 +166,8 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
           <span>Launch Media Memory Studio</span>
           <ArrowRight className="w-3.5 h-3.5 text-white" />
         </button>
-      </div>
+        </div>
+      </Reveal>
     </section>
   );
 }

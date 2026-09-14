@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ArrowRight, Check, X, Split, Database, Sparkles } from 'lucide-react';
+import { Reveal } from '@/components/motion';
 
 export function DifferentiatorSection() {
   const [selectedExample, setSelectedExample] = useState<number>(0);
@@ -38,7 +39,8 @@ export function DifferentiatorSection() {
   return (
     <section id="product" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
-      <div className="text-left mb-14">
+      <Reveal>
+        <div className="text-left mb-14">
         <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           The Core Differentiator
         </div>
@@ -48,7 +50,8 @@ export function DifferentiatorSection() {
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-4 max-w-3xl leading-relaxed font-light">
           Chat logs in a vector DB is not memory. Nue decides what is worth remembering, filters noise, and evolves stored context.
         </p>
-      </div>
+        </div>
+      </Reveal>
 
       {/* Interactive Splitter Demonstration */}
       <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-10 space-y-8">

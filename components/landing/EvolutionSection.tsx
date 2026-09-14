@@ -2,13 +2,17 @@
 
 import React, { useState } from 'react';
 import { ArrowDown, Check, Clock, RefreshCw, AlertCircle } from 'lucide-react';
+import { Reveal, useAutoStage } from '@/components/motion';
 
 export function EvolutionSection() {
-  const [activeStage, setActiveStage] = useState<'initial' | 'updated'>('updated');
+  // mem0-style self-advancing demo stages (pauses on manual selection)
+  const [activeStageIdx, selectStage] = useAutoStage(2, 5000);
+  const activeStage = activeStageIdx === 0 ? 'initial' : 'updated';
 
   return (
     <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
-      <div className="text-left mb-12">
+      <Reveal>
+        <div className="text-left mb-12">
         <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Dynamic Lifecycle
         </div>
@@ -18,7 +22,8 @@ export function EvolutionSection() {
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
           Preferences change. Nue supersedes conflicts instead of accumulating them.
         </p>
-      </div>
+        </div>
+      </Reveal>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         {/* Left Column: Interactive Simulation Control */}
@@ -30,7 +35,7 @@ export function EvolutionSection() {
 
             <div className="space-y-3">
               <button
-                onClick={() => setActiveStage('initial')}
+                onClick={() => selectStage(0)}
                 className={`w-full text-left p-3.5 rounded-md border transition text-xs font-mono ${
                   activeStage === 'initial'
                     ? 'bg-[var(--surface-2)] border-[var(--accent)]/50 text-[var(--fg)] shadow-sm'
@@ -45,7 +50,7 @@ export function EvolutionSection() {
               </button>
 
               <button
-                onClick={() => setActiveStage('updated')}
+                onClick={() => selectStage(1)}
                 className={`w-full text-left p-3.5 rounded-md border transition text-xs font-mono ${
                   activeStage === 'updated'
                     ? 'bg-[var(--surface-2)] border-[var(--accent)]/50 text-[var(--fg)] shadow-sm'
@@ -67,7 +72,7 @@ export function EvolutionSection() {
         </div>
 
         {/* Right Column: Internal Graph Representation */}
-        <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-8 space-y-5 font-mono text-xs">
+        <div key={activeStage} className="nue-fade-swap lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-8 space-y-5 font-mono text-xs">
           <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
             <span className="text-[var(--fg-muted)] uppercase text-[11px] tracking-wider">
               Nue Memory Graph State

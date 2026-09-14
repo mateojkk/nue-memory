@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { ArrowRight, Check, Copy, Terminal, Shield } from 'lucide-react';
+import { Reveal, TypewriterHeadline } from '@/components/motion';
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -27,37 +28,47 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
         Nue Memory <span className="text-[var(--fg-muted)]">·</span> NextMathLabs
       </div>
 
-      {/* Headline: The memory infrastructure layer for AI agents */}
-      <h1 className="text-4xl sm:text-6xl md:text-[64px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans">
-        The memory infrastructure layer <br className="hidden sm:inline" />
-        for AI agents.
+      {/* Headline: mem0-style typewriter over agent-memory outcomes */}
+      <h1 className="text-4xl sm:text-6xl md:text-[64px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans min-h-[1.2em]">
+        <TypewriterHeadline
+          phrases={[
+            'AI media agents can create. Nue lets them remember.',
+            'Feedback in. Preferences out.',
+            'Create again — without repeating yourself.',
+          ]}
+        />
       </h1>
 
       {/* Supporting Copy */}
-      <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-        AI agents forget. Nue remembers — durable preferences that persist across sessions and agents.
-      </p>
+      <Reveal delay={120}>
+        <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
+          AI agents forget. Nue remembers — durable preferences that persist across sessions and agents.
+        </p>
+      </Reveal>
 
       {/* Dual Rectangular CTAs */}
-      <div className="flex flex-wrap items-center justify-center gap-3.5 mb-16">
-        <button
-          onClick={onGetStarted}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-sm font-medium transition shadow-sm"
-        >
-          <span>Get started</span>
-          <ArrowRight className="w-4 h-4 text-white" />
-        </button>
+      <Reveal delay={220}>
+        <div className="flex flex-wrap items-center justify-center gap-3.5 mb-16">
+          <button
+            onClick={onGetStarted}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-sm font-medium transition shadow-sm"
+          >
+            <span>Get started</span>
+            <ArrowRight className="w-4 h-4 text-white" />
+          </button>
 
-        <button
-          onClick={onViewDocs}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--fg-soft)] hover:text-[var(--fg)] text-sm font-medium border border-[var(--border)] transition"
-        >
-          <span>View documentation</span>
-        </button>
-      </div>
+          <button
+            onClick={onViewDocs}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--fg-soft)] hover:text-[var(--fg)] text-sm font-medium border border-[var(--border)] transition"
+          >
+            <span>View documentation</span>
+          </button>
+        </div>
+      </Reveal>
 
       {/* Hero Visual: Memory Flow + SDK Preview Window */}
-      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch text-left">
+      <Reveal delay={320}>
+        <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch text-left">
         {/* Left Column: Visual Flow Diagram (5 cols) */}
         <div className="lg:col-span-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
@@ -154,7 +165,8 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
             </pre>
           </div>
         </div>
-      </div>
+        </div>
+      </Reveal>
     </section>
   );
 }
