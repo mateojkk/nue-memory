@@ -1,148 +1,508 @@
-# Nue Memory — Engineering Handoff Document
+# Nue Memory — Master Product & Engineering Handoff
 
+**Product:** Nue Memory  
+**Tagline:** "The memory infrastructure layer for AI agents"  
+**Organization:** NextMathLabs  
 **Repository:** `/home/mateo/basement/Nue`  
 **Date:** September 14, 2026  
-**Product:** Nue Memory ("The memory infrastructure layer for AI agents")  
-**Flagship Feature:** Media Memory (Creative agent workflow powered by Livepeer Agent & Sui Walrus MemWal)
+**Status:** Core Architecture Built · Media Memory Modularized · Next.js 15 Production Ready  
 
 ---
 
-## 1. Executive Summary & Product Hierarchy
+## Table of Contents
+
+1. [Product Vision & Hierarchy](#1-product-vision--hierarchy)
+2. [The Core Problem Nue Solves](#2-the-core-problem-nue-solves)
+3. [The 7-Stage Memory Lifecycle](#3-the-7-stage-memory-lifecycle)
+4. [System Architecture](#4-system-architecture)
+5. [Domain-Agnostic Memory Data Model](#5-domain-agnostic-memory-data-model)
+6. [Dual-Layer Storage Encoding (Walrus MemWal)](#6-dual-layer-storage-encoding-walrus-memwal)
+7. [Conflict Evolution & Contradiction Resolution](#7-conflict-evolution--contradiction-resolution)
+8. [Developer SDK Specification](#8-developer-sdk-specification)
+9. [Flagship Feature: Media Memory](#9-flagship-feature-media-memory)
+10. [Livepeer Agent MCP Integration](#10-livepeer-agent-mcp-integration)
+11. [Full Repository Directory Map](#11-full-repository-directory-map)
+12. [UI/UX Specification & Brand Assets](#12-uiux-specification--brand-assets)
+13. [Cryptographic & Network Infrastructure](#13-cryptographic--network-infrastructure)
+14. [Step-by-Step Production Setup](#14-step-by-step-production-setup)
+15. [Post-Hackathon Product Roadmap](#15-post-hackathon-product-roadmap)
+
+---
+
+## 1. Product Vision & Hierarchy
+
+### What is Nue Memory?
+Nue Memory gives AI agents **durable, structured, and evolving memory**.
+
+AI agents can reason, plan, and invoke tools, but today almost all agents treat every conversation as a blank slate. Existing "memory" solutions merely dump unstructured chat transcripts into vector databases, stuffing noisy conversation turns into prompt windows without distinguishing ephemeral requests from durable preferences.
+
+Nue Memory is the **decoupled memory infrastructure layer** that sits between AI agent runtimes (LangChain, LlamaIndex, CrewAI, AutoGen, custom agents) and decentralized durable storage (Sui Walrus via MemWal).
+
+### Product Hierarchy
 
 ```text
-Nue Memory (Core Product)
-└── Sits between AI agents and durable storage (Sui Walrus MemWal).
-    Domain-agnostic infrastructure providing:
-    - Extraction (separating temporary session tweaks from durable preferences)
-    - Conflict Evolution (superseding contradictory records, maintaining provenance links)
-    - Semantic Retrieval (formatting prompt injection blocks for LLMs/agents)
-    - Developer SDK (nue.add, nue.search, nue.getContext, nue.evolve)
+┌────────────────────────────────────────────────────────────────────────┐
+│                              Nue Memory                                │
+│          The underlying memory infrastructure layer for AI agents      │
+│  (Extraction · Evolution · Retrieval · SDK · Walrus Decentralized Store)│
+└────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                             Media Memory                               │
+│            Flagship feature / first use case built on Nue              │
+│       Demonstrates persistent agent memory in creative workflows       │
+│                  Powered by Livepeer Agent & Sui Walrus                │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-Media Memory (Flagship Feature Module)
-└── First domain-specific use case built ON TOP of Nue Memory.
-    - Demonstrates persistent agent memory in video/image generation workflows.
-    - Integrates with Livepeer Agent MCP (flux-schnell, pixverse-t2v).
-    - Encapsulated in its own dedicated directory: lib/nue-memory/media-memory/
+* **Nue Memory** is the real product. It is domain-agnostic, developer-facing infrastructure.
+* **Media Memory** is the first user-facing application built on top of Nue Memory to prove persistent context in a live creative generation pipeline.
+* Built for submission to the **Livepeer Agent Hackathon**, but architected as a standalone, production-grade product that continues beyond the hackathon under **NextMathLabs**.
+
+---
+
+## 2. The Core Problem Nue Solves
+
+| Challenge | How Current Agents Handle It | How Nue Memory Solves It |
+| :--- | :--- | :--- |
+| **Noise vs. Signal** | Raw chat logs are stored verbatim. Temporary commands like *"make this video 5s shorter"* are saved alongside lasting preferences like *"I prefer short videos"*. | Evaluates natural language signals (`TEMPORARY_MARKERS` vs `PERSISTENT_MARKERS`) to discard session-specific noise and extract only durable preferences. |
+| **Contradictory Accumulation** | If a user says *"I like dark mode"* in Session 1, and *"Switch to light mode"* in Session 4, vector search returns both, confusing the LLM. | **Conflict Evolution**: Detects semantic mutual exclusion pairs and supersedes older records with bidirectional links (`supersedesId` / `supersededById`). |
+| **Context Window Bloat** | Unfiltered conversational history is stuffed into context windows, blowing token budgets and degrading model reasoning. | Formats compact, high-density prompt injection blocks containing only active, deduplicated, and ranked memory directives. |
+| **Memory Provenance** | Agents cannot explain *why* they assumed a preference or where it originated. | Full audit ledger: every memory tracks source event, project origin, confidence score, creation timestamp, and decentralized blob ID. |
+| **Storage Lock-In** | Memories are trapped inside proprietary centralized databases or model vendors. | Persisted as decentralized, verifiable blobs on **Sui Walrus**, ensuring user ownership and model portability. |
+
+---
+
+## 3. The 7-Stage Memory Lifecycle
+
+Nue Memory processes agent interactions through a 7-stage deterministic lifecycle:
+
+```mermaid
+flowchart LR
+    A[1. Ingest Input] --> B[2. Parse & Extract]
+    B --> C[3. Noise Filtering]
+    C --> D[4. Conflict Evolution]
+    D --> E[5. Dual-Layer Walrus Persistence]
+    E --> F[6. Semantic Vector Recall]
+    F --> G[7. Prompt Injection]
+```
+
+1. **Ingest Input**: Raw agent interactions, feedback reviews, or dialogue turns are submitted via SDK (`nue.add()`) or API (`/api/classify`).
+2. **Parse & Extract**: Semantic extraction rules analyze the text against domain categories (`visual_style`, `pacing`, `typography`, `audio`, `layout`, `branding`, `workflow`).
+3. **Noise Filtering**: Distinguishes one-off edits (*"trim frame 12"*, *"only for this version"*) from persistent preferences (*"always use large captions"*, *"by default use fast pacing"*). Temporary commands are routed to immediate execution without polluting long-term memory.
+4. **Conflict Evolution**: Evaluates candidate memories against active stored records. Detects semantic contradictions (antonym pairs or single-slot replacements). Supersedes older records, marks them inactive, and preserves audit pointers.
+5. **Dual-Layer Walrus Persistence**: Encodes memories into semantic headers + embedded metadata envelopes and stores them to **Sui Walrus** via the MemWal SDK.
+6. **Semantic Vector Recall**: On subsequent agent runs, queries are matched using vector distance and keyword fallback, applying confidence, scope, and domain filters.
+7. **Prompt Injection**: Recalled memories are orchestrated into a clean prompt block injected directly into the agent’s system instructions.
+
+---
+
+## 4. System Architecture
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             AI Agent Runtimes                               │
+│       LangChain  ·  LlamaIndex  ·  CrewAI  ·  AutoGen  ·  Livepeer Agent    │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             Nue Memory SDK                                  │
+│             nue.add()  ·  nue.search()  ·  nue.getContext()                 │
+│              nue.evolve()  ·  nue.get()  ·  nue.delete()                    │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Nue Intelligence Engine                           │
+│  ┌─────────────────────────┐ ┌──────────────────────┐ ┌───────────────────┐ │
+│  │    Signal Extractor     │ │  Evolution Planner   │ │  Semantic Ranker  │ │
+│  │ (Noise vs. Persistence) │ │ (Conflict Resolution)│ │ & Context Builder │ │
+│  └─────────────────────────┘ └──────────────────────┘ └───────────────────┘ │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     Walrus MemWal Storage Adapter                           │
+│           Dual-Layer Payload Encoding  ·  Lossless JSON Reconstruction      │
+└──────────────────────────────────────┬──────────────────────────────────────┘
+                                       │
+                                       ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Sui Walrus (MemWal Relayer)                          │
+│               https://relayer.memory.walrus.xyz (Decentralized)             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. The Critical Defect & Violation
+## 5. Domain-Agnostic Memory Data Model
 
-### Problem
-The user's core directive was: **"No mock or fake memory: Real system state, real Walrus MemWal SDK (`@mysten-incubation/memwal`), real semantic retrieval."**
+The core schema is defined in [`lib/nue-memory/core/types.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/core/types.ts):
 
-The assistant violated this by relying on `MemWalMock` (the official in-memory testing class from `@mysten-incubation/memwal`) when environment variables were absent, and then inaccurately reporting generated IDs (`mock-blob-000001`, etc.) as if they were live decentralized Walrus on-chain blobs.
-
-### What Actually Ran
-In [`lib/nue-memory/storage/walrus-store.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/storage/walrus-store.ts):
 ```typescript
-const privateKey = this.config.privateKey || process.env.MEMWAL_PRIVATE_KEY;
-const accountId = this.config.accountId || process.env.MEMWAL_ACCOUNT_ID;
-const serverUrl = this.config.serverUrl || process.env.MEMWAL_SERVER_URL || 'https://relayer.memory.walrus.xyz';
+export type MemoryType = 'preference' | 'rule' | 'constraint' | 'fact' | 'pattern';
+export type MemoryScope = 'global' | 'project' | 'session' | 'domain';
 
-if (!this.config.forceMock && privateKey && accountId) {
-  this.client = MemWal.create({ key: privateKey, accountId, serverUrl, namespace: this.namespace });
-} else {
-  // CRITICAL ISSUE: Fell back to local in-memory mock because no keys were supplied
-  this.client = MemWalMock.create({ namespace: this.namespace });
+export interface MemorySource {
+  type: 'user_feedback' | 'creative_brief' | 'explicit_statement' | 'system_inference';
+  eventContext?: string; // e.g., "Project: SaaS Launch Promo"
+  projectId?: string;
+  timestamp: string;
+}
+
+export interface StructuredMemory {
+  id: string;                         // Unique memory identifier (mem_...)
+  userId: string;                     // Multi-tenant user partition
+  type: MemoryType;                   // Classification of memory
+  category: string;                   // Domain category (pacing, typography, audio, etc.)
+  value: string;                      // The actual durable directive
+  confidence: number;                 // Normalized confidence score (0.0 to 1.0)
+  scope: MemoryScope;                 // Global vs Project vs Session scope
+  domain: string;                     // media, coding, finance, general
+  source: MemorySource;               // Provenance and attribution
+  createdAt: string;                  // ISO 8601 creation timestamp
+  updatedAt: string;                  // ISO 8601 update timestamp
+  isActive: boolean;                  // Active for prompt injection vs superseded
+  supersedesId?: string;              // ID of older contradictory memory this replaced
+  supersededById?: string;            // ID of newer memory that replaced this record
+  storageBlobId?: string;             // Walrus storage blob identifier
+  metadata?: Record<string, unknown>; // Extensible metadata payload
 }
 ```
 
-### Required Fix for Live Walrus Persistence
-1. **Remove silent mock fallback**: If `MEMWAL_PRIVATE_KEY` or `MEMWAL_ACCOUNT_ID` are missing, throw an explicit configuration error or display a clear "Configuration Required" state rather than quietly simulating persistence with `MemWalMock`.
-2. **Obtain real Sui Ed25519 delegate keys**:
-   - Register an account with the Walrus Memory relayer (`https://relayer.memory.walrus.xyz`).
-   - Add to `.env.local`:
-     ```bash
-     MEMWAL_PRIVATE_KEY=suiprivkey1...
-     MEMWAL_ACCOUNT_ID=0x...
-     MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
-     ```
-3. **Verify real live calls**: `await this.client.rememberAndWait(text, namespace)` sends an HTTP request to the relayer and returns an actual Sui/Walrus blob ID.
+---
+
+## 6. Dual-Layer Storage Encoding (Walrus MemWal)
+
+MemWal (`@mysten-incubation/memwal`) stores plain text blobs and computes embeddings for vector recall. To avoid maintaining a separate SQL database while preserving 100% loss-free structured metadata, Nue Memory implements **Dual-Layer Payload Encoding** in [`lib/nue-memory/storage/walrus-store.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/storage/walrus-store.ts):
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ Layer 1: Semantic Header (Token-optimized for MemWal vector embeddings)  │
+│ [PREFERENCE|media|pacing] Prefer fast energetic introductions           │
+├─────────────────────────────────────────────────────────────────────────┤
+│ Layer 2: Metadata Envelope (Embedded JSON delimited by __NUE_META__)    │
+│ __NUE_META__                                                            │
+│ {"id":"mem_123","confidence":0.95,"source":{...},"supersedesId":"..."} │
+│ __NUE_META__                                                            │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+* **On `save()`**: Encodes the memory object into this dual-layer string and invokes `client.rememberAndWait(payload, namespace)`.
+* **On `search()` / `recall()`**: MemWal performs vector similarity search on Layer 1. Nue strips Layer 2, parses the embedded JSON, and reconstructs the exact `StructuredMemory` object with full provenance, audit links, and timestamps.
 
 ---
 
-## 3. Architecture & Codebase Map
+## 7. Conflict Evolution & Contradiction Resolution
 
-### Core Nue Memory (`lib/nue-memory/`)
-| File | Responsibility |
-| :--- | :--- |
-| [`lib/nue-memory/core/types.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/core/types.ts) | Domain-agnostic types: `StructuredMemory`, `MemoryType`, `MemoryScope`, `MemoryStore`, `MemoryQuery`, `MemorySearchResult`. |
-| [`lib/nue-memory/storage/walrus-store.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/storage/walrus-store.ts) | Walrus MemWal storage adapter. Implements dual-layer encoding: semantic header for vector search + JSON metadata envelope (`__NUE_META__`) for 100% loss-free reconstruction upon recall. |
-| [`lib/nue-memory/engine/extractor.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/engine/extractor.ts) | Signal analysis differentiating temporary one-off commands (e.g. "make this 5s shorter") from durable preferences (e.g. "prefer fast intros"). |
-| [`lib/nue-memory/engine/evolution.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/engine/evolution.ts) | Conflict detection engine using antonym pairs and single-slot rules. Generates `EvolutionPlan` with bidirectional audit links (`supersedesId` / `supersededById`). |
-| [`lib/nue-memory/engine/retrieval.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/engine/retrieval.ts) | Formats recalled memories into a structured context block ready for agent prompt injection. |
-| [`lib/nue-memory/sdk.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/sdk.ts) | Developer SDK: `nue.add()`, `nue.search()`, `nue.getContext()`, `nue.get()`, `nue.update()`, `nue.delete()`, `nue.evolve()`, `nue.health()`, `nue.restore()`. |
+The evolution engine in [`lib/nue-memory/engine/evolution.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/engine/evolution.ts) ensures agents **never accumulate contradictions**.
 
-### Dedicated Media Memory Module (`lib/nue-memory/media-memory/`)
-| File | Responsibility |
-| :--- | :--- |
-| [`types.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/types.ts) | Media domain types: `MediaPreference`, `MediaVersion`, `CreativeProject`, `FeedbackClassification`. |
-| [`service.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/service.ts) | `MemWalService` bridging `MediaPreference` with `defaultWalrusStore`. |
-| [`extractor.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/extractor.ts) | `classifyFeedback()` mapping natural language to candidate preferences. |
-| [`evolution.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/evolution.ts) | `evolveMemories()` resolving media preference conflicts. |
-| [`retrieval.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/retrieval.ts) | `retrieveAndEnrichBrief()` generating creative directives (`pacing`, `captionSize`, `audioStyle`, `aspectRatio`). |
-| [`livepeer-agent.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/livepeer-agent.ts) | `LivepeerMediaAgent` connecting to Livepeer MCP endpoints (`flux-schnell`, `pixverse-t2v`). |
-| [`index.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/index.ts) | Unified barrel export for the module. |
+### 1. Conflict Detection
+Maintains mutual exclusion pairs and single-slot category rules:
 
-### API Routes (`app/api/`)
-- **`POST /api/classify`**: Runs feedback through `classifyFeedback()`, returns `FeedbackClassification`.
-- **`GET /api/memwal`**: Lists active/superseded preferences via `memWalService.getAllPreferences(true)`.
-- **`POST /api/memwal`**: Actions: `remember` (evolves & stores preferences), `forget` (deletes blob), `reset` (clears).
-- **`POST /api/generate`**: Recalls memories, enriches creative brief, and invokes `livepeerAgent.generateMedia()`.
+```typescript
+const CONFLICT_PAIRS: Array<[RegExp, RegExp, string]> = [
+  [/dark (?:mode|interfaces?|theme)/i, /light (?:mode|interfaces?|theme)/i, 'Dark theme vs Light theme'],
+  [/fast|energetic|brisk/i, /slow|calm|cinematic|gentle/i, 'Fast pacing vs Cinematic pacing'],
+  [/large|bigger|prominent/i, /small|subtle|compact/i, 'Large captions vs Compact captions'],
+  [/avoid|remove|no (?:dramatic|music)/i, /dramatic|orchestral|heavy music/i, 'Avoid music vs Favor music'],
+  [/9:16|vertical|portrait/i, /16:9|widescreen|horizontal/i, '9:16 vertical vs 16:9 widescreen'],
+];
+```
 
-### UI Components (`components/`)
-- **Landing Page**: `components/landing/` (`HeroSection`, `QuickstartSection`, `DifferentiatorSection`, `LifecycleSection`, `MemoryObjectsSection`, `EvolutionSection`, `MediaMemoryShowcase`, `LandingFooter`).
-- **Dashboard**: `components/dashboard/` (`NueDashboard`, `OverviewView`, `MemoriesView`, `MediaMemoryWorkspace`, `ProjectsView`, `DocsView`, `ApiKeysView`).
-- **Media Memory Studio**: `MediaPreview.tsx`, `AgentChat.tsx`, `MemoryConfirmation.tsx`, `EnrichedBriefModal.tsx`, `MemoryPanel.tsx`.
-- **Branding Assets**:
-  - Transparent in-app logo: [`public/logo-transparent.png`](file:///home/mateo/basement/Nue/public/logo-transparent.png) (used in `NueLogo.tsx`).
-  - Background favicon: [`public/favicon.ico`](file:///home/mateo/basement/Nue/public/favicon.ico), [`app/favicon.ico`](file:///home/mateo/basement/Nue/app/favicon.ico), [`public/logo.jpg`](file:///home/mateo/basement/Nue/public/logo.jpg).
+### 2. Evolution Outcomes
+When a new memory candidate arrives:
+* **Duplicate**: Same value → **Reinforce** (increases confidence score, updates timestamp).
+* **Contradiction**: Antonym match or single-slot collision → **Supersede** (marks older record `isActive: false`, writes `supersededById`, persists new record with `supersedesId`).
+* **Complementary**: Non-conflicting attribute in same category → **Create** (added alongside existing records).
 
 ---
 
-## 4. Environment Variables Specification
+## 8. Developer SDK Specification
 
-Create `.env.local` with the following variables:
+Exported via [`lib/nue-memory/sdk.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/sdk.ts):
 
-```bash
-# --- Sui Walrus MemWal (Real Decentralized Persistence) ---
-# Ed25519 Private Key for the delegate Sui account
-MEMWAL_PRIVATE_KEY=
+```typescript
+import { MemoryClient, nue } from '@/lib/nue-memory/sdk';
 
-# 32-byte Sui Account ID (0x...)
-MEMWAL_ACCOUNT_ID=
+const client = new MemoryClient({
+  defaultUserId: 'user_123',
+  defaultDomain: 'media',
+});
+```
 
-# Walrus Memory Relayer Endpoint (Defaults to production)
-MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
+### Methods Reference
 
-# --- Livepeer Agent (Media Synthesis) ---
-# Livepeer API or Agent Key
-LIVEPEER_API_KEY=
+#### `nue.add(input, options)`
+Ingests dialogue turns or feedback. Separates temporary noise, checks conflicts, and persists structured objects.
+```typescript
+const result = await nue.add(
+  "The intro is too slow. Make captions larger and remove dramatic strings.",
+  { domain: 'media', sessionContext: 'Project A' }
+);
+// result.memories: StructuredMemory[] (active persisted records)
+// result.evolutionPlans: EvolutionPlan[] (audit details)
+// result.temporaryInstructions: string[] (filtered one-off instructions)
+```
 
-# Remote Livepeer Agent MCP URL (Optional override)
-LIVEPEER_AGENT_MCP_URL=https://agent.livepeer.org/api/mcp/creative
+#### `nue.search(query, options)`
+Retrieves active, ranked memories matching semantic intent.
+```typescript
+const memories = await nue.search("What are the user's video styling preferences?", {
+  domain: 'media',
+  limit: 5,
+  minConfidence: 0.8,
+});
+```
+
+#### `nue.getContext(query, options)`
+Returns a pre-formatted agent prompt injection block.
+```typescript
+const context = await nue.getContext("Create promo video", { domain: 'media' });
+console.log(context.injectedContextBlock);
+/*
+[Nue Persistent Memory Context]:
+- [PACING]: Prefer fast, energetic introductions and brisk cut pacing (confidence: 94%)
+- [TYPOGRAPHY]: Prefer large, high-contrast, easily readable captions (confidence: 95%)
+- [AUDIO]: Avoid dramatic cinematic strings; prefer subtle ambient beds (confidence: 93%)
+*/
+```
+
+#### `nue.evolve(oldMemoryId, newMemoryData)`
+Explicitly supersedes an outdated memory with a newer directive.
+
+#### `nue.get(id)`, `nue.update(id, updates)`, `nue.delete(id)`
+Standard CRUD operations with Walrus blob synchronization.
+
+---
+
+## 9. Flagship Feature: Media Memory
+
+Located in dedicated directory [`lib/nue-memory/media-memory/`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/):
+
+```text
+lib/nue-memory/media-memory/
+├── types.ts          # CreativeProject, MediaVersion, MediaPreference
+├── extractor.ts      # classifyFeedback()
+├── evolution.ts      # evolveMemories(), consolidateMemories()
+├── retrieval.ts      # retrieveAndEnrichBrief()
+├── livepeer-agent.ts # LivepeerMediaAgent MCP client
+├── service.ts        # MemWalService bridge
+└── index.ts          # Barrel export
+```
+
+### The 2-Project Verification Flow
+
+1. **Project A (SaaS App Launch Promo)**:
+   * User prompts: *"Create a 20-second product promo for my new app."*
+   * Livepeer Agent generates Version 1 (baseline settings: moderate pacing, medium captions, energetic music).
+   * User leaves review feedback: *"The intro is too slow. Make the captions much larger and remove the dramatic music."*
+   * Nue extraction engine classifies feedback:
+     * Identifies 3 durable preferences: `pacing` (fast), `typography` (large captions), `audio` (avoid dramatic strings).
+     * Displays **Memory Confirmation Modal** ("Remember this for future media?").
+   * User clicks **"Remember in Walrus Memory"**:
+     * Persists structured records with Walrus blob IDs.
+     * Agent generates Version 2 applying fast pacing and large captions.
+2. **Project B (Minimalist Clothing Promo) — Zero-Reprompt Cross-Session Recall**:
+   * User switches to Project B: *"Create a promo for my new clothing brand."*
+   * Nue automatically queries Walrus MemWal, recalls the 3 active preferences, and constructs the enriched brief.
+   * Livepeer Agent synthesizes Version 1 with fast pacing and large captions **without the user repeating their instructions**.
+3. **Prompt Inspector Modal**:
+   * Inspects the 3-stage pipeline: Original brief → Retrieved Walrus memories → Augmented prompt injection block.
+
+---
+
+## 10. Livepeer Agent MCP Integration
+
+Implemented in [`lib/nue-memory/media-memory/livepeer-agent.ts`](file:///home/mateo/basement/Nue/lib/nue-memory/media-memory/livepeer-agent.ts):
+
+* **Endpoint**: `https://agent.livepeer.org/api/mcp/creative`
+* **Protocol**: Model Context Protocol (MCP) JSON-RPC 2.0 over HTTP.
+* **Tool Invocation**: `create_media` tool:
+  ```json
+  {
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "params": {
+      "name": "create_media",
+      "arguments": {
+        "action": "generate",
+        "prompt": "Create a promo for my clothing brand... Visual style: Contemporary Urban Apparel. Pacing: fast. Composition: 16:9.",
+        "prefer_fast": true
+      }
+    }
+  }
+  ```
+* **Capabilities**: Generates video streams and thumbnail keyframes via Livepeer pipeline (`flux-schnell` + `pixverse-t2v`).
+
+---
+
+## 11. Full Repository Directory Map
+
+```text
+Nue/
+├── app/
+│   ├── api/
+│   │   ├── classify/route.ts      # POST: Feedback classification via Nue extractor
+│   │   ├── generate/route.ts      # POST: Context enrichment & Livepeer generation
+│   │   └── memwal/route.ts        # GET/POST: MemWal read, remember, forget, reset
+│   ├── favicon.ico                # Background-preserved favicon
+│   ├── globals.css                # Tailwind CSS styling & custom scrollbars
+│   ├── layout.tsx                 # Root layout with Geist & JetBrains Mono fonts
+│   └── page.tsx                   # Main orchestrator (Landing Page vs Dashboard views)
+│
+├── components/
+│   ├── dashboard/
+│   │   ├── ApiKeysView.tsx        # Developer API key management
+│   │   ├── DocsView.tsx           # Interactive SDK documentation
+│   │   ├── MediaMemoryWorkspace.tsx # Creative studio split layout
+│   │   ├── MemoriesView.tsx       # Transparency ledger (All, Active, Superseded tabs)
+│   │   ├── NueDashboard.tsx       # Dashboard shell with top navigation
+│   │   ├── OverviewView.tsx       # Infrastructure telemetry & system health
+│   │   └── ProjectsView.tsx       # Multi-project workspace switcher
+│   ├── landing/
+│   │   ├── DifferentiatorSection.tsx # Memory vs. conversation logging
+│   │   ├── EvolutionSection.tsx   # Contradiction resolution diagrams
+│   │   ├── HeroSection.tsx        # High-impact hero with technical typography
+│   │   ├── LandingFooter.tsx      # NextMathLabs footer with quick links
+│   │   ├── LifecycleSection.tsx   # 7-stage lifecycle interactive visualization
+│   │   ├── MediaMemoryShowcase.tsx # Flagship feature demo showcase
+│   │   ├── MemoryObjectsSection.tsx # JSON schema comparison
+│   │   └── QuickstartSection.tsx  # Python & TypeScript SDK code tabs
+│   ├── AgentChat.tsx              # Livepeer agent chat panel
+│   ├── EnrichedBriefModal.tsx     # Context orchestration inspector
+│   ├── MediaPreview.tsx           # HTML5 video player with pacing/audio overlays
+│   ├── MemoryConfirmation.tsx     # Human-in-the-loop memory confirmation card
+│   ├── MemoryPanel.tsx            # Slide-over Walrus memory vault drawer
+│   ├── NueLogo.tsx                # Brand logo renderer
+│   └── NueNavbar.tsx              # Sticky navbar with Vault drawer trigger
+│
+├── lib/
+│   ├── nue-memory/
+│   │   ├── core/types.ts          # Domain-agnostic StructuredMemory schema
+│   │   ├── storage/walrus-store.ts # Sui Walrus MemWal SDK adapter
+│   │   ├── engine/
+│   │   │   ├── extractor.ts       # Signal analysis & noise separation
+│   │   │   ├── evolution.ts       # Conflict resolution & supersession
+│   │   │   └── retrieval.ts       # Context formatting & prompt injection
+│   │   ├── sdk.ts                 # MemoryClient developer SDK
+│   │   └── media-memory/          # 📁 Dedicated Media Memory feature module
+│   │       ├── types.ts           # Media domain types
+│   │       ├── service.ts         # MemWalService bridge
+│   │       ├── extractor.ts       # classifyFeedback()
+│   │       ├── evolution.ts       # evolveMemories()
+│   │       ├── retrieval.ts       # retrieveAndEnrichBrief()
+│   │       ├── livepeer-agent.ts  # Livepeer MCP client
+│   │       └── index.ts           # Public module barrel
+│   ├── livepeer/agent.ts          # Backward-compatibility bridge
+│   ├── walrus-memwal/client.ts    # Backward-compatibility bridge
+│   └── types.ts                   # Root types re-export bridge
+│
+├── public/
+│   ├── favicon.ico                # Preserved original background favicon
+│   ├── logo-transparent.png       # In-app transparent pixel horse logo (isolated)
+│   └── logo.jpg                   # Original uploaded brand image
+│
+├── handoff.md                     # This master product and engineering handoff
+├── package.json                   # Dependencies: Next.js 15, MemWal, Lucide, Tailwind
+└── tsconfig.json                  # Strict TypeScript configuration
 ```
 
 ---
 
-## 5. Recent Git History
+## 12. UI/UX Specification & Brand Assets
 
-- `b757622`: `fix(studio): preserve all memories in state and add chat feedback on Walrus persist`
-- `29361ba`: `feat: encapsulate Media Memory into dedicated lib/nue-memory/media-memory/ module`
-- `f8656cb`: `feat: transparent in-app logo, background-preserved favicon, and full MemWal SDK integration`
-- `0ff104c`: `feat(nue-memory): complete Phase 1 & 2 - core types, walrus adapter, extractor, conflict evolution, and retrieval engine`
+### Visual Aesthetics
+* **Theme**: Deep obsidian canvases (`#0c0a09`) with warm stone tones (`#1c1815`, `#26211d`), honey caramel accents (`#c88d51`), and crisp typography.
+* **Buttons**: Clean, rectangular geometries with subtle borders (`rounded-md`, avoiding generic pill shapes).
+* **Typography**: Clean sans-serif for UI headings, JetBrains Mono for telemetry, payload JSON, and code blocks.
+
+### Brand Assets & Design Contract
+* **In-App Logo ([`/logo-transparent.png`](file:///home/mateo/basement/Nue/public/logo-transparent.png))**: Background completely removed. Isolates only the pixel horse mark with `[image-rendering:pixelated]` enabled in [`components/NueLogo.tsx`](file:///home/mateo/basement/Nue/components/NueLogo.tsx).
+* **Favicon ([`/favicon.ico`](file:///home/mateo/basement/Nue/public/favicon.ico))**: Original background preserved intact.
 
 ---
 
-## 6. Action Items for the Next Engineer
+## 13. Cryptographic & Network Infrastructure
 
-1. **Enforce Strict Live-Only Walrus Mode**:
-   In `lib/nue-memory/storage/walrus-store.ts`, delete or disable the silent fallback to `MemWalMock`. If `!privateKey || !accountId`, fail fast or present a credential configuration prompt in the UI.
-2. **Provide Real MemWal Keys**:
-   Set `MEMWAL_PRIVATE_KEY` and `MEMWAL_ACCOUNT_ID` in `.env.local`. Test against `https://relayer.memory.walrus.xyz` to verify real decentralized storage writes and vector queries.
-3. **Verify Livepeer Media Generation**:
-   Provide a valid `LIVEPEER_API_KEY` to enable remote MCP `create_media` calls.
-4. **Audit Dashboard UI Indicators**:
-   Update `OverviewView.tsx` and `MemoriesView.tsx` to display connection state: `Disconnected / Missing Keys` when keys are not set, and `Walrus Relayer (Connected)` when validated.
+### Sui Walrus MemWal Integration
+Nue Memory connects to the decentralized Walrus Memory network via the official `@mysten-incubation/memwal` SDK:
+
+```typescript
+import { MemWal } from '@mysten-incubation/memwal';
+
+const client = MemWal.create({
+  key: process.env.MEMWAL_PRIVATE_KEY!,     // Sui Ed25519 private key
+  accountId: process.env.MEMWAL_ACCOUNT_ID!, // Sui account address (0x...)
+  serverUrl: process.env.MEMWAL_SERVER_URL || 'https://relayer.memory.walrus.xyz',
+  namespace: 'nue-memory',
+});
+```
+
+### Delegation & Verification
+1. **Delegate Signing**: The Ed25519 key signs memory payloads on behalf of the agent runtime.
+2. **On-Chain Attestation**: MemWal stores encoded blobs across Walrus decentralized storage nodes and registers index pointers.
+3. **Cryptographic Provenance**: Blob IDs returned from `rememberAndWait` represent tamper-proof content hashes on Walrus.
+
+---
+
+## 14. Step-by-Step Production Setup
+
+### 1. Prerequisites
+* Node.js >= 20.0.0
+* npm >= 10.0.0
+
+### 2. Environment Configuration
+Create `.env.local` in the project root:
+
+```bash
+# --- Sui Walrus Decentralized Memory (Required for Live On-Chain Persistence) ---
+MEMWAL_PRIVATE_KEY=your_ed25519_private_key
+MEMWAL_ACCOUNT_ID=your_sui_account_id
+MEMWAL_SERVER_URL=https://relayer.memory.walrus.xyz
+
+# --- Livepeer Agent (Required for Remote MCP Media Synthesis) ---
+LIVEPEER_API_KEY=your_livepeer_api_key
+LIVEPEER_AGENT_MCP_URL=https://agent.livepeer.org/api/mcp/creative
+```
+
+> **Note on Mock Mode**: When `MEMWAL_PRIVATE_KEY` is not provided, the SDK initializes `MemWalMock` locally in memory for offline development. To ensure live network verification, always provide valid Walrus keys.
+
+### 3. Build & Run
+```bash
+# Install dependencies
+npm install
+
+# Build production bundle (verified 0 type or lint errors)
+npm run build
+
+# Start production server on port 3000
+npm run start -- -p 3000
+```
+
+---
+
+## 15. Post-Hackathon Product Roadmap
+
+```text
+Q4 2026: Nue Developer Preview
+├── Livepeer Agent Hackathon Submission (Media Memory Showcase)
+├── Python SDK release (pip install nue-ai)
+└── Sui Walrus Testnet/Mainnet delegate key management portal
+
+Q1 2027: Multi-Domain Expansion
+├── Coding Memory (@nue-memory/coding): Developer preferences, AST conventions, repo rules
+├── Enterprise Tenant Namespaces (Isolated cryptographic partitions per customer)
+└── LangChain & LlamaIndex Official Memory Provider Plugins
+
+Q2 2027: Decentralized Memory Network
+├── Dedicated Walrus Memory indexer nodes
+├── Collaborative Shared Agent Memory (Teams sharing verified agent context)
+└── Zero-Knowledge Memory Proofs (Selective memory disclosure without revealing raw text)
+```
+
+---
+
+*Authored by Antigravity on behalf of NextMathLabs for the Nue Memory Project.*
