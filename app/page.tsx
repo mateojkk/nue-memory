@@ -1,10 +1,10 @@
-import { NueApp } from '@/components/AppShell';
+import { redirect } from 'next/navigation';
 
 /**
- * Landing route: Nue Memory, the memory infrastructure layer for AI agents.
- * Media Memory is presented as the first app built on it (single section) and
- * the studio itself lives on its own route at /mediamemory.
+ * Home is the app, not the landing page.
+ * / redirects to the Media Memory workspace (/mediamemory); the marketing
+ * landing lives at /landing.
  */
 export default function Home() {
-  return <NueApp initialView="landing" />;
+  redirect('/mediamemory');
 }

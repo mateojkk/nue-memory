@@ -1,14 +1,12 @@
 import { NueApp } from '@/components/AppShell';
 
 /**
- * Media Memory route.
+ * Media Memory route — the working surface.
  *
- * This is the working surface: it opens Nue Memory directly on the Media Memory
- * workspace, where the create -> review -> feedback -> remember -> recall loop
- * runs against the real Livepeer Agent and Walrus MemWal layers.
- *
- * What Media Memory *is* gets explained on the landing page (one section) and in
- * the workspace intro panel. This route is where you use it.
+ * Opens Nue Memory directly on the Media Memory workspace, where the
+ * create -> review -> feedback -> remember -> recall loop runs against the
+ * real Livepeer Agent and Walrus MemWal layers. What Media Memory *is* gets
+ * explained in one section on /landing; this route is where you use it.
  */
 export const metadata = {
   title: 'Media Memory · Nue Memory',
@@ -17,5 +15,5 @@ export const metadata = {
 };
 
 export default function MediaMemoryPage() {
-  return <NueApp initialView="dashboard" initialTab="media-memory" />;
+  return <NueApp view="dashboard" initialTab="media-memory" />;
 }

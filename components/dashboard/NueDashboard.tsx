@@ -100,7 +100,7 @@ export function NueDashboard({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)] transition"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Home</span>
+              <span>Back to Landing</span>
             </button>
 
             <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />

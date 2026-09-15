@@ -60,15 +60,15 @@ import {
 } from '@/lib/types';
 
 export interface NueAppProps {
-  /** Which surface to render on first paint. */
-  initialView?: 'landing' | 'dashboard';
-  /** Dashboard tab to open when initialView is 'dashboard'. */
+  /** Which surface this route renders. The two routes are separate: /landing and /mediamemory. */
+  view: 'landing' | 'dashboard';
+  /** Dashboard tab to open when view is 'dashboard'. */
   initialTab?: DashboardTab;
 }
 
-export function NueApp({ initialView = 'landing', initialTab }: NueAppProps) {
+export function NueApp({ view, initialTab }: NueAppProps) {
   const router = useRouter();
-  const [currentView, setCurrentView] = useState<'landing' | 'dashboard'>(initialView);
+  const currentView = view;
 
   // Projects State (Demonstrating Media Memory feature under Nue)
   const [projects, setProjects] = useState<CreativeProject[]>([
@@ -415,16 +415,13 @@ export function NueApp({ initialView = 'landing', initialTab }: NueAppProps) {
       {/* 1. Navbar */}
       <NueNavbar
         onOpenVault={() => setIsMemoryPanelOpen(true)}
-        onGetStarted={() => router.push('/mediamemory')}
         activeCount={activeMemories.filter((m) => m.isActive).length}
-        currentView={currentView}
-        onSwitchView={(v) => setCurrentView(v)}
       />
 
       {/* 2. Hero Section */}
       <HeroSection
         onGetStarted={() => router.push('/mediamemory')}
-        onViewDocs={() => setCurrentView('dashboard')}
+        onViewDocs={() => router.push('/mediamemory')}
       />
 
       {/* 3. Quickstart SDK Code Section */}
@@ -450,7 +447,7 @@ export function NueApp({ initialView = 'landing', initialTab }: NueAppProps) {
       {/* 9. Landing Footer */}
       <LandingFooter
         onOpenWorkspace={() => router.push('/mediamemory')}
-        onOpenDocs={() => setCurrentView('dashboard')}
+        onOpenDocs={() => router.push('/mediamemory')}
       />
 
       {/* Slide-over Walrus Memory Vault Drawer */}

@@ -2,48 +2,50 @@
 
 import React from 'react';
 import { ArrowRight, Database } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { NueLogo } from './NueLogo';
 import { ThemeToggle } from './ThemeToggle';
 
 interface NueNavbarProps {
   onOpenVault?: () => void;
-  onGetStarted?: () => void;
   activeCount?: number;
-  currentView?: 'landing' | 'dashboard';
-  onSwitchView?: (view: 'landing' | 'dashboard') => void;
 }
 
+/**
+ * Landing navbar. The landing lives at /landing; the working app at
+ * /mediamemory (which is also where / redirects). All navigation is
+ * route-based — no client view switching.
+ */
 export function NueNavbar({
   onOpenVault,
-  onGetStarted,
   activeCount = 0,
-  currentView = 'landing',
-  onSwitchView,
 }: NueNavbarProps) {
+  const router = useRouter();
+
   return (
     <header className="sticky top-0 z-50 bg-[var(--bg)]/80 backdrop-blur-[13px] border-b border-[var(--border)] px-6 py-3.5 font-light transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Brand: Technical asterisk icon + Nue mark */}
         <div className="flex items-center gap-6">
           <button
-            onClick={() => onSwitchView?.('landing')}
+            onClick={() => router.push('/landing')}
             className="flex items-center text-left group"
           >
             <NueLogo size={28} showText={true} textSize="text-xl" />
           </button>
 
-          {/* Minimal Navigation (Section 17: Product | Media Memory | Developers | Docs) */}
+          {/* Minimal Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-[13px] font-medium text-[var(--fg-muted)]">
-            <a href="#product" className="hover:text-[var(--fg)] transition">
+            <a href="/#product" className="hover:text-[var(--fg)] transition">
               Product
             </a>
             <a href="/mediamemory" className="hover:text-[var(--fg)] transition">
               Media Memory
             </a>
-            <a href="#developers" className="hover:text-[var(--fg)] transition">
+            <a href="/#developers" className="hover:text-[var(--fg)] transition">
               Developers
             </a>
-            <a href="#docs" className="hover:text-[var(--fg)] transition">
+            <a href="/#docs" className="hover:text-[var(--fg)] transition">
               Docs
             </a>
           </nav>
@@ -83,16 +85,10 @@ export function NueNavbar({
 
           {/* Primary CTA: Rectangular Get Started button */}
           <button
-            onClick={() => {
-              if (onGetStarted) {
-                onGetStarted();
-              } else if (onSwitchView) {
-                onSwitchView('dashboard');
-              }
-            }}
+            onClick={() => router.push('/mediamemory')}
             className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-xs font-medium transition shadow-sm"
           >
-            <span>{currentView === 'dashboard' ? 'Dashboard' : 'Get started'}</span>
+            <span>Get started</span>
             <ArrowRight className="w-3.5 h-3.5 text-white" />
           </button>
           <ThemeToggle />
