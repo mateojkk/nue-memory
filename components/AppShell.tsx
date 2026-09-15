@@ -339,7 +339,6 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       <>
         <NueDashboard
           initialTab={initialTab}
-          onBackToLanding={() => router.push('/')}
           activeProject={activeProject}
           activeVersion={activeVersion}
           allVersions={activeProject?.versions || []}

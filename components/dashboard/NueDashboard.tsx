@@ -29,7 +29,6 @@ export type DashboardTab =
   | 'documentation';
 
 interface NueDashboardProps {
-  onBackToLanding: () => void;
   /** Tab to open on first render. Defaults to 'media-memory'. */
   initialTab?: DashboardTab;
   activeProject: CreativeProject;
@@ -55,7 +54,6 @@ interface NueDashboardProps {
 }
 
 export function NueDashboard({
-  onBackToLanding,
   initialTab = 'media-memory',
   activeProject,
   activeVersion,
@@ -95,16 +93,6 @@ export function NueDashboard({
       <header className="sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--border)] px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <button
-              onClick={onBackToLanding}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)] transition"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to Landing</span>
-            </button>
-
-            <div className="h-4 w-px bg-[var(--border)] hidden sm:block" />
-
             <NueLogo size={24} showText={true} textSize="text-sm" />
           </div>
 
