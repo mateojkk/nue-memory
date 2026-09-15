@@ -1,29 +1,12 @@
 import type { Metadata } from 'next';
-import { Fustat, Fragment_Mono, EB_Garamond } from 'next/font/google';
+// Fonts are vendored via @fontsource (no build-time Google Fonts fetch —
+// a flaky CDN must never be able to break a build).
+import '@fontsource/fustat/400.css';
+import '@fontsource/fustat/500.css';
+import '@fontsource/fustat/600.css';
+import '@fontsource/fustat/700.css';
+import '@fontsource/fragment-mono/400.css';
 import './globals.css';
-
-// mem0.ai exact font stack
-const fustat = Fustat({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  display: 'swap',
-  variable: '--font-fustat',
-});
-
-const fragmentMono = Fragment_Mono({
-  subsets: ['latin'],
-  weight: '400',
-  display: 'swap',
-  variable: '--font-fragment',
-});
-
-const ebGaramond = EB_Garamond({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  style: ['normal', 'italic'],
-  display: 'swap',
-  variable: '--font-garamond',
-});
 
 export const metadata: Metadata = {
   title: 'Nue · The Memory Infrastructure Layer for AI Agents',
@@ -42,7 +25,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${fustat.variable} ${fragmentMono.variable} ${ebGaramond.variable}`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
@@ -50,7 +33,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${fustat.className} min-h-screen bg-[var(--bg)] text-[var(--fg)] antialiased selection:bg-[var(--accent)]/20 selection:text-[var(--fg)]`}>
+      <body className="min-h-screen bg-[var(--bg)] text-[var(--fg)] antialiased selection:bg-[var(--accent)]/20 selection:text-[var(--fg)]">
         {children}
       </body>
     </html>

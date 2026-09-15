@@ -64,20 +64,15 @@
   --accent-cognac: var(--accent-deep);
 }
 
-/* mem0 font system: Fustat (sans) everywhere, Fragment Mono for code/labels */
+/* mem0 font system: Fustat (sans) everywhere, Fragment Mono for code/labels.
+   Both are vendored via @fontsource — no build-time network dependency. */
 * {
-  font-family: var(--font-fustat), 'Fustat', sans-serif !important;
+  font-family: 'Fustat', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
 /* Tailwind's font-mono → Fragment Mono (mem0's mono font) */
 .font-mono, code, pre, kbd, samp {
-  font-family: var(--font-fragment), 'Fragment Mono', monospace !important;
-}
-
-/* mem0 serif italic accents (EB Garamond) — use via .font-serif-accent */
-.font-serif-accent {
-  font-family: var(--font-garamond), 'EB Garamond', serif !important;
-  font-style: italic;
+  font-family: 'Fragment Mono', 'DM Mono', monospace !important;
 }
 
 body {

@@ -30,6 +30,8 @@ export type DashboardTab =
 
 interface NueDashboardProps {
   onBackToLanding: () => void;
+  /** Tab to open on first render. Defaults to 'media-memory'. */
+  initialTab?: DashboardTab;
   activeProject: CreativeProject;
   activeVersion: MediaVersion | null;
   allVersions: MediaVersion[];
@@ -54,6 +56,7 @@ interface NueDashboardProps {
 
 export function NueDashboard({
   onBackToLanding,
+  initialTab = 'media-memory',
   activeProject,
   activeVersion,
   allVersions,
@@ -75,7 +78,7 @@ export function NueDashboard({
   currentProjectIndex,
   onSelectProject,
 }: NueDashboardProps) {
-  const [activeTab, setActiveTab] = useState<DashboardTab>('media-memory');
+  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
 
   const navItems = [
     { id: 'overview' as DashboardTab, label: 'Overview', icon: LayoutDashboard },

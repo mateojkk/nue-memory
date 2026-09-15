@@ -34,7 +34,7 @@ export function MemoryCompressionVisual() {
 
   return (
     <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-4">
-      <span className="text-xs font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium block">
+      <span className="text-xs font-medium uppercase tracking-wider text-[var(--fg-muted)] font-medium block">
         Execution Workflow
       </span>
 

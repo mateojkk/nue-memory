@@ -29,7 +29,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
 
         {/* Product Column */}
         <div>
-          <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-mono">
+          <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-medium">
             Product
           </h4>
           <ul className="space-y-2 text-[var(--fg-muted)] font-light">
@@ -61,7 +61,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
 
         {/* Infrastructure Column: one understated tech mention */}
         <div>
-          <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-mono">
+          <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-medium">
             Under the Hood
           </h4>
           <p className="text-[var(--fg-faint)] font-light text-xs leading-relaxed">
@@ -71,7 +71,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
 
         {/* Developers & Hackathon */}
         <div>
-          <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-mono">
+          <h4 className="font-medium text-[var(--fg)] mb-3 uppercase tracking-wider text-[11px] font-medium">
             Developers
           </h4>
           <ul className="space-y-2 text-[var(--fg-muted)] font-light mb-5">
@@ -98,7 +98,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
             </li>
           </ul>
 
-          <h4 className="font-medium text-[var(--fg)] mb-2 uppercase tracking-wider text-[11px] font-mono">
+          <h4 className="font-medium text-[var(--fg)] mb-2 uppercase tracking-wider text-[11px] font-medium">
             Hackathon
           </h4>
           <div className="text-[var(--fg-muted)] text-xs font-light">
@@ -111,7 +111,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
         <div>
           &copy; 2026 Nue &middot; Founded by NextMathLabs. All rights reserved.
         </div>
-        <div className="flex items-center gap-4 text-[var(--fg-faint)] font-mono text-[10px]">
+        <div className="flex items-center gap-4 text-[var(--fg-faint)] font-medium text-[10px]">
           <span>BUILT FOR AGENTS WITH MEMORY</span>
         </div>
       </div>

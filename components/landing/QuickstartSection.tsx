@@ -19,7 +19,7 @@ export function QuickstartSection() {
     <section id="developers" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       <Reveal>
         <div className="text-left mb-12">
-        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Developer Quickstart
         </div>
         <h2 className="text-3xl sm:text-4xl font-medium text-[var(--fg)] tracking-tight font-sans">
@@ -37,10 +37,8 @@ export function QuickstartSection() {
           {/* Header Bar */}
           <div className="px-5 py-3 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[var(--border)]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[var(--border)]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[var(--border)]" />
-              <span className="ml-2 text-xs font-mono text-[var(--fg-soft)]">
+              <Code2 className="w-3.5 h-3.5 text-[var(--fg-muted)]" />
+              <span className="text-xs font-medium text-[var(--fg-soft)]">
                 {activeTab === 'python' ? 'quickstart.py' : 'quickstart.ts'}
               </span>
             </div>
@@ -113,7 +111,7 @@ export function QuickstartSection() {
         <div className="lg:col-span-5 space-y-6">
           {/* Install SDK Box */}
           <div className="p-5 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
-            <span className="text-xs font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium block mb-2">
+            <span className="text-xs font-medium uppercase tracking-wider text-[var(--fg-muted)] font-medium block mb-2">
               Install SDK
             </span>
             <div className="flex items-center justify-between p-3 rounded-md bg-[var(--surface)] border border-[var(--border)] font-mono text-xs text-[var(--fg)]">

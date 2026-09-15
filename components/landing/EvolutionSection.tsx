@@ -13,7 +13,7 @@ export function EvolutionSection() {
     <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       <Reveal>
         <div className="text-left mb-12">
-        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Dynamic Lifecycle
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
@@ -29,14 +29,14 @@ export function EvolutionSection() {
         {/* Left Column: Interactive Simulation Control */}
         <div className="lg:col-span-5 space-y-6">
           <div className="p-6 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-4">
-            <span className="text-xs font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium block">
+            <span className="text-xs font-medium uppercase tracking-wider text-[var(--fg-muted)] font-medium block">
               Simulate Preference Shift
             </span>
 
             <div className="space-y-3">
               <button
                 onClick={() => selectStage(0)}
-                className={`w-full text-left p-3.5 rounded-md border transition text-xs font-mono ${
+                className={`w-full text-left p-3.5 rounded-md border transition text-xs font-medium ${
                   activeStage === 'initial'
                     ? 'bg-[var(--surface-2)] border-[var(--accent)]/50 text-[var(--fg)] shadow-sm'
                     : 'bg-[var(--surface)] border-[var(--border)] text-[var(--fg-muted)] hover:text-[var(--fg)]'
@@ -51,7 +51,7 @@ export function EvolutionSection() {
 
               <button
                 onClick={() => selectStage(1)}
-                className={`w-full text-left p-3.5 rounded-md border transition text-xs font-mono ${
+                className={`w-full text-left p-3.5 rounded-md border transition text-xs font-medium ${
                   activeStage === 'updated'
                     ? 'bg-[var(--surface-2)] border-[var(--accent)]/50 text-[var(--fg)] shadow-sm'
                     : 'bg-[var(--surface)] border-[var(--border)] text-[var(--fg-muted)] hover:text-[var(--fg)]'
@@ -72,7 +72,7 @@ export function EvolutionSection() {
         </div>
 
         {/* Right Column: Internal Graph Representation */}
-        <div key={activeStage} className="nue-fade-swap lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-8 space-y-5 font-mono text-xs">
+        <div key={activeStage} className="nue-fade-swap lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-8 space-y-5 font-medium text-xs">
           <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
             <span className="text-[var(--fg-muted)] uppercase text-[11px] tracking-wider">
               Nue Memory Graph State

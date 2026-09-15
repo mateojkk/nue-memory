@@ -67,7 +67,7 @@ export function MemoryObjectsSection() {
   return (
     <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       <div className="text-left mb-12">
-        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Structured Schema
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
@@ -81,7 +81,7 @@ export function MemoryObjectsSection() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left Column: Category Selector Chips */}
         <div className="lg:col-span-5 space-y-4">
-          <span className="text-xs font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium block">
+          <span className="text-xs font-medium uppercase tracking-wider text-[var(--fg-muted)] font-medium block">
             Ontology Categories ({categories.length})
           </span>
           <div className="flex flex-wrap gap-2">

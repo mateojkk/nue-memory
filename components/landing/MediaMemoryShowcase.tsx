@@ -14,7 +14,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
       {/* Section Header */}
       <Reveal>
         <div className="text-left mb-14">
-        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Flagship Capability · Built on Nue Memory
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
@@ -36,15 +36,15 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col justify-between shadow-xl">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <span className="text-xs font-mono text-[var(--fg-muted)] font-medium">PROJECT 01</span>
-              <span className="text-[11px] font-mono text-[var(--fg-faint)]">SaaS App Promo</span>
+              <span className="text-xs font-medium text-[var(--fg-muted)] font-medium">PROJECT 01</span>
+              <span className="text-[11px] font-medium text-[var(--fg-faint)]">SaaS App Promo</span>
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-mono text-[var(--fg-muted)] uppercase tracking-wider block">
+              <span className="text-[11px] font-medium text-[var(--fg-muted)] uppercase tracking-wider block">
                 User Review Feedback:
               </span>
-              <div className="p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] font-mono text-xs text-[var(--fg-soft)] space-y-1.5">
+              <div className="p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] font-medium text-xs text-[var(--fg-soft)] space-y-1.5">
                 <div>&bull; &ldquo;Make the captions larger.&rdquo;</div>
                 <div>&bull; &ldquo;Remove dramatic music.&rdquo;</div>
                 <div>&bull; &ldquo;Keep the visual style minimal.&rdquo;</div>
@@ -56,7 +56,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             </p>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-mono text-[var(--fg-faint)] flex items-center justify-between">
+          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-medium text-[var(--fg-faint)] flex items-center justify-between">
             <span>Feedback parsed</span>
             <span className="text-[var(--fg-muted)]">Extracted →</span>
           </div>
@@ -66,21 +66,21 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         <div className="lg:col-span-4 rounded-xl bg-[var(--border)] border border-[var(--accent)]/40 p-6 flex flex-col justify-between shadow-xl shadow-[var(--accent)]/5 relative overflow-hidden">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <span className="text-xs font-mono text-[var(--fg)] font-medium flex items-center gap-1.5">
+              <span className="text-xs font-medium text-[var(--fg)] font-medium flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[var(--fg-muted)]" />
                 NUE MEMORY
               </span>
-              <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
+              <span className="text-[11px] font-medium text-emerald-400 flex items-center gap-1">
                 <Database className="w-3 h-3" />
                 Memory Store
               </span>
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-mono text-[var(--fg-muted)] uppercase tracking-wider block">
+              <span className="text-[11px] font-medium text-[var(--fg-muted)] uppercase tracking-wider block">
                 Persisted Creative Preferences:
               </span>
-              <div className="space-y-2 font-mono text-xs">
+              <div className="space-y-2 font-medium text-xs">
                 <div className="p-2.5 rounded bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg)] flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-[var(--fg-muted)] shrink-0" />
                   <span>Large, high-contrast captions</span>
@@ -101,7 +101,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             </p>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-mono text-[var(--fg-muted)] flex items-center justify-between">
+          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-medium text-[var(--fg-muted)] flex items-center justify-between">
             <span>Durable encrypted storage</span>
             <span className="text-emerald-400">Durable →</span>
           </div>
@@ -111,20 +111,20 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col justify-between shadow-xl">
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
-              <span className="text-xs font-mono text-emerald-400 font-medium">PROJECT 02</span>
-              <span className="text-[11px] font-mono text-[var(--fg-faint)]">New Product Launch</span>
+              <span className="text-xs font-medium text-emerald-400 font-medium">PROJECT 02</span>
+              <span className="text-[11px] font-medium text-[var(--fg-faint)]">New Product Launch</span>
             </div>
 
             <div className="space-y-2">
-              <span className="text-[11px] font-mono text-[var(--fg-muted)] uppercase tracking-wider block">
+              <span className="text-[11px] font-medium text-[var(--fg-muted)] uppercase tracking-wider block">
                 User Prompt (Zero Reprompt):
               </span>
-              <div className="p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] font-mono text-xs text-[var(--fg)]">
+              <div className="p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] font-medium text-xs text-[var(--fg)]">
                 &ldquo;Create a launch video for my new product.&rdquo;
               </div>
             </div>
 
-            <div className="p-3 rounded bg-[var(--border)] border border-emerald-900/50 text-xs font-mono text-emerald-300 space-y-1">
+            <div className="p-3 rounded bg-[var(--border)] border border-emerald-900/50 text-xs font-medium text-emerald-300 space-y-1">
               <span className="text-[10px] text-emerald-400 font-medium uppercase block">
                 Nue Memory Applied Automatically:
               </span>
@@ -138,7 +138,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
             </p>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-mono text-emerald-400 flex items-center justify-between">
+          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-medium text-emerald-400 flex items-center justify-between">
             <span>Result: Perfect Continuity</span>
             <span>Zero Re-prompting</span>
           </div>

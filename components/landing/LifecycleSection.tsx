@@ -62,7 +62,7 @@ export function LifecycleSection() {
       {/* Section Header */}
       <Reveal>
         <div className="text-left mb-16">
-        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Technical Pipeline
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
@@ -84,15 +84,15 @@ export function LifecycleSection() {
               >
               <div>
                 <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
-                  <span className="text-[11px] font-mono text-[var(--fg-muted)] font-medium">
+                  <span className="text-[11px] font-medium text-[var(--fg-muted)] font-medium">
                     {st.step}
                   </span>
-                  <span className="text-[9px] font-mono text-[var(--fg-faint)] uppercase px-1.5 py-0.5 rounded bg-[var(--border)]">
+                  <span className="text-[9px] font-medium text-[var(--fg-faint)] uppercase px-1.5 py-0.5 rounded bg-[var(--border)]">
                     {st.tag}
                   </span>
                 </div>
 
-                <h3 className="text-sm font-medium text-[var(--fg)] font-mono uppercase tracking-tight mb-2 group-hover:text-[var(--fg-muted)] transition">
+                <h3 className="text-sm font-medium text-[var(--fg)] font-medium uppercase tracking-tight mb-2 group-hover:text-[var(--fg-muted)] transition">
                   {st.name}
                 </h3>
                 <h4 className="text-xs text-[var(--fg-soft)] font-medium mb-2 leading-snug">
@@ -103,7 +103,7 @@ export function LifecycleSection() {
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-[var(--surface-2)] text-[10px] font-mono text-[var(--fg-faint)] flex items-center justify-between">
+              <div className="pt-3 border-t border-[var(--surface-2)] text-[10px] font-medium text-[var(--fg-faint)] flex items-center justify-between">
                 <span>Stage {st.step}</span>
                 {idx < stages.length - 1 ? (
                   <span className="text-[var(--fg-faint)]">→</span>

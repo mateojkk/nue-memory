@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ArrowRight, Check, Copy, Terminal, Shield } from 'lucide-react';
+import { ArrowRight, Check, Copy, Terminal, Shield, Code2 } from 'lucide-react';
 import { Reveal } from '@/components/motion';
 
 interface HeroSectionProps {
@@ -24,7 +24,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[var(--accent)]/40 pointer-events-none rounded-full blur-3xl" />
 
       {/* Eyebrow: NUE MEMORY */}
-      <div className="text-xs font-mono text-[var(--fg-faint)] uppercase tracking-[0.2em] mb-8">
+      <div className="text-xs font-medium text-[var(--fg-faint)] uppercase tracking-[0.2em] mb-8">
         Nue Memory <span className="text-[var(--fg-muted)]">·</span> NextMathLabs
       </div>
 
@@ -66,10 +66,10 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
         {/* Left Column: Visual Flow Diagram (5 cols) */}
         <div className="lg:col-span-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden">
           <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
-            <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium">
+            <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--fg-muted)] font-medium">
               Architecture Pipeline
             </span>
-            <span className="text-[10px] font-mono text-[var(--fg-muted)] flex items-center gap-1">
+            <span className="text-[10px] font-medium text-[var(--fg-muted)] flex items-center gap-1">
               <Shield className="w-3 h-3" />
               Decoupled
             </span>
@@ -103,7 +103,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
 
           <div className="pt-4 border-t border-[var(--border)] text-xs text-[var(--fg-muted)] font-light flex items-center justify-between">
             <span>Storage: durable encrypted blobs</span>
-            <span className="text-[var(--fg-faint)] font-mono text-[10px]">Zero Model Lock-in</span>
+            <span className="text-[var(--fg-faint)] font-medium text-[10px]">Zero Model Lock-in</span>
           </div>
         </div>
 
@@ -112,10 +112,8 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
           {/* Window Title Bar */}
           <div className="px-5 py-3.5 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-[var(--border)]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[var(--border)]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[var(--border)]" />
-              <span className="ml-2 text-xs font-mono text-[var(--fg-muted)]">quickstart.py</span>
+              <Code2 className="w-3.5 h-3.5 text-[var(--fg-muted)]" />
+              <span className="text-xs font-medium text-[var(--fg-soft)]">quickstart.py</span>
             </div>
 
             <button

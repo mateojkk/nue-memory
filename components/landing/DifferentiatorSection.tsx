@@ -42,7 +42,7 @@ export function DifferentiatorSection() {
       {/* Section Header */}
       <Reveal>
         <div className="text-left mb-14">
-        <div className="text-xs font-mono text-[var(--fg-muted)] uppercase tracking-wider mb-2">
+        <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           The Core Differentiator
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans max-w-3xl leading-[1.12]">
@@ -58,7 +58,7 @@ export function DifferentiatorSection() {
       <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-10 space-y-8">
         {/* mem0-style tab strip: dark active pill, plain muted inactive */}
         <div className="flex items-center gap-1 overflow-x-auto pb-2 border-b border-[var(--border)]" role="tablist">
-          <span className="text-xs font-mono text-[var(--fg-faint)] uppercase tracking-wider mr-2">
+          <span className="text-xs font-medium text-[var(--fg-faint)] uppercase tracking-wider mr-2">
             Example Input:
           </span>
           {examples.map((ex, idx) => (
@@ -67,7 +67,7 @@ export function DifferentiatorSection() {
               role="tab"
               aria-selected={selectedExample === idx}
               onClick={() => selectExample(idx)}
-              className={`px-3.5 py-1.5 rounded-md text-xs font-mono transition whitespace-nowrap ${
+              className={`px-3.5 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
                 selectedExample === idx
                   ? 'bg-[var(--fg)] text-[var(--bg)] font-medium'
                   : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
@@ -80,11 +80,11 @@ export function DifferentiatorSection() {
 
         {/* Raw Interaction Container — cross-fades on scenario switch */}
         <div key={selectedExample} className="nue-fade-swap">
-          <div className="text-xs font-mono text-[var(--fg-muted)] mb-2 flex items-center justify-between">
+          <div className="text-xs font-medium text-[var(--fg-muted)] mb-2 flex items-center justify-between">
             <span>RAW AGENT INTERACTION STREAM</span>
             <span className="text-[var(--fg-muted)] text-[11px]">Nue Real-Time Parser</span>
           </div>
-          <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] font-mono text-sm text-[var(--fg)] leading-relaxed shadow-inner">
+          <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] font-medium text-sm text-[var(--fg)] leading-relaxed shadow-inner">
             &ldquo;{active.rawInput}&rdquo;
           </div>
         </div>
@@ -95,14 +95,14 @@ export function DifferentiatorSection() {
           <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-red-950/40 relative overflow-hidden flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-red-950/40 text-red-400 border border-red-900/40">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-medium font-medium uppercase bg-red-950/40 text-red-400 border border-red-900/40">
                   <X className="w-3 h-3" />
                   TEMPORARY EDIT
                 </span>
-                <span className="text-[11px] font-mono text-[var(--fg-faint)]">Filtered Out</span>
+                <span className="text-[11px] font-medium text-[var(--fg-faint)]">Filtered Out</span>
               </div>
 
-              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--border)] font-mono text-xs text-[var(--fg-soft)]">
+              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--border)] font-medium text-xs text-[var(--fg-soft)]">
                 &ldquo;{active.temporaryPart}&rdquo;
               </div>
 
@@ -111,7 +111,7 @@ export function DifferentiatorSection() {
               </p>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-[var(--border)] text-[11px] font-mono text-[var(--fg-faint)] flex items-center justify-between">
+            <div className="pt-4 mt-4 border-t border-[var(--border)] text-[11px] font-medium text-[var(--fg-faint)] flex items-center justify-between">
               <span>Status: Used for this task</span>
               <span className="text-red-400/80">Not persisted</span>
             </div>
@@ -121,17 +121,17 @@ export function DifferentiatorSection() {
           <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-[var(--accent)]/40 relative overflow-hidden flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-mono font-medium uppercase bg-[var(--accent)]/20 text-[var(--fg-muted)] border border-[var(--accent)]/40">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-medium font-medium uppercase bg-[var(--accent)]/20 text-[var(--fg-muted)] border border-[var(--accent)]/40">
                   <Check className="w-3 h-3" />
                   PERSISTENT MEMORY
                 </span>
-                <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
+                <span className="text-[11px] font-medium text-emerald-400 flex items-center gap-1">
                   <Database className="w-3 h-3" />
                   Durable Memory
                 </span>
               </div>
 
-              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--border)] font-mono text-xs text-[var(--fg)]">
+              <div className="p-3.5 rounded bg-[var(--surface)] border border-[var(--border)] font-medium text-xs text-[var(--fg)]">
                 &ldquo;{active.persistentPart}&rdquo;
               </div>
 
@@ -140,7 +140,7 @@ export function DifferentiatorSection() {
               </p>
             </div>
 
-            <div className="pt-4 mt-4 border-t border-[var(--border)] text-[11px] font-mono text-[var(--fg-muted)] flex items-center justify-between">
+            <div className="pt-4 mt-4 border-t border-[var(--border)] text-[11px] font-medium text-[var(--fg-muted)] flex items-center justify-between">
               <span>Status: Stored in Nue Memory</span>
               <span className="text-[var(--fg-muted)] font-medium">Available to future tasks</span>
             </div>
@@ -148,7 +148,7 @@ export function DifferentiatorSection() {
         </div>
 
         {/* Summary Differentiator Checklist */}
-        <div className="pt-6 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-3 gap-6 font-mono text-xs">
+        <div className="pt-6 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-3 gap-6 font-medium text-xs">
           <div>
             <span className="text-[var(--fg-muted)] block mb-1">01. What to Remember</span>
             <p className="text-[var(--fg-muted)] font-sans text-xs font-light">

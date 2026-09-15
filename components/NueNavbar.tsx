@@ -37,7 +37,7 @@ export function NueNavbar({
             <a href="#product" className="hover:text-[var(--fg)] transition">
               Product
             </a>
-            <a href="#media-memory" className="hover:text-[var(--fg)] transition">
+            <a href="/mediamemory" className="hover:text-[var(--fg)] transition">
               Media Memory
             </a>
             <a href="#developers" className="hover:text-[var(--fg)] transition">
