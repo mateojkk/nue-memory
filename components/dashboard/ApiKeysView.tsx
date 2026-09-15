@@ -51,7 +51,7 @@ export function ApiKeysView() {
 
         <button
           onClick={handleGenerate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-xs font-medium transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium transition shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Key</span>

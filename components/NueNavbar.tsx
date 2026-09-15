@@ -76,7 +76,7 @@ export function NueNavbar({
               <Database className="w-3.5 h-3.5 text-[var(--accent)]" />
               <span className="hidden sm:inline">Vault</span>
               {activeCount > 0 && (
-                <span className="w-4 h-4 rounded-full bg-[var(--accent)] text-white text-[9px] font-medium flex items-center justify-center">
+                <span className="w-4 h-4 rounded-full bg-[var(--accent)] text-[#4a2c0e] text-[9px] font-medium flex items-center justify-center">
                   {activeCount}
                 </span>
               )}
@@ -86,10 +86,10 @@ export function NueNavbar({
           {/* Primary CTA: Rectangular Get Started button */}
           <button
             onClick={() => router.push('/mediamemory')}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-xs font-medium transition shadow-sm"
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium transition shadow-sm"
           >
             <span>Get started</span>
-            <ArrowRight className="w-3.5 h-3.5 text-white" />
+            <ArrowRight className="w-3.5 h-3.5 text-[#4a2c0e]" />
           </button>
           <ThemeToggle />
         </div>

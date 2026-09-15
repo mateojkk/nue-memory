@@ -183,7 +183,7 @@ export function OverviewView({ memories, onOpenWorkspace, onOpenMemories }: Over
 
             <button
               onClick={onOpenWorkspace}
-              className="w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-xs font-medium transition shadow-md"
+              className="w-full mt-6 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium transition shadow-md"
             >
               <span>Launch Media Studio</span>
               <ArrowRight className="w-3.5 h-3.5" />

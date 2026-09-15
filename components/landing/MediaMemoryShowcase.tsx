@@ -160,11 +160,11 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
 
         <button
           onClick={onOpenWorkspace}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-xs font-medium transition shadow-md whitespace-nowrap"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium transition shadow-md whitespace-nowrap"
         >
-          <Video className="w-4 h-4 text-white" />
+          <Video className="w-4 h-4 text-[#4a2c0e]" />
           <span>Launch Media Memory Studio</span>
-          <ArrowRight className="w-3.5 h-3.5 text-white" />
+          <ArrowRight className="w-3.5 h-3.5 text-[#4a2c0e]" />
         </button>
         </div>
       </Reveal>

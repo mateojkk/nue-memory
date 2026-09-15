@@ -100,7 +100,7 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
           {onOpenStudio && (
             <button
               onClick={onOpenStudio}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[var(--accent-deep)] text-white text-xs font-medium hover:bg-[var(--surface-2)] transition mt-2"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[var(--accent-deep)] text-[#4a2c0e] text-xs font-medium hover:bg-[var(--surface-2)] transition mt-2"
             >
               <span>Launch Media Memory Studio</span>
               <ArrowRight className="w-3.5 h-3.5" />

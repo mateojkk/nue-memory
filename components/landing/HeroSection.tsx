@@ -45,10 +45,10 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
         <div className="flex flex-wrap items-center justify-center gap-3.5 mb-16">
           <button
             onClick={onGetStarted}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-white text-sm font-medium transition shadow-sm"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-sm font-medium transition shadow-sm"
           >
             <span>Get started</span>
-            <ArrowRight className="w-4 h-4 text-white" />
+            <ArrowRight className="w-4 h-4 text-[#4a2c0e]" />
           </button>
 
           <button

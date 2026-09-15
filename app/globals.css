@@ -17,19 +17,16 @@
   --fg-muted: #565553;
   --fg-faint: #a1a1aa;
 
-  /* Accent: mem0 link blue on light; lavender lives on dark surfaces */
-  --accent: #0099ff;
-  --accent-bright: #33adff;
-  --accent-deep: #007fd6;
-  --accent-glow: rgba(0, 153, 255, 0.08);
-  --border-accent: rgba(0, 153, 255, 0.35);
-  /* mem0 lavender + yellow (as used on their dark surfaces) */
-  --accent-soft: #cbb2ff;
-  --accent-highlight: #f1c96c;
+  /* Accent: ONE very light orange, shared by both themes */
+  --accent: #ffc78f;
+  --accent-bright: #ffdfbe;
+  --accent-deep: #ffc78f;
+  --accent-glow: rgba(255, 199, 143, 0.16);
+  --border-accent: rgba(255, 184, 110, 0.5);
 }
 
 .dark {
-  /* mem0.ai EXACT COLORS — DARK: zinc-950 canvas, lavender accent */
+  /* mem0.ai EXACT COLORS — DARK: zinc-950 canvas */
   --background: #09090b;
   --foreground: #fcfcfc;
 
@@ -43,13 +40,12 @@
   --fg-muted: #a1a1aa;
   --fg-faint: #71717a;
 
-  --accent: #cbb2ff;
-  --accent-bright: #dccaff;
-  --accent-deep: #b394ff;
-  --accent-glow: rgba(203, 178, 255, 0.1);
-  --border-accent: rgba(203, 178, 255, 0.35);
-  --accent-soft: #cbb2ff;
-  --accent-highlight: #f1c96c;
+  /* Same single accent */
+  --accent: #ffc78f;
+  --accent-bright: #ffdfbe;
+  --accent-deep: #ffc78f;
+  --accent-glow: rgba(255, 199, 143, 0.14);
+  --border-accent: rgba(255, 199, 143, 0.4);
 }
 
 /* Legacy token aliases (older sections reference these) */
