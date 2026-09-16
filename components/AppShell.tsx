@@ -69,7 +69,8 @@ export interface NueAppProps {
 export function NueApp({ view, initialTab }: NueAppProps) {
   const router = useRouter();
   const currentView = view;
-  const { authenticated } = useAuth();
+  const { authenticated, deductCredits } = useAuth();
+
 
   // Projects State (Demonstrating Media Memory feature under Nue)
   const [projects, setProjects] = useState<CreativeProject[]>([]);
@@ -159,6 +160,9 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           }
           return updated;
         });
+
+        // Deduct compute cost ($0.05) from user profile in Supabase
+        deductCredits?.(0.05);
 
         // Add Agent Response message
         const appliedCount = newVersion.appliedPreferences.length;

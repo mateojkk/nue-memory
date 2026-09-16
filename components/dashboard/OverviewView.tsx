@@ -12,6 +12,8 @@ import {
 import { MediaVersion } from '@/lib/types';
 import { useSystemHealth, connectionIndicator } from '@/lib/hooks/useSystemHealth';
 
+import { useAuth } from '@/components/auth/useAuth';
+
 interface UsageViewProps {
   versions?: MediaVersion[];
   onOpenStudio?: () => void;
@@ -19,15 +21,25 @@ interface UsageViewProps {
 
 export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
   const { health, isLoading } = useSystemHealth();
-  const [demoBonus, setDemoBonus] = useState(0);
+  const { email, creditBalance, topupCredits } = useAuth();
+  const [isToppingUp, setIsToppingUp] = useState(false);
 
-  // Calculate compute usage based on generations
-  const totalGenerations = versions.length || 3;
+  // User-specific compute usage calculation
+  const totalGenerations = versions.length;
   const costPerGen = 0.05;
   const computeSpent = Number((totalGenerations * costPerGen).toFixed(2));
-  const initialCredit = 10.0 + demoBonus;
-  const remainingCredit = Math.max(0, Number((initialCredit - computeSpent).toFixed(2)));
-  const percentageUsed = Math.min(100, Math.round((computeSpent / initialCredit) * 100));
+  const remainingCredit = Number(creditBalance.toFixed(2));
+  const totalGrant = Math.max(10.0, Number((remainingCredit + computeSpent).toFixed(2)));
+  const percentageUsed = Math.min(100, Math.round((computeSpent / totalGrant) * 100));
+
+  const handleTopup = async () => {
+    setIsToppingUp(true);
+    try {
+      await topupCredits(5.0);
+    } finally {
+      setIsToppingUp(false);
+    }
+  };
 
   const livepeer = connectionIndicator(health.livepeer.state, isLoading);
 
@@ -44,13 +56,21 @@ export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
           </p>
         </div>
 
-        <button
-          onClick={() => setDemoBonus((prev) => prev + 5)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm self-start sm:self-auto"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span>Top-up Demo Credit (+$5)</span>
-        </button>
+        <div className="flex items-center gap-3">
+          {email && (
+            <span className="text-xs font-mono text-[var(--fg-muted)] px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+              Account: <span className="text-[var(--fg)] font-medium">{email}</span>
+            </span>
+          )}
+          <button
+            onClick={handleTopup}
+            disabled={isToppingUp}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm self-start sm:self-auto disabled:opacity-50"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{isToppingUp ? 'Updating...' : 'Top-up Credit (+$5.00)'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Credit Balance Card */}
@@ -65,7 +85,7 @@ export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
                 ${remainingCredit.toFixed(2)}
               </span>
               <span className="text-sm font-mono text-[var(--fg-muted)]">
-                / ${initialCredit.toFixed(2)} USD
+                / ${totalGrant.toFixed(2)} USD
               </span>
             </div>
           </div>

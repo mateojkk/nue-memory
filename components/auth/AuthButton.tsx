@@ -10,10 +10,11 @@ interface AuthButtonProps {
   className?: string;
 }
 
-export function AuthButton({ creditBalance = 10.0, className = '' }: AuthButtonProps) {
+export function AuthButton({ creditBalance: propCreditBalance, className = '' }: AuthButtonProps) {
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { authenticated, email, logout } = useAuth();
+  const { authenticated, email, logout, creditBalance: userCreditBalance } = useAuth();
+  const creditBalance = propCreditBalance !== undefined ? propCreditBalance : userCreditBalance;
 
   if (!authenticated) {
     return (
