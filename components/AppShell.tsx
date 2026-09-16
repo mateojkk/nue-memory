@@ -390,6 +390,20 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     }
   };
 
+  // Rename Project
+  const handleRenameProject = (projectId: string, newTitle: string) => {
+    const trimmed = newTitle.trim();
+    if (!trimmed) return;
+    setProjects((prev) => {
+      const updated = prev.map((p) => (p.id === projectId ? { ...p, title: trimmed } : p));
+      const targetProj = updated.find((p) => p.id === projectId);
+      if (targetProj) {
+        persistProjectToDb(targetProj);
+      }
+      return updated;
+    });
+  };
+
   // Forget memory
   const handleForgetMemory = async (id: string) => {
     try {
@@ -450,6 +464,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           }}
           isSavingMemory={isSavingMemory}
           onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
+          onRenameProject={handleRenameProject}
           activeMemories={activeMemories}
           onForgetMemory={handleForgetMemory}
           projects={projects}

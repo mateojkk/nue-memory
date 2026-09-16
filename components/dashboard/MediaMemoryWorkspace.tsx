@@ -5,7 +5,7 @@ import { MediaPreview } from '@/components/MediaPreview';
 import { AgentChat } from '@/components/AgentChat';
 import { MemoryConfirmation } from '@/components/MemoryConfirmation';
 import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
-import { Plus, Layers, Check, X, Sparkles, FolderPlus } from 'lucide-react';
+import { Plus, Layers, Check, X, Sparkles, FolderPlus, Edit2, CheckCheck } from 'lucide-react';
 
 interface MediaMemoryWorkspaceProps {
   activeProject: CreativeProject | null;
@@ -21,6 +21,7 @@ interface MediaMemoryWorkspaceProps {
   onDismissPending: () => void;
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
+  onRenameProject?: (projectId: string, newTitle: string) => void;
   activeMemories: MediaPreference[];
   projects?: CreativeProject[];
   currentProjectIndex?: number;
@@ -41,6 +42,7 @@ export function MediaMemoryWorkspace({
   onDismissPending,
   isSavingMemory,
   onNewProject,
+  onRenameProject,
   activeMemories,
   projects = [],
   currentProjectIndex = 0,
@@ -49,6 +51,21 @@ export function MediaMemoryWorkspace({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newPrompt, setNewPrompt] = useState('');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
+
+  const handleStartRename = () => {
+    if (!activeProject) return;
+    setEditedTitle(activeProject.title);
+    setIsEditingTitle(true);
+  };
+
+  const handleSaveRename = () => {
+    if (activeProject && editedTitle.trim() && onRenameProject) {
+      onRenameProject(activeProject.id, editedTitle.trim());
+    }
+    setIsEditingTitle(false);
+  };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,9 +88,46 @@ export function MediaMemoryWorkspace({
             {activeProject && (
               <>
                 <span className="text-[var(--fg-faint)] text-xs">&middot;</span>
-                <span className="text-xs font-mono text-[var(--fg-muted)] px-2 py-0.5 rounded bg-[var(--surface-2)]">
-                  {activeProject.title}
-                </span>
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveRename();
+                        if (e.key === 'Escape') setIsEditingTitle(false);
+                      }}
+                      autoFocus
+                      className="px-2 py-0.5 text-xs font-mono bg-[var(--surface-2)] border border-[var(--accent)] text-[var(--fg)] rounded transition"
+                    />
+                    <button
+                      onClick={handleSaveRename}
+                      className="p-1 rounded bg-[var(--accent-deep)] text-[#4a2c0e] hover:bg-[var(--accent)] transition"
+                      title="Save Title"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setIsEditingTitle(false)}
+                      className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--fg-muted)] transition"
+                      title="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 group">
+                    <span
+                      onClick={handleStartRename}
+                      className="text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] px-2 py-0.5 rounded bg-[var(--surface-2)] border border-transparent hover:border-[var(--border)] cursor-pointer transition flex items-center gap-1.5"
+                      title="Click to rename project"
+                    >
+                      <span>{activeProject.title}</span>
+                      <Edit2 className="w-2.5 h-2.5 opacity-40 group-hover:opacity-100 transition" />
+                    </span>
+                  </div>
+                )}
               </>
             )}
           </div>

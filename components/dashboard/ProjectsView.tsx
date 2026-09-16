@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Plus, Video, Calendar, ArrowRight, Layers } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Video, Calendar, ArrowRight, Layers, Edit2, CheckCheck, X } from 'lucide-react';
 import { CreativeProject } from '@/lib/types';
 
 interface ProjectsViewProps {
@@ -9,6 +9,7 @@ interface ProjectsViewProps {
   currentProjectIndex: number;
   onSelectProject: (index: number) => void;
   onNewProject: (title?: string, prompt?: string) => void;
+  onRenameProject?: (projectId: string, newTitle: string) => void;
   onOpenWorkspace: () => void;
 }
 
@@ -17,8 +18,23 @@ export function ProjectsView({
   currentProjectIndex,
   onSelectProject,
   onNewProject,
+  onRenameProject,
   onOpenWorkspace,
 }: ProjectsViewProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+
+  const handleStartEdit = (proj: CreativeProject) => {
+    setEditingId(proj.id);
+    setEditingTitle(proj.title);
+  };
+
+  const handleSaveEdit = (projId: string) => {
+    if (editingTitle.trim() && onRenameProject) {
+      onRenameProject(projId, editingTitle.trim());
+    }
+    setEditingId(null);
+  };
   return (
     <div className="space-y-8 font-light text-left">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
@@ -86,7 +102,46 @@ export function ProjectsView({
                     )}
                   </div>
 
-                  <h3 className="text-lg font-medium text-[var(--fg)] font-sans">{proj.title}</h3>
+                  {editingId === proj.id ? (
+                    <div className="flex items-center gap-1.5 my-1">
+                      <input
+                        type="text"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleSaveEdit(proj.id);
+                          if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        autoFocus
+                        className="px-2.5 py-1 text-sm font-sans bg-[var(--surface)] border border-[var(--accent)] text-[var(--fg)] rounded-lg flex-1 transition"
+                      />
+                      <button
+                        onClick={() => handleSaveEdit(proj.id)}
+                        className="p-1.5 rounded-lg bg-[var(--accent-deep)] text-[#4a2c0e] hover:bg-[var(--accent)] transition"
+                        title="Save Project Name"
+                      >
+                        <CheckCheck className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setEditingId(null)}
+                        className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] text-[var(--fg-muted)] transition"
+                        title="Cancel"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between group/title">
+                      <h3 className="text-lg font-medium text-[var(--fg)] font-sans">{proj.title}</h3>
+                      <button
+                        onClick={() => handleStartEdit(proj)}
+                        className="p-1 rounded text-[var(--fg-muted)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] transition opacity-0 group-hover/title:opacity-100"
+                        title="Rename Project"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
 
                   <div className="p-3.5 rounded-xl bg-[var(--surface-2)]/60 font-mono text-xs text-[var(--fg-soft)]">
                     Prompt: &ldquo;{proj.initialPrompt || 'No initial prompt'}&rdquo;
