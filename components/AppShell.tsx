@@ -134,19 +134,8 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     }
   };
 
-  // Load initial memories from MemWal on Walrus with localStorage cache fallback
+  // Load initial memories directly from MemWal on Walrus
   useEffect(() => {
-    try {
-      const cached = localStorage.getItem('nue_active_memories');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setActiveMemories(parsed);
-        }
-      }
-    } catch (e) {
-      console.warn('Notice reading local memories cache:', e);
-    }
     fetchMemories();
   }, []);
 
@@ -155,28 +144,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       const res = await fetch('/api/memwal');
       const data = await res.json();
       if (data.success && Array.isArray(data.preferences)) {
-        if (data.preferences.length > 0) {
-          setActiveMemories(data.preferences);
-          try {
-            localStorage.setItem('nue_active_memories', JSON.stringify(data.preferences));
-          } catch {}
-        } else {
-          // If server was restarted but client has saved memories, re-sync them to MemWal
-          try {
-            const cached = localStorage.getItem('nue_active_memories');
-            if (cached) {
-              const parsed = JSON.parse(cached);
-              if (Array.isArray(parsed) && parsed.length > 0) {
-                setActiveMemories(parsed);
-                fetch('/api/memwal', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'remember', preferences: parsed }),
-                }).catch(() => {});
-              }
-            }
-          } catch {}
-        }
+        setActiveMemories(data.preferences);
       }
     } catch (e) {
       console.warn('Failed to load memories from MemWal:', e);
@@ -354,9 +322,6 @@ export function NueApp({ view, initialTab }: NueAppProps) {
               const getData = await getRes.json();
               if (getData.success && getData.preferences) {
                 setActiveMemories(getData.preferences);
-                try {
-                  localStorage.setItem('nue_active_memories', JSON.stringify(getData.preferences));
-                } catch {}
               }
               const blobSummary = memData.blobIds?.length ? ` (Walrus: ${memData.blobIds[0].substring(0, 10)}...)` : '';
               const prefText = autoSaveCandidates.map((c: any) => c.preference).join('; ');
@@ -415,9 +380,6 @@ export function NueApp({ view, initialTab }: NueAppProps) {
         const getData = await getRes.json();
         if (getData.success && getData.preferences) {
           setActiveMemories(getData.preferences);
-          try {
-            localStorage.setItem('nue_active_memories', JSON.stringify(getData.preferences));
-          } catch {}
         }
 
         const blobSummary = data.blobIds?.length ? ` (Blob: ${data.blobIds[0]})` : '';
@@ -498,13 +460,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'forget', id }),
       });
-      setActiveMemories((prev) => {
-        const next = prev.filter((m) => m.id !== id);
-        try {
-          localStorage.setItem('nue_active_memories', JSON.stringify(next));
-        } catch {}
-        return next;
-      });
+      setActiveMemories((prev) => prev.filter((m) => m.id !== id));
     } catch (e) {
       console.error('Failed to forget memory:', e);
     }

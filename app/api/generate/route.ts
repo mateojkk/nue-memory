@@ -14,7 +14,7 @@ export async function POST(request: Request) {
 
     // Step 1: Initialize Nue Memory layer and retrieve active preferences from Walrus MemWal
     await nue.initialize();
-    const storedMemories = memWalService.getAllPreferences(false);
+    const storedMemories = await memWalService.getAllPreferencesAsync(false);
     const { relevantMemories, enrichedBrief, creativeDirectives, summaryTokens } = retrieveAndEnrichBrief(brief, storedMemories);
 
     // Step 2: Send enriched context to Livepeer Agent

@@ -21,7 +21,7 @@ function errorResponse(error: unknown) {
 export async function GET() {
   try {
     await memWalService.initialize();
-    const preferences = memWalService.getAllPreferences(true);
+    const preferences = await memWalService.getAllPreferencesAsync(true);
     const connection = await memWalService.getConnectionState();
     return NextResponse.json({
       success: true,
