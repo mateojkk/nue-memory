@@ -102,13 +102,32 @@ export class LivepeerMediaAgent {
       visualTheme = 'Next-Gen Mobile Application';
     }
 
+    // Duration parsing: check remembered preferences and feedbackContext
+    let targetDuration = 5;
+    for (const pref of appliedPreferences) {
+      if (pref.category === 'duration' || pref.category === 'length') {
+        const match = pref.preference.match(/(\d+)\s*(?:seconds?|secs?|s)/i);
+        if (match) {
+          targetDuration = Math.min(8, Math.max(3, parseInt(match[1], 10)));
+        }
+      }
+    }
+    if (feedbackContext) {
+      const match = feedbackContext.match(/(\d+)\s*(?:seconds?|secs?|s)/i);
+      if (match) {
+        targetDuration = Math.min(8, Math.max(3, parseInt(match[1], 10)));
+      }
+    }
+    // pixverse-t2v supports 3, 5, or 8 seconds
+    const supportedDuration = targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3;
+
     // Build Livepeer prompt that includes prompt directives
     const livepeerPrompt = `${brief}. Visual style: ${visualTheme}. Pacing: ${pacing}. Composition: ${aspectRatio}.`;
 
     // Attempt real live render call via Livepeer Agent MCP create_media tool
     let realMediaUrl: string | null = null;
     let livepeerCapability = 'pixverse-t2v';
-    let generationDuration = pacing === 'fast' ? 15 : 20;
+    let generationDuration = supportedDuration;
 
     try {
       const mcpCallRes = await fetch(this.endpoint, {
@@ -128,7 +147,7 @@ export class LivepeerMediaAgent {
               action: 'generate',
               prompt: livepeerPrompt,
               model_override: 'pixverse-t2v',
-              duration: 3,
+              duration: supportedDuration,
             },
           },
         }),

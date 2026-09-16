@@ -203,6 +203,20 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
       };
     },
   },
+  // 6. Video Duration / Length
+  {
+    category: 'duration',
+    type: 'preference',
+    domain: 'media',
+    pattern: /(?:(?:prefer|want|make|generate|use|standard is|keep)\s+(?:it\s+)?(\d+)\s*(?:seconds?|secs?|s)\s*(?:videos?|clips?|takes?)?)|(?:(?:videos?|clips?|duration|length)\s+(?:should be|is|to be|around)\s*(\d+)\s*(?:seconds?|secs?|s))/i,
+    extract: (text, match) => {
+      const sec = parseInt(match[1] || match[2], 10);
+      return {
+        value: `Prefer ${sec} second video duration`,
+        confidence: 0.95,
+      };
+    },
+  },
   // 6. Branding & Logo Placement
   {
     category: 'branding',

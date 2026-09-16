@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink, Download } from 'lucide-react';
 import { MediaVersion } from '@/lib/types';
 
 interface MediaPreviewProps {
@@ -172,6 +172,32 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
               9:16
             </button>
           </div>
+
+          {/* Export / Download Actions */}
+          {version?.mediaUrl && (
+            <div className="flex items-center gap-1">
+              <a
+                href={version.mediaUrl}
+                download={`nue-version-${version.versionNumber}.mp4`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg)] text-xs font-mono border border-[var(--border)] transition-all duration-200 hover:scale-105 active:scale-95"
+                title="Download / Export Video Asset"
+              >
+                <Download className="w-3 h-3 text-[var(--accent)]" />
+                <span>Export</span>
+              </a>
+              <a
+                href={version.mediaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)] transition"
+                title="Open in new tab"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
         </div>
       </div>
 

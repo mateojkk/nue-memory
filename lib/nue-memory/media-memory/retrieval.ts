@@ -78,6 +78,12 @@ export function retrieveAndEnrichBrief(
         isRelevant = true;
         summaryTokens.push(memory.preference.slice(0, 30) + '...');
         break;
+
+      case 'duration':
+      case 'length':
+        isRelevant = true;
+        summaryTokens.push(memory.preference);
+        break;
     }
 
     if (isRelevant && !relevantMemories.some((m) => m.id === memory.id)) {

@@ -203,12 +203,16 @@ export function NueApp({ view, initialTab }: NueAppProps) {
             ? `\n\n✨ Automatically applied ${appliedCount} remembered preference(s) from Nue Memory.`
             : '';
 
+        const durationNotice = newVersion.generationDurationSeconds
+          ? ` (${newVersion.generationDurationSeconds}s clip on ${newVersion.livepeerCapability || 'Livepeer'})`
+          : '';
+
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-${Date.now()}`,
             sender: 'agent',
-            content: `I have generated Version ${newVersion.versionNumber} for you with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}`,
+            content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}`,
             timestamp: new Date().toISOString(),
             versionNumber: newVersion.versionNumber,
           },
