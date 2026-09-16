@@ -1,32 +1,31 @@
 'use client';
 
 import React, { useState } from 'react';
-import { OverviewView } from './OverviewView';
+import { useRouter } from 'next/navigation';
 import { MemoriesView } from './MemoriesView';
 import { MediaMemoryWorkspace } from './MediaMemoryWorkspace';
 import { ProjectsView } from './ProjectsView';
 import { ApiKeysView } from './ApiKeysView';
-import { DocsView } from './DocsView';
+import { UsageView } from './OverviewView';
 import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
 import { NueLogo } from '../NueLogo';
 import { ThemeToggle } from '../ThemeToggle';
+import { AuthButton } from '../auth/AuthButton';
 import {
   ArrowLeft,
-  LayoutDashboard,
   Database,
   Video,
   Layers,
   Key,
-  BookOpen,
+  CreditCard,
 } from 'lucide-react';
 
 export type DashboardTab =
-  | 'overview'
   | 'memories'
   | 'media-memory'
   | 'projects'
-  | 'api-keys'
-  | 'documentation';
+  | 'usage'
+  | 'api-keys';
 
 interface NueDashboardProps {
   /** Tab to open on first render. Defaults to 'media-memory'. */
@@ -45,8 +44,6 @@ interface NueDashboardProps {
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
   activeMemories: MediaPreference[];
-  onOpenVault: () => void;
-  onOpenInspector: () => void;
   onForgetMemory: (id: string) => void;
   projects: CreativeProject[];
   currentProjectIndex: number;
@@ -69,22 +66,20 @@ export function NueDashboard({
   isSavingMemory,
   onNewProject,
   activeMemories,
-  onOpenVault,
-  onOpenInspector,
   onForgetMemory,
   projects,
   currentProjectIndex,
   onSelectProject,
 }: NueDashboardProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
 
   const navItems = [
-    { id: 'overview' as DashboardTab, label: 'Overview', icon: LayoutDashboard },
+    { id: 'media-memory' as DashboardTab, label: 'Motion', icon: Video, highlight: true },
     { id: 'memories' as DashboardTab, label: 'Memories', icon: Database, badge: activeMemories.filter((m) => m.isActive).length },
-    { id: 'media-memory' as DashboardTab, label: 'Media Memory', icon: Video, highlight: true },
     { id: 'projects' as DashboardTab, label: 'Projects', icon: Layers, badge: projects.length },
+    { id: 'usage' as DashboardTab, label: 'Credits', icon: CreditCard },
     { id: 'api-keys' as DashboardTab, label: 'API Keys', icon: Key },
-    { id: 'documentation' as DashboardTab, label: 'Documentation', icon: BookOpen },
   ];
 
   return (
@@ -93,22 +88,22 @@ export function NueDashboard({
       <header className="sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--border)] px-4 sm:px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <NueLogo size={24} showText={true} textSize="text-sm" />
+            <button
+              onClick={() => router.push('/')}
+              className="flex items-center gap-2 group hover:opacity-85 transition-all text-left"
+              title="Return to Home"
+            >
+              <NueLogo size={18} showText={false} />
+              <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--accent)] font-medium">
+                Motion
+              </span>
+            </button>
           </div>
 
-          {/* Walrus Vault Quick Trigger */}
-          <button
-            onClick={onOpenVault}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[var(--surface)] hover:border-[var(--accent)]/50 text-xs font-mono text-[var(--fg-soft)] hover:text-[var(--fg)] border border-[var(--border)] transition"
-          >
-            <Database className="w-3.5 h-3.5 text-[var(--accent)]" />
-            <span className="hidden sm:inline">Walrus Vault</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded bg-[var(--border)] text-[var(--fg-muted)]">
-              {activeMemories.filter((m) => m.isActive).length}
-            </span>
-          </button>
-
-          <ThemeToggle />
+          <div className="flex items-center gap-2.5">
+            <AuthButton />
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Dashboard Sub-navigation Tabs (Section 21) */}
@@ -120,16 +115,16 @@ export function NueDashboard({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md transition whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all duration-200 whitespace-nowrap hover:-translate-y-0.5 active:scale-95 ${
                   isActive
-                    ? 'bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--accent)]/40 font-medium'
-                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface)] border border-transparent'
+                    ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-sm scale-[1.01]'
+                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]/50'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--accent)]' : 'text-[var(--fg-faint)]'}`} />
+                <Icon className={`w-3.5 h-3.5 transition-transform duration-200 ${isActive ? 'text-[var(--accent)] scale-110' : 'text-[var(--fg-faint)]'}`} />
                 <span>{item.label}</span>
                 {item.badge !== undefined && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-black/40 text-[var(--fg-muted)]">
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/40 text-[var(--fg-muted)] animate-pulse-subtle">
                     {item.badge}
                   </span>
                 )}
@@ -140,15 +135,7 @@ export function NueDashboard({
       </header>
 
       {/* Main Workspace View Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8">
-        {activeTab === 'overview' && (
-          <OverviewView
-            memories={activeMemories}
-            onOpenWorkspace={() => setActiveTab('media-memory')}
-            onOpenMemories={() => setActiveTab('memories')}
-          />
-        )}
-
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 animate-fadeIn" key={activeTab}>
         {activeTab === 'memories' && (
           <MemoriesView
             memories={activeMemories}
@@ -173,8 +160,9 @@ export function NueDashboard({
             isSavingMemory={isSavingMemory}
             onNewProject={onNewProject}
             activeMemories={activeMemories}
-            onOpenVault={onOpenVault}
-            onOpenInspector={onOpenInspector}
+            projects={projects}
+            currentProjectIndex={currentProjectIndex}
+            onSelectProject={onSelectProject}
           />
         )}
 
@@ -188,9 +176,14 @@ export function NueDashboard({
           />
         )}
 
-        {activeTab === 'api-keys' && <ApiKeysView />}
+        {activeTab === 'usage' && (
+          <UsageView
+            versions={allVersions}
+            onOpenStudio={() => setActiveTab('media-memory')}
+          />
+        )}
 
-        {activeTab === 'documentation' && <DocsView />}
+        {activeTab === 'api-keys' && <ApiKeysView />}
       </main>
     </div>
   );

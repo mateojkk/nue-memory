@@ -228,12 +228,79 @@ h1, h2, h3, h4, h5, h6, b, strong, th {
   to { opacity: 1; }
 }
 
+/* ---- Elimination of focus rings, outline rings, and box rings ---- */
+*, *:focus, *:focus-visible {
+  outline: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
+button:focus, button:focus-visible,
+input:focus, input:focus-visible,
+textarea:focus, textarea:focus-visible,
+select:focus, select:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ---- Global Micro-Animations & Fluid Interactivity ---- */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatGentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.82; transform: scale(1.04); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-float {
+  animation: floatGentle 3s ease-in-out infinite;
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2.2s ease-in-out infinite;
+}
+
+/* Smooth active micro-clicks for buttons */
+button:not(:disabled), [role="button"]:not(:disabled) {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:not(:disabled):active, [role="button"]:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Interactive Card & Box transitions */
+.interactive-card {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.2s ease;
+}
+
+.interactive-card:hover {
+  transform: translateY(-2px);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .typewriter-caret {
     animation: none;
     opacity: 1;
   }
-  .nue-fade-swap {
+  .nue-fade-swap, .animate-fadeIn, .animate-float, .animate-pulse-subtle {
     animation: none;
   }
 }

@@ -16,7 +16,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12 text-left">
         {/* Brand Column */}
         <div className="space-y-3">
-          <NueLogo size={24} showText={true} textSize="text-lg" />
+          <NueLogo size={18} showText={true} textSize="text-sm" />
           <p className="text-[var(--fg-muted)] text-xs leading-relaxed font-light">
             The memory infrastructure layer for AI agents.
           </p>
@@ -43,7 +43,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
                 onClick={onOpenWorkspace}
                 className="hover:text-[var(--fg)] transition text-left"
               >
-                Media Memory
+                Nue Motion
               </button>
             </li>
             <li>

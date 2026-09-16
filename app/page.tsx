@@ -1,10 +1,11 @@
-import { redirect } from 'next/navigation';
+import { NueApp } from '@/components/AppShell';
 
-/**
- * Home is the app, not the landing page.
- * / redirects to the Media Memory workspace (/mediamemory); the marketing
- * landing lives at /landing.
- */
+export const metadata = {
+  title: 'Nue · The Memory Infrastructure Layer for AI Agents',
+  description:
+    'Nue is the memory infrastructure layer for AI agents: durable, evolving memory with extraction, conflict resolution, and durable decentralized storage.',
+};
+
 export default function Home() {
-  redirect('/mediamemory');
+  return <NueApp view="landing" />;
 }

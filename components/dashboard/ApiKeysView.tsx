@@ -38,20 +38,17 @@ export function ApiKeysView() {
     <div className="space-y-8 font-light text-left">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
         <div>
-          <div className="text-xs font-mono text-[var(--accent)] uppercase tracking-wider mb-1">
-            Authentication
-          </div>
           <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
             Developer API Keys
           </h2>
           <p className="text-[var(--fg-muted)] text-xs sm:text-sm mt-1">
-            API keys authenticate your agent runtimes with the Nue Memory intelligence engine and Walrus storage.
+            API keys to authenticate and connect your external agents to Nue.
           </p>
         </div>
 
         <button
           onClick={handleGenerate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium transition shadow-sm"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Key</span>
@@ -59,21 +56,21 @@ export function ApiKeysView() {
       </div>
 
       {/* Key Table */}
-      <div className="rounded-xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden shadow-xl">
-        <div className="p-4 bg-[var(--surface-2)] border-b border-[var(--border)] flex items-center justify-between text-xs font-mono text-[var(--fg-muted)]">
+      <div className="interactive-card rounded-2xl bg-[var(--surface)] border border-[var(--border)]/60 overflow-hidden shadow-xl animate-fadeIn">
+        <div className="p-4 bg-[var(--surface-2)]/70 border-b border-[var(--border)]/50 flex items-center justify-between text-xs font-mono text-[var(--fg-muted)]">
           <span>ACTIVE API KEYS</span>
           <button
             onClick={() => setRevealed(!revealed)}
-            className="flex items-center gap-1 text-[var(--accent)] hover:text-[var(--fg)] transition"
+            className="flex items-center gap-1 text-[var(--accent)] hover:text-[var(--fg)] hover:scale-105 active:scale-95 transition-all duration-200"
           >
             {revealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
             <span>{revealed ? 'Hide Keys' : 'Reveal Keys'}</span>
           </button>
         </div>
 
-        <div className="divide-y divide-[var(--border)]">
+        <div className="divide-y divide-[var(--border)]/40">
           {keys.map((k) => (
-            <div key={k.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs">
+            <div key={k.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs hover:bg-[var(--surface-2)]/40 transition-colors duration-200">
               <div className="space-y-1">
                 <div className="text-[var(--fg)] font-medium flex items-center gap-2">
                   <Key className="w-3.5 h-3.5 text-[var(--accent)]" />
@@ -89,7 +86,7 @@ export function ApiKeysView() {
                 <span>Last used: {k.lastUsed}</span>
                 <button
                   onClick={() => handleCopy(k.key)}
-                  className="p-1.5 rounded hover:bg-[var(--border)] text-[var(--fg-soft)] hover:text-[var(--fg)] transition"
+                  className="p-1.5 rounded-lg hover:bg-[var(--surface-2)] text-[var(--fg-soft)] hover:text-[var(--fg)] hover:scale-110 active:scale-90 transition-all duration-200"
                   title="Copy Key"
                 >
                   {copiedKey === k.key ? (

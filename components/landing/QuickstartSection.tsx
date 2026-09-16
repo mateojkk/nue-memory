@@ -16,7 +16,8 @@ export function QuickstartSection() {
   };
 
   return (
-    <section id="developers" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
+    <section id="docs" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light relative">
+      <div id="developers" className="absolute -top-16" />
       <Reveal>
         <div className="text-left mb-12">
         <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">

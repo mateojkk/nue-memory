@@ -25,9 +25,15 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
       onClick={toggle}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={isDark ? 'Light theme' : 'Dark theme'}
-      className={`inline-flex items-center justify-center w-8 h-8 rounded-md border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] hover:border-[var(--border-accent)] transition ${className}`}
+      className={`inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-2)]/80 text-[var(--fg-muted)] hover:text-[var(--fg)] hover:scale-105 active:scale-90 transition-all duration-200 ${className}`}
     >
-      {isDark === null ? <span className="w-3.5 h-3.5" /> : isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+      {isDark === null ? (
+        <span className="w-3.5 h-3.5" />
+      ) : isDark ? (
+        <Sun className="w-3.5 h-3.5 text-amber-300 transition-transform duration-300 hover:rotate-45" />
+      ) : (
+        <Moon className="w-3.5 h-3.5 text-slate-400 transition-transform duration-300 hover:-rotate-12" />
+      )}
     </button>
   );
 }

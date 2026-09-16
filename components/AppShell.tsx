@@ -23,7 +23,7 @@ function AnnouncementBar() {
       <div className="max-w-7xl mx-auto px-4 h-11 flex items-center justify-center gap-2 text-xs font-mono text-[var(--fg-muted)]">
         <span className="text-[var(--accent)]">●</span>
         <span>
-          Nue Memory keeps agent context accurate as it grows. Introducing Media Memory.
+          Persistent memory infrastructure for AI agents. Introducing Nue Motion with $10 free credit.
         </span>
         <button
           onClick={() => {
@@ -50,8 +50,8 @@ import { MediaMemoryShowcase } from '@/components/landing/MediaMemoryShowcase';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { NueDashboard } from '@/components/dashboard/NueDashboard';
 import type { DashboardTab } from '@/components/dashboard/NueDashboard';
-import { MemoryPanel } from '@/components/MemoryPanel';
-import { EnrichedBriefModal } from '@/components/EnrichedBriefModal';
+import { useAuth } from '@/components/auth/useAuth';
+import { AuthGuardModal } from '@/components/auth/AuthGuardModal';
 import {
   CreativeProject,
   MediaVersion,
@@ -69,18 +69,10 @@ export interface NueAppProps {
 export function NueApp({ view, initialTab }: NueAppProps) {
   const router = useRouter();
   const currentView = view;
+  const { authenticated, login } = useAuth();
 
   // Projects State (Demonstrating Media Memory feature under Nue)
-  const [projects, setProjects] = useState<CreativeProject[]>([
-    {
-      id: 'proj-1',
-      title: 'Project A - SaaS App Launch Promo',
-      initialPrompt: 'Create a 20-second product promo for my new app.',
-      createdAt: new Date().toISOString(),
-      currentVersionIndex: 0,
-      versions: [],
-    },
-  ]);
+  const [projects, setProjects] = useState<CreativeProject[]>([]);
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
 
   // Chat State
@@ -89,7 +81,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       id: 'msg-welcome',
       sender: 'agent',
       content:
-        'Welcome to Media Studio. I am your Livepeer Agent, powered by Nue persistent memory.\n\nEnter a creative prompt or try one of the suggestions below to start generating.',
+        'Welcome to Creative Studio. I adapt to your style as we collaborate.\n\nEnter a creative prompt or select a suggestion below to start.',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -99,16 +91,14 @@ export function NueApp({ view, initialTab }: NueAppProps) {
   const [pendingPreferences, setPendingPreferences] = useState<
     Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[]
   >([]);
-  const [isMemoryPanelOpen, setIsMemoryPanelOpen] = useState(false);
-  const [isInspectorOpen, setIsInspectorOpen] = useState(false);
 
   // Loading States
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSavingMemory, setIsSavingMemory] = useState(false);
 
-  const activeProject = projects[currentProjectIndex];
+  const activeProject = projects[currentProjectIndex] || null;
   const activeVersion =
-    activeProject?.versions?.length > 0
+    activeProject && activeProject.versions?.length > 0
       ? activeProject.versions[activeProject.currentVersionIndex]
       : null;
 
@@ -205,9 +195,40 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     };
     setMessages((prev) => [...prev, userMsg]);
 
+    let currentProj = activeProject;
+    let targetIndex = currentProjectIndex;
+
+    // If there is no active project yet, create Project 1
+    if (!currentProj) {
+      const generatedTitle = text.length > 25 ? `${text.slice(0, 25).trim()}…` : text;
+      const newProj: CreativeProject = {
+        id: `proj-${Date.now()}`,
+        title: generatedTitle,
+        initialPrompt: text,
+        createdAt: new Date().toISOString(),
+        currentVersionIndex: 0,
+        versions: [],
+      };
+      setProjects([newProj]);
+      setCurrentProjectIndex(0);
+      currentProj = newProj;
+      targetIndex = 0;
+      await handleGenerate(text, 1, undefined, 0, newProj.title);
+      return;
+    }
+
     // If project has no versions yet, this is the first generation
-    if (activeProject.versions.length === 0) {
-      await handleGenerate(text, 1);
+    if (currentProj.versions.length === 0) {
+      if (!currentProj.initialPrompt) {
+        setProjects((prev) => {
+          const updated = [...prev];
+          if (updated[targetIndex]) {
+            updated[targetIndex] = { ...updated[targetIndex], initialPrompt: text };
+          }
+          return updated;
+        });
+      }
+      await handleGenerate(text, 1, undefined, targetIndex, currentProj.title);
       return;
     }
 
@@ -221,8 +242,8 @@ export function NueApp({ view, initialTab }: NueAppProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           feedback: text,
-          projectTitle: activeProject.title,
-          currentBrief: activeProject.initialPrompt,
+          projectTitle: currentProj.title,
+          currentBrief: currentProj.initialPrompt,
         }),
       });
 
@@ -236,11 +257,13 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       }
 
       // Step 2: Livepeer Agent regenerates revised version with Nue context
-      const nextVersionNumber = activeProject.versions.length + 1;
+      const nextVersionNumber = currentProj.versions.length + 1;
       await handleGenerate(
-        activeProject.initialPrompt,
+        currentProj.initialPrompt,
         nextVersionNumber,
-        text
+        text,
+        targetIndex,
+        currentProj.title
       );
     } catch (e) {
       console.error('Feedback handling error:', e);
@@ -274,7 +297,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           {
             id: `msg-saved-${Date.now()}`,
             sender: 'agent',
-            content: `✨ Saved ${pendingPreferences.length} preference(s) to Walrus Memory Vault${blobSummary}. These will automatically persist and enrich all future agent generations.`,
+            content: `✨ Saved ${pendingPreferences.length} preference(s) to persistent memory${blobSummary}. These will automatically persist and enrich all future agent generations.`,
             timestamp: new Date().toISOString(),
           },
         ]);
@@ -288,15 +311,17 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     }
   };
 
-  // Switch or Create New Project (Cross-Session Recall Demo)
+  // Create New Project
   const handleCreateNewProject = (
-    title = 'Project B - Minimalist Clothing Promo',
-    prompt = 'Create a promo for my new clothing brand.'
+    title?: string,
+    prompt?: string
   ) => {
+    const projectTitle = title?.trim() || `Project ${projects.length + 1}`;
+    const initialPrompt = prompt?.trim() || '';
     const newProj: CreativeProject = {
       id: `proj-${Date.now()}`,
-      title,
-      initialPrompt: prompt,
+      title: projectTitle,
+      initialPrompt,
       createdAt: new Date().toISOString(),
       currentVersionIndex: 0,
       versions: [],
@@ -311,13 +336,14 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       {
         id: `msg-${Date.now()}`,
         sender: 'agent',
-        content: `Switched to new project: "${title}".\nI will query your agent memory on Walrus and automatically apply your persistent preferences.`,
+        content: `Created new project: "${projectTitle}".\nEnter a creative prompt below to generate your first media version with persistent memory recall.`,
         timestamp: new Date().toISOString(),
       },
     ]);
 
-    // Immediately trigger generation for Project B
-    handleGenerate(prompt, 1, undefined, newIndex, title);
+    if (initialPrompt) {
+      handleGenerate(initialPrompt, 1, undefined, newIndex, projectTitle);
+    }
   };
 
   // Forget memory
@@ -337,16 +363,20 @@ export function NueApp({ view, initialTab }: NueAppProps) {
   if (currentView === 'dashboard') {
     return (
       <>
+        {!authenticated && <AuthGuardModal isOpen={true} onLogin={login} />}
         <NueDashboard
           initialTab={initialTab}
           activeProject={activeProject}
           activeVersion={activeVersion}
           allVersions={activeProject?.versions || []}
-          onSelectVersion={(vIdx) => {
+          onSelectVersion={(index) => {
             setProjects((prev) => {
-              const copy = [...prev];
-              copy[currentProjectIndex].currentVersionIndex = vIdx;
-              return copy;
+              const updated = [...prev];
+              updated[currentProjectIndex] = {
+                ...updated[currentProjectIndex],
+                currentVersionIndex: index,
+              };
+              return updated;
             });
           }}
           isGenerating={isGenerating}
@@ -369,7 +399,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
               {
                 id: `msg-dismiss-${Date.now()}`,
                 sender: 'agent',
-                content: 'Noted. These adjustments will apply to this project only and will not be persisted to your permanent Walrus memory.',
+                content: 'Noted. These adjustments will apply to this project only and will not be saved to your persistent memory.',
                 timestamp: new Date().toISOString(),
               },
             ]);
@@ -377,32 +407,11 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           isSavingMemory={isSavingMemory}
           onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
           activeMemories={activeMemories}
-          onOpenVault={() => setIsMemoryPanelOpen(true)}
-          onOpenInspector={() => setIsInspectorOpen(true)}
           onForgetMemory={handleForgetMemory}
           projects={projects}
           currentProjectIndex={currentProjectIndex}
           onSelectProject={(index) => setCurrentProjectIndex(index)}
         />
-
-        {/* Slide-over Walrus Memory Vault Drawer */}
-        <MemoryPanel
-          isOpen={isMemoryPanelOpen}
-          onClose={() => setIsMemoryPanelOpen(false)}
-          memories={activeMemories}
-          onForget={handleForgetMemory}
-        />
-
-        {/* Prompt Orchestration Inspector Modal */}
-        {activeVersion && (
-          <EnrichedBriefModal
-            isOpen={isInspectorOpen}
-            onClose={() => setIsInspectorOpen(false)}
-            rawBrief={activeVersion.brief}
-            enrichedBrief={activeVersion.enrichedBrief}
-            appliedMemories={activeVersion.appliedPreferences}
-          />
-        )}
       </>
     );
   }
@@ -412,15 +421,14 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       <AnnouncementBar />
 
       {/* 1. Navbar */}
-      <NueNavbar
-        onOpenVault={() => setIsMemoryPanelOpen(true)}
-        activeCount={activeMemories.filter((m) => m.isActive).length}
-      />
+      <NueNavbar />
 
       {/* 2. Hero Section */}
       <HeroSection
         onGetStarted={() => router.push('/mediamemory')}
-        onViewDocs={() => router.push('/mediamemory')}
+        onViewDocs={() => {
+          document.getElementById('docs')?.scrollIntoView({ behavior: 'smooth' });
+        }}
       />
 
       {/* 3. Quickstart SDK Code Section */}
@@ -446,27 +454,10 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       {/* 9. Landing Footer */}
       <LandingFooter
         onOpenWorkspace={() => router.push('/mediamemory')}
-        onOpenDocs={() => router.push('/mediamemory')}
+        onOpenDocs={() => {
+          document.getElementById('docs')?.scrollIntoView({ behavior: 'smooth' });
+        }}
       />
-
-      {/* Slide-over Walrus Memory Vault Drawer */}
-      <MemoryPanel
-        isOpen={isMemoryPanelOpen}
-        onClose={() => setIsMemoryPanelOpen(false)}
-        memories={activeMemories}
-        onForget={handleForgetMemory}
-      />
-
-      {/* Prompt Orchestration Inspector Modal */}
-      {activeVersion && (
-        <EnrichedBriefModal
-          isOpen={isInspectorOpen}
-          onClose={() => setIsInspectorOpen(false)}
-          rawBrief={activeVersion.brief}
-          enrichedBrief={activeVersion.enrichedBrief}
-          appliedMemories={activeVersion.appliedPreferences}
-        />
-      )}
     </div>
   );
 }

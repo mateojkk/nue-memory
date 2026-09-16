@@ -9,9 +9,9 @@ import { NueApp } from '@/components/AppShell';
  * explained in one section on /landing; this route is where you use it.
  */
 export const metadata = {
-  title: 'Media Memory · Nue Memory',
+  title: 'Nue Motion · Autonomous Video with Agent Memory',
   description:
-    'Media Memory is the first app built on Nue Memory: media agents remember creative feedback once and apply it to every later project without reprompting.',
+    'Nue Motion is the generative video agent powered by Nue and Livepeer: continuous memory recall across every video project with zero reprompting.',
 };
 
 export default function MediaMemoryPage() {

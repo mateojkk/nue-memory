@@ -14,17 +14,17 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
       {/* Section Header */}
       <Reveal>
         <div className="text-left mb-14">
-        <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
-          Flagship Capability · Built on Nue Memory
+        <div className="text-xs font-medium text-[var(--accent)] uppercase tracking-wider mb-2 font-mono">
+          Flagship Creative Video · Powered by Livepeer
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
-          Media Memory
+          Nue Motion
         </h2>
         <p className="text-[var(--fg-soft)] text-lg sm:text-xl mt-3 font-normal max-w-3xl">
-          &ldquo;Your creative agent should remember how you work.&rdquo;
+          Autonomous video generation with persistent agent memory.
         </p>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-3xl font-light">
-          Create once. Give feedback. Let Nue remember what matters. Then start another project without repeating yourself.
+          Sign up with your email to receive <span className="text-emerald-500 font-medium">$10 in complimentary generation credit</span>. Direct videos once, give feedback, and watch Nue Motion learn your creative taste across projects.
         </p>
         </div>
       </Reveal>
@@ -151,19 +151,19 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         <div className="p-8 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="text-left space-y-1">
           <h3 className="text-lg font-medium text-[var(--fg)] font-sans">
-            Experience Media Memory in the Live Studio
+            Ready to direct video with persistent style memory?
           </h3>
           <p className="text-xs text-[var(--fg-muted)] font-light">
-            Generate, review, and experience cross-project memory recall.
+            Claim your $10 free credit and experience continuous cross-project memory recall.
           </p>
         </div>
 
         <button
           onClick={onOpenWorkspace}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium transition shadow-md whitespace-nowrap"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium transition shadow-md whitespace-nowrap hover:scale-105 active:scale-95 duration-200"
         >
           <Video className="w-4 h-4 text-[#4a2c0e]" />
-          <span>Launch Media Memory Studio</span>
+          <span>Launch Nue Motion</span>
           <ArrowRight className="w-3.5 h-3.5 text-[#4a2c0e]" />
         </button>
         </div>

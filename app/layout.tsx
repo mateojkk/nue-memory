@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { PrivyWrapper } from '@/components/auth/PrivyWrapper';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -34,7 +36,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-[var(--bg)] text-[var(--fg)] antialiased selection:bg-[var(--accent)]/20 selection:text-[var(--fg)]">
-        {children}
+        <PrivyWrapper>{children}</PrivyWrapper>
       </body>
     </html>
   );
