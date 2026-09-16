@@ -107,7 +107,7 @@ export class LivepeerMediaAgent {
 
     // Attempt real live render call via Livepeer Agent MCP create_media tool
     let realMediaUrl: string | null = null;
-    let livepeerCapability = 'flux-schnell + pixverse-t2v';
+    let livepeerCapability = 'pixverse-t2v';
     let generationDuration = pacing === 'fast' ? 15 : 20;
 
     try {
@@ -127,7 +127,8 @@ export class LivepeerMediaAgent {
             arguments: {
               action: 'generate',
               prompt: livepeerPrompt,
-              prefer_fast: true,
+              model_override: 'pixverse-t2v',
+              duration: 3,
             },
           },
         }),
@@ -147,7 +148,45 @@ export class LivepeerMediaAgent {
         console.error('[LivepeerAgent] MCP create_media HTTP failure:', mcpCallRes.status, await mcpCallRes.text().catch(() => ''));
       }
     } catch (err) {
-      console.error('[LivepeerAgent] MCP generate call failed:', err);
+      console.error('[LivepeerAgent] MCP pixverse-t2v call failed:', err);
+    }
+
+    // Fallback: If pixverse-t2v timed out or errored, generate visual asset with flux-schnell
+    if (!realMediaUrl) {
+      try {
+        console.log('[LivepeerAgent] Attempting fast visual render fallback via flux-schnell...');
+        const fallbackRes = await fetch(this.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json, text/event-stream',
+            ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method: 'tools/call',
+            params: {
+              name: 'create_media',
+              arguments: {
+                action: 'generate',
+                prompt: livepeerPrompt,
+                prefer_fast: true,
+              },
+            },
+          }),
+        });
+
+        if (fallbackRes.ok) {
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData.result?.structuredContent?.url) {
+            realMediaUrl = fallbackData.result.structuredContent.url;
+            livepeerCapability = fallbackData.result.structuredContent.capability || 'flux-schnell';
+          }
+        }
+      } catch (fbErr) {
+        console.error('[LivepeerAgent] Fallback render also failed:', fbErr);
+      }
     }
 
     // STRICT: never substitute a stock clip for a real Livepeer render.

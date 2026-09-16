@@ -69,10 +69,9 @@ export interface NueAppProps {
 export function NueApp({ view, initialTab }: NueAppProps) {
   const router = useRouter();
   const currentView = view;
-  const { authenticated, deductCredits } = useAuth();
+  const { authenticated, email, deductCredits } = useAuth();
 
-
-  // Projects State (Demonstrating Media Memory feature under Nue)
+  // Projects State (Saved and retrieved from Supabase DB)
   const [projects, setProjects] = useState<CreativeProject[]>([]);
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0);
 
@@ -102,6 +101,38 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     activeProject && activeProject.versions?.length > 0
       ? activeProject.versions[activeProject.currentVersionIndex]
       : null;
+
+  // Load user projects from Supabase database
+  useEffect(() => {
+    if (email) {
+      loadProjects(email);
+    }
+  }, [email]);
+
+  const loadProjects = async (userEmail: string) => {
+    try {
+      const res = await fetch(`/api/projects?email=${encodeURIComponent(userEmail)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.projects) && data.projects.length > 0) {
+        setProjects(data.projects);
+      }
+    } catch (e) {
+      console.warn('Failed to load user projects from DB:', e);
+    }
+  };
+
+  const persistProjectToDb = async (proj: CreativeProject) => {
+    if (!email) return;
+    try {
+      await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, project: proj }),
+      });
+    } catch (e) {
+      console.warn('Failed to persist project to DB:', e);
+    }
+  };
 
   // Load initial memories from MemWal on Walrus
   useEffect(() => {
@@ -157,6 +188,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
             proj.versions = [...proj.versions, newVersion];
             proj.currentVersionIndex = proj.versions.length - 1;
             updated[targetIndex] = proj;
+            persistProjectToDb(proj);
           }
           return updated;
         });
@@ -335,6 +367,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     setProjects((prev) => [...prev, newProj]);
     setCurrentProjectIndex(newIndex);
     setPendingPreferences([]);
+    persistProjectToDb(newProj);
 
     setMessages([
       {

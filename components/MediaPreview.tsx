@@ -24,18 +24,19 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     (version.mediaUrl.endsWith('.mp4') ||
      version.mediaUrl.endsWith('.webm') ||
      version.mediaUrl.includes('.mp4') ||
-     version.mediaUrl.includes('video'))
+     version.mediaUrl.includes('video') ||
+     version.livepeerCapability?.includes('pixverse') ||
+     version.livepeerCapability?.includes('t2v') ||
+     version.livepeerCapability?.includes('video'))
   );
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [aspectMode, setAspectMode] = useState<'16:9' | '9:16' | '1:1'>('16:9');
-  const [displayMode, setDisplayMode] = useState<'video' | 'keyframe'>(() => {
-    if (version?.mediaUrl && !isVideoAsset) return 'keyframe';
-    return 'video';
-  });
+  const [displayMode, setDisplayMode] = useState<'video' | 'keyframe'>('video');
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (version?.aspectRatio) {
@@ -46,26 +47,42 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         version.mediaUrl.endsWith('.mp4') ||
         version.mediaUrl.endsWith('.webm') ||
         version.mediaUrl.includes('.mp4') ||
-        version.mediaUrl.includes('video');
+        version.mediaUrl.includes('video') ||
+        version.livepeerCapability?.includes('pixverse') ||
+        version.livepeerCapability?.includes('t2v') ||
+        version.livepeerCapability?.includes('video');
       setDisplayMode(isVid ? 'video' : 'keyframe');
+      setIsPlaying(false);
+      setProgress(0);
     }
   }, [version]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (isPlaying) {
+    if (videoRef.current.paused) {
+      videoRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          console.warn('[MediaPreview] Playback failed or was blocked by browser:', err);
+          // Try playing muted if autoplay policy blocked audio playback
+          if (videoRef.current && !videoRef.current.muted) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+          }
+        });
+    } else {
       videoRef.current.pause();
       setIsPlaying(false);
-    } else {
-      videoRef.current.play();
-      setIsPlaying(true);
     }
   };
 
   const toggleMute = () => {
     if (!videoRef.current) return;
-    videoRef.current.muted = !isMuted;
-    setIsMuted(!isMuted);
+    const nextMuted = !isMuted;
+    videoRef.current.muted = nextMuted;
+    setIsMuted(nextMuted);
   };
 
   const handleTimeUpdate = () => {
@@ -73,6 +90,16 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     const curr = videoRef.current.currentTime;
     const dur = videoRef.current.duration || 1;
     setProgress((curr / dur) * 100);
+  };
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!videoRef.current || !progressBarRef.current) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clickPos = (e.clientX - rect.left) / rect.width;
+    const clampedPos = Math.max(0, Math.min(1, clickPos));
+    const dur = videoRef.current.duration || 1;
+    videoRef.current.currentTime = clampedPos * dur;
+    setProgress(clampedPos * 100);
   };
 
   return (
@@ -201,12 +228,15 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
                 playsInline
                 autoPlay
                 muted={isMuted}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => setIsPlaying(false)}
                 onError={() => {
                   // If browser fails to decode as video, seamlessly switch to high-res viewer
                   setDisplayMode('keyframe');
                 }}
                 onTimeUpdate={handleTimeUpdate}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover cursor-pointer"
                 onClick={togglePlay}
               />
             )}
@@ -253,7 +283,9 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
             {displayMode === 'video' && (
               <button
                 onClick={togglePlay}
-                className="absolute inset-0 m-auto w-12 h-12 rounded-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[var(--accent)]/30 flex items-center justify-center text-white opacity-0 hover:opacity-100 transition-opacity z-30"
+                className={`absolute inset-0 m-auto w-12 h-12 rounded-md bg-black/60 hover:bg-black/80 backdrop-blur-md border border-[var(--accent)]/30 flex items-center justify-center text-white transition-opacity z-30 ${
+                  isPlaying ? 'opacity-0 hover:opacity-100' : 'opacity-100'
+                }`}
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 translate-x-0.5" />}
               </button>
@@ -277,9 +309,13 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
           </button>
 
           {/* Progress Bar with Accent Gradient */}
-          <div className="flex-1 h-2 bg-[var(--surface-2)] rounded-full overflow-hidden relative cursor-pointer">
+          <div
+            ref={progressBarRef}
+            onClick={handleSeek}
+            className="flex-1 h-2 bg-[var(--surface-2)] rounded-full overflow-hidden relative cursor-pointer"
+          >
             <div
-              className="h-full bg-gradient-to-r from-[var(--accent-deep)] via-[var(--accent)] to-[var(--accent-bright)] rounded-full transition-all duration-150 ease-out"
+              className="h-full bg-gradient-to-r from-[var(--accent-deep)] via-[var(--accent)] to-[var(--accent-bright)] rounded-full transition-all duration-150 ease-out pointer-events-none"
               style={{ width: `${progress}%` }}
             />
           </div>

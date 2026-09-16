@@ -178,7 +178,7 @@ export function NueDashboard({
 
         {activeTab === 'usage' && (
           <UsageView
-            versions={allVersions}
+            versions={projects.flatMap((p) => p.versions || [])}
             onOpenStudio={() => setActiveTab('media-memory')}
           />
         )}
