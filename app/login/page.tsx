@@ -37,7 +37,7 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => router.push('/mediamemory')}
+            onClick={() => router.push('/motion')}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium hover:scale-105 active:scale-95 transition-all duration-200 shadow-md"
           >
             <span>Enter Nue Motion Studio</span>
@@ -58,7 +58,7 @@ export default function LoginPage() {
     try {
       await loginWithMagic(inputEmail.trim());
       setIsLoading(false);
-      router.push('/mediamemory');
+      router.push('/motion');
     } catch (err: any) {
       setIsLoading(false);
       setErrorMessage(err?.message || 'Magic authentication failed. Please try again.');

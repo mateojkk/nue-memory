@@ -60,7 +60,7 @@ import {
 } from '@/lib/types';
 
 export interface NueAppProps {
-  /** Which surface this route renders. The two routes are separate: /landing and /mediamemory. */
+  /** Which surface this route renders. The two routes are separate: /landing and /motion. */
   view: 'landing' | 'dashboard';
   /** Dashboard tab to open when view is 'dashboard'. */
   initialTab?: DashboardTab;
@@ -425,7 +425,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
 
       {/* 2. Hero Section */}
       <HeroSection
-        onGetStarted={() => router.push('/mediamemory')}
+        onGetStarted={() => router.push('/motion')}
         onViewDocs={() => {
           document.getElementById('docs')?.scrollIntoView({ behavior: 'smooth' });
         }}
@@ -448,12 +448,12 @@ export function NueApp({ view, initialTab }: NueAppProps) {
 
       {/* 8. Flagship Shipped Feature: Media Memory Showcase */}
       <MediaMemoryShowcase
-        onOpenWorkspace={() => router.push('/mediamemory')}
+        onOpenWorkspace={() => router.push('/motion')}
       />
 
       {/* 9. Landing Footer */}
       <LandingFooter
-        onOpenWorkspace={() => router.push('/mediamemory')}
+        onOpenWorkspace={() => router.push('/motion')}
         onOpenDocs={() => {
           document.getElementById('docs')?.scrollIntoView({ behavior: 'smooth' });
         }}

@@ -49,8 +49,8 @@ export function NueNavbar({}: NueNavbarProps = {}) {
 
           {/* Primary CTA: Launch Motion */}
           <button
-            onClick={() => router.push('/mediamemory')}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-medium text-[var(--fg)] transition shadow-xs hover:-translate-y-0.5 active:scale-95"
+            onClick={() => router.push('/motion')}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm"
           >
             <span>Launch Studio</span>
             <ArrowRight className="w-3.5 h-3.5 text-[var(--accent)]" />

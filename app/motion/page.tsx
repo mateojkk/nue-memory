@@ -14,6 +14,7 @@ export const metadata = {
     'Nue Motion is the generative video agent powered by Nue and Livepeer: continuous memory recall across every video project with zero reprompting.',
 };
 
-export default function MediaMemoryPage() {
+export default function MotionPage() {
   return <NueApp view="dashboard" initialTab="media-memory" />;
 }
+

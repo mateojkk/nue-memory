@@ -95,7 +95,7 @@ cp .env.example .env.local
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) to view the landing page, or visit [http://localhost:3000/mediamemory](http://localhost:3000/mediamemory) to open the Nue Motion workspace.
+Open [http://localhost:3000](http://localhost:3000) to view the landing page, or visit [http://localhost:3000/motion](http://localhost:3000/motion) to open the Nue Motion workspace.
 
 ---
 
