@@ -7,10 +7,10 @@ import { NueLogo } from '@/components/NueLogo';
 
 interface AuthGuardModalProps {
   isOpen: boolean;
-  onLogin: () => void;
+  onLogin?: () => void;
 }
 
-export function AuthGuardModal({ isOpen, onLogin }: AuthGuardModalProps) {
+export function AuthGuardModal({ isOpen }: AuthGuardModalProps) {
   const router = useRouter();
   if (!isOpen) return null;
 
@@ -39,11 +39,11 @@ export function AuthGuardModal({ isOpen, onLogin }: AuthGuardModalProps) {
 
         <div className="space-y-3 pt-2">
           <button
-            onClick={onLogin}
+            onClick={() => router.push('/login')}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs sm:text-sm font-medium hover:scale-[1.02] active:scale-95 transition-all duration-200 shadow-md"
           >
             <Mail className="w-4 h-4" />
-            <span>Sign in with Email · Claim $10</span>
+            <span>Sign in with Magic Link · Claim $10</span>
           </button>
 
           <button
@@ -57,7 +57,7 @@ export function AuthGuardModal({ isOpen, onLogin }: AuthGuardModalProps) {
 
         <div className="pt-3 border-t border-[var(--border)]/60 text-[11px] text-[var(--fg-faint)] flex items-center justify-center gap-2">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-          <span>Passwordless OTP · Powered by Privy</span>
+          <span>Passwordless Magic Link · Powered by Magic Labs</span>
         </div>
       </div>
     </div>

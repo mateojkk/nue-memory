@@ -13,12 +13,12 @@ interface AuthButtonProps {
 export function AuthButton({ creditBalance = 10.0, className = '' }: AuthButtonProps) {
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const { authenticated, email, login, logout } = useAuth();
+  const { authenticated, email, logout } = useAuth();
 
   if (!authenticated) {
     return (
       <button
-        onClick={() => router ? router.push('/login') : login()}
+        onClick={() => router.push('/login')}
         className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm ${className}`}
       >
         <Sparkles className="w-3.5 h-3.5 text-[#4a2c0e]" />

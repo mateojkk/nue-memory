@@ -2,18 +2,18 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, ArrowRight, ArrowLeft, Mail, ShieldCheck, CheckCircle2, Lock } from 'lucide-react';
+import { Sparkles, ArrowRight, ArrowLeft, Mail, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { NueLogo } from '@/components/NueLogo';
 import { useAuth } from '@/components/auth/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { authenticated, login, email: currentEmail } = useAuth();
+  const { authenticated, loginWithMagic, email: currentEmail } = useAuth();
   const [inputEmail, setInputEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // If already authenticated, allow instant redirection to Nue Motion workspace
+  // If already authenticated, redirect to Nue Motion workspace
   if (authenticated) {
     return (
       <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)] flex flex-col items-center justify-center p-6 relative font-light">
@@ -48,28 +48,20 @@ export default function LoginPage() {
     );
   }
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputEmail.trim()) return;
 
     setIsLoading(true);
-    // If Privy is active, trigger privy login
-    const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
-    if (appId) {
-      login();
+    setErrorMessage(null);
+
+    try {
+      await loginWithMagic(inputEmail.trim());
       setIsLoading(false);
-    } else {
-      // In demo mode, persist session and show instant sign-in confirmation
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('nue_demo_user', JSON.stringify({ email: inputEmail.trim() }));
-        }
-        setIsLoading(false);
-        setSubmitted(true);
-        setTimeout(() => {
-          router.push('/mediamemory');
-        }, 1200);
-      }, 700);
+      router.push('/mediamemory');
+    } catch (err: any) {
+      setIsLoading(false);
+      setErrorMessage(err?.message || 'Magic authentication failed. Please try again.');
     }
   };
 
@@ -111,57 +103,54 @@ export default function LoginPage() {
           {/* Titles */}
           <div className="space-y-1.5 text-left">
             <h1 className="text-2xl sm:text-[26px] font-medium text-[var(--fg)] tracking-tight font-sans">
-              Sign in to Nue
+              Sign in with Magic
             </h1>
             <p className="text-xs sm:text-sm text-[var(--fg-muted)] leading-relaxed font-light">
-              Enter your email to access Nue Motion video generation with persistent agent memory.
+              Enter your email address to receive an authentic Magic link and activate your $10 Livepeer generation grant.
             </p>
           </div>
 
-          {submitted ? (
-            <div className="p-6 rounded-xl bg-emerald-950/20 border border-emerald-900/40 text-center space-y-2 animate-fadeIn">
-              <CheckCircle2 className="w-7 h-7 text-emerald-400 mx-auto" />
-              <h3 className="text-sm font-medium text-[var(--fg)]">Grant Activated!</h3>
-              <p className="text-xs text-[var(--fg-muted)] font-mono">
-                Redirecting to Nue Motion Studio...
-              </p>
+          {errorMessage && (
+            <div className="p-3.5 rounded-xl bg-red-950/30 border border-red-900/50 text-xs text-red-400 flex items-start gap-2 text-left">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
             </div>
-          ) : (
-            <form onSubmit={handleEmailSubmit} className="space-y-4">
-              <div className="space-y-1.5 text-left">
-                <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--fg-muted)] block">
-                  Email address
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-[var(--fg-faint)] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="email"
-                    required
-                    value={inputEmail}
-                    onChange={(e) => setInputEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    autoFocus
-                    className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--fg)] placeholder:text-[var(--fg-faint)] font-mono focus:outline-none focus:border-[var(--accent)] transition"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs sm:text-sm font-medium hover:scale-[1.01] active:scale-95 transition-all duration-200 shadow-md disabled:opacity-50"
-              >
-                <span>{isLoading ? 'Activating...' : 'Continue with Email'}</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </form>
           )}
+
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <div className="space-y-1.5 text-left">
+              <label className="text-[11px] font-mono uppercase tracking-wider text-[var(--fg-muted)] block">
+                Email address
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-[var(--fg-faint)] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="email"
+                  required
+                  value={inputEmail}
+                  onChange={(e) => setInputEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  autoFocus
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--fg)] placeholder:text-[var(--fg-faint)] font-mono focus:outline-none focus:border-[var(--accent)] transition"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs sm:text-sm font-medium hover:scale-[1.01] active:scale-95 transition-all duration-200 shadow-md disabled:opacity-50"
+            >
+              <span>{isLoading ? 'Sending Magic Link...' : 'Continue with Magic Link'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
 
           {/* Security & Benefits footer */}
           <div className="pt-4 border-t border-[var(--border)]/60 grid grid-cols-2 gap-3 text-[11px] font-mono text-[var(--fg-faint)] text-left">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Passwordless OTP</span>
+              <span>Magic Labs Auth</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />

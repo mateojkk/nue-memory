@@ -69,7 +69,7 @@ export interface NueAppProps {
 export function NueApp({ view, initialTab }: NueAppProps) {
   const router = useRouter();
   const currentView = view;
-  const { authenticated, login } = useAuth();
+  const { authenticated } = useAuth();
 
   // Projects State (Demonstrating Media Memory feature under Nue)
   const [projects, setProjects] = useState<CreativeProject[]>([]);
@@ -363,7 +363,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
   if (currentView === 'dashboard') {
     return (
       <>
-        {!authenticated && <AuthGuardModal isOpen={true} onLogin={login} />}
+        {!authenticated && <AuthGuardModal isOpen={true} />}
         <NueDashboard
           initialTab={initialTab}
           activeProject={activeProject}
