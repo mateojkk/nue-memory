@@ -23,7 +23,7 @@ AI agents are inherently ephemeral: they forget user feedback and creative prefe
 * **Dual Runtime Engine**:
   * **Next.js 15 (App Router)** frontend and interactive creative workspace.
   * **FastAPI Serverless Backend** (`api/index.py`) for semantic classification, prompt enrichment, and Livepeer Agent tool coordination.
-* **Frictionless Creator Auth**: Passwordless email authentication via Privy, granting every new creator account **$10 in free video generation credits**.
+* **Frictionless Creator Auth**: Passwordless email authentication via Magic Labs (`magic-sdk`), granting every creator account a persistent Livepeer generation credit balance.
 * **Decentralized Persistence**: Deep integration with **Sui Walrus (MemWal)** for cryptographic, decentralized memory storage.
 
 ---
@@ -31,8 +31,8 @@ AI agents are inherently ephemeral: they forget user feedback and creative prefe
 ## Livepeer Agent Integration
 
 Nue Motion connects directly to the **Livepeer Agent Network** through the Model Context Protocol (MCP):
-* **Endpoint**: `https://agent.livepeer.org/api/mcp`
-* **Profile**: Lean tool profile (`X-Livepeer Agent-Tool-Profile: lean`) exposing core creative tools: `create_media`, `get_pricing`, `list_capabilities`, and `generate_project`.
+* **Endpoint**: `https://agent.livepeer.org/api/mcp/creative`
+* **Harness**: Full creative harness with pre-run cost estimation and capabilities across `create_media`, `get_pricing`, `list_capabilities`, and multi-scene generation.
 * **Prompt Orchestration**: Before dispatching to Livepeer GPU Orchestrators, Nue Motion dynamically retrieves active learned memories and compiles them into enriched directives.
 
 ---
@@ -70,8 +70,8 @@ Nue Motion connects directly to the **Livepeer Agent Network** through the Model
 
 ### 2. Clone & Install
 ```bash
-git clone https://github.com/NextMathLabs/nue.git
-cd nue
+git clone git@github.com:mateojkk/nue-memory.git
+cd nue-memory
 npm install
 pip install -r requirements.txt
 ```
@@ -84,15 +84,17 @@ cp .env.example .env.local
 
 | Variable | Description |
 |---|---|
-| `LIVEPEER_API_KEY` | Livepeer API / Daydream key (optional: uses keyless $10 demo by default) |
+| `LIVEPEER_API_KEY` | Livepeer API / Daydream key (optional: uses keyless $100 demo tier by default) |
+| `LIVEPEER_AGENT_MCP_URL` | Livepeer Agent MCP URL (`https://agent.livepeer.org/api/mcp/creative`) |
 | `MEMWAL_ACCOUNT_ID` | Sui delegate account ID for Walrus storage |
 | `MEMWAL_PRIVATE_KEY` | Ed25519 private key for Sui Walrus transactions |
-| `NEXT_PUBLIC_PRIVY_APP_ID` | Privy App ID for email login |
+| `NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY` | Magic Labs publishable key for passwordless email auth |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL for backend database storage |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anonymous API key |
 
 ### 4. Run the Development Server
 ```bash
+
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) to view the landing page, or visit [http://localhost:3000/motion](http://localhost:3000/motion) to open the Nue Motion workspace.
