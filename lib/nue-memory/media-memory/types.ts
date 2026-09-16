@@ -14,6 +14,7 @@ export type MemoryCategory =
   | 'aspect_ratio'
   | 'layout'
   | 'duration'
+  | 'model'
   | 'branding'
   | 'composition'
   | 'coding_style'
@@ -108,6 +109,7 @@ export interface GenerateMediaRequest {
   versionNumber: number;
   projectTitle: string;
   feedbackContext?: string;
+  creativeDirectives?: RetrievalResult['creativeDirectives'];
 }
 
 export interface RetrievalResult {
@@ -119,6 +121,8 @@ export interface RetrievalResult {
     audioStyle?: string;
     aspectRatio?: '16:9' | '9:16' | '1:1';
     visualStyle?: string;
+    duration?: number;
+    model?: string;
   };
   summaryTokens: string[];
 }

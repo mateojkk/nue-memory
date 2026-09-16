@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       versionNumber,
       projectTitle,
       feedbackContext,
+      creativeDirectives,
     });
 
     return NextResponse.json({

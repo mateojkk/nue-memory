@@ -80,10 +80,29 @@ export function retrieveAndEnrichBrief(
         break;
 
       case 'duration':
-      case 'length':
+      case 'length': {
         isRelevant = true;
         summaryTokens.push(memory.preference);
+        const match = memory.preference.match(/(\d+)/);
+        if (match) {
+          creativeDirectives.duration = parseInt(match[1], 10);
+        }
         break;
+      }
+
+      case 'model': {
+        isRelevant = true;
+        summaryTokens.push(memory.preference);
+        const lower = memory.preference.toLowerCase();
+        if (lower.includes('seedance')) {
+          creativeDirectives.model = 'seedance-25-t2v';
+        } else if (lower.includes('ltx')) {
+          creativeDirectives.model = 'ltx-25-t2v-pro';
+        } else if (lower.includes('pixverse')) {
+          creativeDirectives.model = 'pixverse-t2v';
+        }
+        break;
+      }
     }
 
     if (isRelevant && !relevantMemories.some((m) => m.id === memory.id)) {

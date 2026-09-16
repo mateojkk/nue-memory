@@ -26,6 +26,7 @@ export const AgentChat: React.FC<AgentChatProps> = ({
   ],
 }) => {
   const [inputText, setInputText] = useState('');
+  const hasUserSentMessage = messages.some((msg) => msg.sender === 'user');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,27 +101,29 @@ export const AgentChat: React.FC<AgentChatProps> = ({
         ))}
       </div>
 
-      {/* Suggested Prompts */}
-      <div className="px-3.5 py-2.5 bg-[var(--surface)] border-t border-[var(--border)]/60">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium">
-            Suggested Prompts
-          </span>
+      {/* Suggested Prompts (only shown before user sends first message) */}
+      {!hasUserSentMessage && suggestions && suggestions.length > 0 && (
+        <div className="px-3.5 py-2.5 bg-[var(--surface)] border-t border-[var(--border)]/60">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--fg-muted)] font-medium">
+              Suggested Prompts
+            </span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {suggestions.map((suggestion, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onSelectSuggestion && onSelectSuggestion(suggestion)}
+                className="text-left text-[11px] text-[var(--fg-soft)] hover:text-[var(--fg)] bg-[var(--surface-2)] hover:bg-[var(--surface-2)]/80 px-3 py-2 rounded-lg flex items-center justify-between group transition-all duration-200 hover:translate-x-1 active:scale-[0.99]"
+              >
+                <span className="truncate pr-2">{suggestion}</span>
+                <ArrowRight className="w-3 h-3 text-[var(--fg-faint)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-transform shrink-0" />
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5">
-          {suggestions.map((suggestion, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => onSelectSuggestion && onSelectSuggestion(suggestion)}
-              className="text-left text-[11px] text-[var(--fg-soft)] hover:text-[var(--fg)] bg-[var(--surface-2)] hover:bg-[var(--surface-2)]/80 px-3 py-2 rounded-lg flex items-center justify-between group transition-all duration-200 hover:translate-x-1 active:scale-[0.99]"
-            >
-              <span className="truncate pr-2">{suggestion}</span>
-              <ArrowRight className="w-3 h-3 text-[var(--fg-faint)] group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-transform shrink-0" />
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* Message Input Box */}
       <form onSubmit={handleSubmit} className="p-3 bg-[var(--surface)] border-t border-[var(--border)]/60">

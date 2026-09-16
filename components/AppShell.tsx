@@ -134,8 +134,19 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     }
   };
 
-  // Load initial memories from MemWal on Walrus
+  // Load initial memories from MemWal on Walrus with localStorage cache fallback
   useEffect(() => {
+    try {
+      const cached = localStorage.getItem('nue_active_memories');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setActiveMemories(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn('Notice reading local memories cache:', e);
+    }
     fetchMemories();
   }, []);
 
@@ -143,11 +154,32 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     try {
       const res = await fetch('/api/memwal');
       const data = await res.json();
-      if (data.success && data.preferences) {
-        setActiveMemories(data.preferences);
+      if (data.success && Array.isArray(data.preferences)) {
+        if (data.preferences.length > 0) {
+          setActiveMemories(data.preferences);
+          try {
+            localStorage.setItem('nue_active_memories', JSON.stringify(data.preferences));
+          } catch {}
+        } else {
+          // If server was restarted but client has saved memories, re-sync them to MemWal
+          try {
+            const cached = localStorage.getItem('nue_active_memories');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                setActiveMemories(parsed);
+                fetch('/api/memwal', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'remember', preferences: parsed }),
+                }).catch(() => {});
+              }
+            }
+          } catch {}
+        }
       }
     } catch (e) {
-      console.warn('Failed to load memories:', e);
+      console.warn('Failed to load memories from MemWal:', e);
     }
   };
 
@@ -296,7 +328,58 @@ export function NueApp({ view, initialTab }: NueAppProps) {
         classifyData.success &&
         classifyData.classification?.extractedPreferences?.length > 0
       ) {
-        setPendingPreferences(classifyData.classification.extractedPreferences);
+        const extracted = classifyData.classification.extractedPreferences;
+        const autoSaveCandidates = extracted.filter(
+          (p: any) =>
+            p.strength === 'high' ||
+            p.category === 'duration' ||
+            p.category === 'model' ||
+            p.category === 'pacing' ||
+            p.category === 'audio' ||
+            p.category === 'typography' ||
+            p.category === 'captions'
+        );
+        const manualCandidates = extracted.filter((p: any) => !autoSaveCandidates.includes(p));
+
+        if (autoSaveCandidates.length > 0) {
+          try {
+            const memRes = await fetch('/api/memwal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'remember', preferences: autoSaveCandidates }),
+            });
+            const memData = await memRes.json();
+            if (memData.success) {
+              const getRes = await fetch('/api/memwal');
+              const getData = await getRes.json();
+              if (getData.success && getData.preferences) {
+                setActiveMemories(getData.preferences);
+                try {
+                  localStorage.setItem('nue_active_memories', JSON.stringify(getData.preferences));
+                } catch {}
+              }
+              const blobSummary = memData.blobIds?.length ? ` (Walrus: ${memData.blobIds[0].substring(0, 10)}...)` : '';
+              const prefText = autoSaveCandidates.map((c: any) => c.preference).join('; ');
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: `msg-auto-mem-${Date.now()}`,
+                  sender: 'agent',
+                  content: `✨ Remembered preference: "${prefText}". Saved to Walrus MemWal persistent decentralized memory${blobSummary}.`,
+                  timestamp: new Date().toISOString(),
+                },
+              ]);
+            }
+          } catch (memErr) {
+            console.warn('[AppShell] Auto-persist memory error:', memErr);
+          }
+        }
+
+        if (manualCandidates.length > 0) {
+          setPendingPreferences(manualCandidates);
+        } else {
+          setPendingPreferences([]);
+        }
       }
 
       // Step 2: Livepeer Agent regenerates revised version with Nue context
@@ -332,6 +415,9 @@ export function NueApp({ view, initialTab }: NueAppProps) {
         const getData = await getRes.json();
         if (getData.success && getData.preferences) {
           setActiveMemories(getData.preferences);
+          try {
+            localStorage.setItem('nue_active_memories', JSON.stringify(getData.preferences));
+          } catch {}
         }
 
         const blobSummary = data.blobIds?.length ? ` (Blob: ${data.blobIds[0]})` : '';
@@ -412,7 +498,13 @@ export function NueApp({ view, initialTab }: NueAppProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'forget', id }),
       });
-      setActiveMemories((prev) => prev.filter((m) => m.id !== id));
+      setActiveMemories((prev) => {
+        const next = prev.filter((m) => m.id !== id);
+        try {
+          localStorage.setItem('nue_active_memories', JSON.stringify(next));
+        } catch {}
+        return next;
+      });
     } catch (e) {
       console.error('Failed to forget memory:', e);
     }

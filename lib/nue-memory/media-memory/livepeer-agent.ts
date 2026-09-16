@@ -45,7 +45,7 @@ export class LivepeerMediaAgent {
    * Generates a new media version based on the enriched brief and applied preferences
    */
   public async generateMedia(request: GenerateMediaRequest): Promise<MediaVersion> {
-    const { brief, enrichedBrief, appliedPreferences, versionNumber, projectTitle, feedbackContext } = request;
+    const { brief, enrichedBrief, appliedPreferences, versionNumber, projectTitle, feedbackContext, creativeDirectives } = request;
 
     await this.initializeMcp();
 
@@ -59,24 +59,22 @@ export class LivepeerMediaAgent {
 
     // Apply remembered preferences
     for (const pref of appliedPreferences) {
-      const lower = pref.preference.toLowerCase();
       if (pref.category === 'pacing') {
-        if (lower.includes('fast') || lower.includes('energetic')) pacing = 'fast';
-        else if (lower.includes('cinematic') || lower.includes('slow') || lower.includes('smooth')) pacing = 'cinematic';
-      } else if (pref.category === 'captions' || pref.category === 'typography') {
-        if (lower.includes('large') || lower.includes('bigger') || lower.includes('readable')) captionSize = 'large';
-        else if (lower.includes('small') || lower.includes('subtle')) captionSize = 'small';
-      } else if (pref.category === 'music' || pref.category === 'audio') {
-        if (lower.includes('avoid') || lower.includes('remove') || lower.includes('minimal')) {
-          audioStyle = 'Subtle minimal rhythm bed (dramatic cinematic strings avoided)';
+        pacing = pref.preference.toLowerCase().includes('fast') ? 'fast' : 'cinematic';
+      }
+      if (pref.category === 'captions' || pref.category === 'typography') {
+        captionSize = pref.preference.toLowerCase().includes('large') ? 'large' : 'medium';
+      }
+      if (pref.category === 'music' || pref.category === 'audio') {
+        audioStyle = pref.preference;
+        if (pref.preference.toLowerCase().includes('avoid') || pref.preference.toLowerCase().includes('remove')) {
           audioTempo = 'none';
-        } else if (lower.includes('upbeat') || lower.includes('energetic')) {
-          audioStyle = 'Punchy modern electronic synth';
+        } else if (pref.preference.toLowerCase().includes('upbeat')) {
           audioTempo = 'energetic';
         }
-      } else if (pref.category === 'aspect_ratio' || pref.category === 'layout') {
-        if (lower.includes('9:16') || lower.includes('vertical')) aspectRatio = '9:16';
-        else if (lower.includes('16:9')) aspectRatio = '16:9';
+      }
+      if (pref.category === 'aspect_ratio' || pref.category === 'layout') {
+        aspectRatio = pref.preference.includes('9:16') ? '9:16' : '16:9';
       }
     }
 
@@ -102,30 +100,52 @@ export class LivepeerMediaAgent {
       visualTheme = 'Next-Gen Mobile Application';
     }
 
-    // Duration parsing: check remembered preferences and feedbackContext
-    let targetDuration = 5;
+    // Duration parsing: check creativeDirectives, remembered preferences, and feedbackContext
+    let targetDuration = creativeDirectives?.duration || 5;
     for (const pref of appliedPreferences) {
       if (pref.category === 'duration' || pref.category === 'length') {
-        const match = pref.preference.match(/(\d+)\s*(?:seconds?|secs?|s)/i);
+        const match = pref.preference.match(/(\d+)\s*(?:seconds?|secs?|s)?/i);
         if (match) {
           targetDuration = Math.max(3, parseInt(match[1], 10));
         }
       }
     }
     if (feedbackContext) {
-      const match = feedbackContext.match(/(\d+)\s*(?:seconds?|secs?|s)/i);
+      const match = feedbackContext.match(/(\d+)\s*(?:seconds?|secs?|s)?/i);
       if (match) {
         targetDuration = Math.max(3, parseInt(match[1], 10));
       }
     }
 
-    // Determine model dispatch strategy based on target duration:
-    // 1. If targetDuration > 8s: Attempt long-form take via seedance-25-t2v (up to 30s)
-    // 2. Otherwise: Use pixverse-t2v clamped to 3, 5, or 8 seconds
-    const isLongForm = targetDuration > 8;
-    const modelToUse = isLongForm ? 'seedance-25-t2v' : 'pixverse-t2v';
+    // Check if user explicitly requested a specific model (e.g. "use seedance", "seedance", "pixverse", "ltx")
+    const preferredModel = creativeDirectives?.model?.toLowerCase();
+    const explicitSeedance =
+      preferredModel?.includes('seedance') ||
+      (feedbackContext && feedbackContext.toLowerCase().includes('seedance')) ||
+      brief.toLowerCase().includes('seedance');
+    const explicitPixverse =
+      preferredModel?.includes('pixverse') ||
+      (feedbackContext && feedbackContext.toLowerCase().includes('pixverse')) ||
+      brief.toLowerCase().includes('pixverse');
+    const explicitLtx =
+      preferredModel?.includes('ltx') ||
+      (feedbackContext && feedbackContext.toLowerCase().includes('ltx')) ||
+      brief.toLowerCase().includes('ltx');
+
+    // Determine model dispatch strategy:
+    // 1. If explicitly requested seedance OR targetDuration > 8s: Dispatch seedance-25-t2v (up to 30s)
+    // 2. If explicitly requested ltx: Dispatch ltx-25-t2v-pro (up to 10s)
+    // 3. Otherwise: Use pixverse-t2v clamped to 3, 5, or 8 seconds
+    const isLongForm = explicitSeedance || (!explicitPixverse && !explicitLtx && targetDuration > 8);
+    const modelToUse = isLongForm
+      ? 'seedance-25-t2v'
+      : explicitLtx
+      ? 'ltx-25-t2v-pro'
+      : 'pixverse-t2v';
     const effectiveDuration = isLongForm
       ? Math.min(30, Math.max(10, targetDuration))
+      : explicitLtx
+      ? Math.min(10, Math.max(3, targetDuration))
       : (targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3);
 
     // Build Livepeer prompt that includes prompt directives
@@ -162,10 +182,55 @@ export class LivepeerMediaAgent {
 
       if (mcpCallRes.ok) {
         const mcpData = await mcpCallRes.json();
-        if (mcpData.result?.structuredContent?.url) {
-          realMediaUrl = mcpData.result.structuredContent.url;
-          if (mcpData.result.structuredContent.capability) {
-            livepeerCapability = mcpData.result.structuredContent.capability;
+        const content = mcpData.result?.structuredContent;
+        if (content?.url) {
+          realMediaUrl = content.url;
+          if (content.capability) {
+            livepeerCapability = content.capability;
+          }
+        } else if (content?.job_id && (content.status === 'pending' || content.status === 'running')) {
+          // Asynchronous long-form job (e.g. seedance-25-t2v). Poll until complete or max poll threshold reached.
+          const jobId = content.job_id;
+          console.log(`[LivepeerAgent] Async job ${jobId} initiated for ${modelToUse} (${effectiveDuration}s). Polling...`);
+          const maxAttempts = 45; // 45 * 6s = 270s poll window (seedance p50 ~220s)
+          for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            await new Promise((resolve) => setTimeout(resolve, 6000));
+            try {
+              const pollRes = await fetch(this.endpoint, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'application/json, text/event-stream',
+                  ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+                },
+                body: JSON.stringify({
+                  jsonrpc: '2.0',
+                  id: Date.now(),
+                  method: 'tools/call',
+                  params: {
+                    name: 'get_create_media',
+                    arguments: { job_id: jobId },
+                  },
+                }),
+              });
+              if (pollRes.ok) {
+                const pollData = await pollRes.json();
+                const pollContent = pollData.result?.structuredContent;
+                if (pollContent?.url) {
+                  realMediaUrl = pollContent.url;
+                  livepeerCapability = pollContent.capability || modelToUse;
+                  generationDuration = effectiveDuration;
+                  console.log(`[LivepeerAgent] Job ${jobId} finished successfully! URL: ${realMediaUrl}`);
+                  break;
+                }
+                if (pollContent?.status === 'failed' || pollContent?.error) {
+                  console.warn(`[LivepeerAgent] Job ${jobId} failed:`, pollContent.error);
+                  break;
+                }
+              }
+            } catch (pollErr) {
+              console.warn(`[LivepeerAgent] Polling attempt ${attempt + 1} notice:`, pollErr);
+            }
           }
         } else if (mcpData.error) {
           console.error('[LivepeerAgent] MCP create_media error:', mcpData.error);

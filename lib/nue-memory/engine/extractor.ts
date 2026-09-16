@@ -208,12 +208,32 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     category: 'duration',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:(?:prefer|want|make|generate|use|standard is|keep)\s+(?:it\s+)?(\d+)\s*(?:seconds?|secs?|s)\s*(?:videos?|clips?|takes?)?)|(?:(?:videos?|clips?|duration|length)\s+(?:should be|is|to be|around)\s*(\d+)\s*(?:seconds?|secs?|s))/i,
+    pattern: /(?:(?:prefer|like|want|make|generate|use|standard is|keep|set)\s+(?:(?:my|the|all|our)\s+)?(?:videos?|clips?|takes?)?\s*(?:to be|at|around|it)?\s*(\d+)\s*(?:seconds?|secs?|s)\b(?:\s*long|\s*videos?|\s*clips?)?)|(?:(?:videos?|clips?|duration|length)\s+(?:should be|is|to be|around|like)\s*(\d+)\s*(?:seconds?|secs?|s)\b(?:\s*long)?)|(?:(\d+)\s*(?:seconds?|secs?|s)\s*(?:long|duration|videos?|clips?))/i,
     extract: (text, match) => {
-      const sec = parseInt(match[1] || match[2], 10);
+      const numStr = match[1] || match[2] || match[3];
+      const sec = parseInt(numStr, 10);
       return {
         value: `Prefer ${sec} second video duration`,
         confidence: 0.95,
+      };
+    },
+  },
+  // 7. Video AI Model Selection
+  {
+    category: 'model',
+    type: 'preference',
+    domain: 'media',
+    pattern: /(?:prefer|use|switch to|render with|on)\s+(seedance(?:-25-t2v)?|pixverse(?:-t2v)?|ltx(?:-25-t2v-pro)?)/i,
+    extract: (text, match) => {
+      const raw = match[1].toLowerCase();
+      const model = raw.includes('seedance')
+        ? 'seedance-25-t2v'
+        : raw.includes('ltx')
+        ? 'ltx-25-t2v-pro'
+        : 'pixverse-t2v';
+      return {
+        value: `Prefer ${model} generative video model`,
+        confidence: 0.96,
       };
     },
   },

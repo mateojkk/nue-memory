@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import {
   StructuredMemory,
   MemoryQuery,
@@ -140,9 +142,42 @@ export class WalrusMemWalStore implements MemoryStore {
   private memoryCache: Map<string, StructuredMemory> = new Map();
   private blobToMemoryId: Map<string, string> = new Map();
 
+  private static readonly CACHE_FILE_PATH = path.join(process.cwd(), '.walrus_memories_cache.json');
+
   constructor(config: WalrusStoreConfig = {}) {
     this.config = config;
     this.namespace = config.namespace || 'nue-memory';
+    this.loadCacheFromDisk();
+  }
+
+  private loadCacheFromDisk(): void {
+    try {
+      if (typeof window === 'undefined' && fs.existsSync(WalrusMemWalStore.CACHE_FILE_PATH)) {
+        const raw = fs.readFileSync(WalrusMemWalStore.CACHE_FILE_PATH, 'utf-8');
+        const items: StructuredMemory[] = JSON.parse(raw);
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            this.memoryCache.set(item.id, item);
+            if (item.storageBlobId) {
+              this.blobToMemoryId.set(item.storageBlobId, item.id);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[WalrusStore] Notice reading cache from disk:', e);
+    }
+  }
+
+  private saveCacheToDisk(): void {
+    try {
+      if (typeof window === 'undefined') {
+        const items = Array.from(this.memoryCache.values());
+        fs.writeFileSync(WalrusMemWalStore.CACHE_FILE_PATH, JSON.stringify(items, null, 2), 'utf-8');
+      }
+    } catch (e) {
+      console.warn('[WalrusStore] Notice saving cache to disk:', e);
+    }
   }
 
   /**
@@ -249,6 +284,7 @@ export class WalrusMemWalStore implements MemoryStore {
 
     this.memoryCache.set(persisted.id, persisted);
     this.blobToMemoryId.set(blobId, persisted.id);
+    this.saveCacheToDisk();
 
     return { blobId, memory: persisted };
   }
@@ -400,6 +436,7 @@ export class WalrusMemWalStore implements MemoryStore {
     };
 
     this.memoryCache.set(id, updated);
+    this.saveCacheToDisk();
     return updated;
   }
 
@@ -429,6 +466,7 @@ export class WalrusMemWalStore implements MemoryStore {
     if (existing.storageBlobId) {
       this.blobToMemoryId.delete(existing.storageBlobId);
     }
+    this.saveCacheToDisk();
 
     return true;
   }
@@ -441,6 +479,7 @@ export class WalrusMemWalStore implements MemoryStore {
     domain?: string;
     activeOnly?: boolean;
   }): StructuredMemory[] {
+    this.loadCacheFromDisk();
     let all = Array.from(this.memoryCache.values());
 
     if (filter?.activeOnly) {
@@ -462,6 +501,7 @@ export class WalrusMemWalStore implements MemoryStore {
   public clearAll(): void {
     this.memoryCache.clear();
     this.blobToMemoryId.clear();
+    this.saveCacheToDisk();
   }
 
   /**
