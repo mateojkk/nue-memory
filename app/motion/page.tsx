@@ -1,7 +1,7 @@
 import { NueApp } from '@/components/AppShell';
 
 /**
- * Media Memory route — the working surface.
+ * Media Memory route - the working surface.
  *
  * Opens Nue Memory directly on the Media Memory workspace, where the
  * create -> review -> feedback -> remember -> recall loop runs against the

@@ -82,7 +82,7 @@ export function MemoryCompressionVisual() {
         })}
       </div>
 
-      {/* Final compact memory chip — appears when the loop completes */}
+      {/* Final compact memory chip - appears when the loop completes */}
       <div
         className="rounded-lg border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-2.5 font-mono text-[11px] text-[var(--fg)] flex items-center justify-between transition-all duration-500"
         style={{ opacity: finished ? 1 : 0.25 }}

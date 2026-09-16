@@ -78,7 +78,7 @@ export function DifferentiatorSection() {
           ))}
         </div>
 
-        {/* Raw Interaction Container — cross-fades on scenario switch */}
+        {/* Raw Interaction Container - cross-fades on scenario switch */}
         <div key={selectedExample} className="nue-fade-swap">
           <div className="text-xs font-medium text-[var(--fg-muted)] mb-2 flex items-center justify-between">
             <span>RAW AGENT INTERACTION STREAM</span>
@@ -89,7 +89,7 @@ export function DifferentiatorSection() {
           </div>
         </div>
 
-        {/* The Visual Split: Temporary vs Persistent — cross-fades with scenario */}
+        {/* The Visual Split: Temporary vs Persistent - cross-fades with scenario */}
         <div key={`split-${selectedExample}`} className="nue-fade-swap grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           {/* Box 1: Temporary Edit */}
           <div className="p-6 rounded-lg bg-[var(--surface-2)] border border-red-950/40 relative overflow-hidden flex flex-col justify-between">

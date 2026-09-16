@@ -220,7 +220,7 @@ export function AnimatedTabs({
 
   return (
     <div>
-      {/* Tab strip — mem0 style: dark active pill, plain muted inactive */}
+      {/* Tab strip - mem0 style: dark active pill, plain muted inactive */}
       <div className="flex items-center gap-1 mb-6" role="tablist">
         {stages.map((s, i) => (
           <button

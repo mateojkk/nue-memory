@@ -1,18 +1,16 @@
 'use client';
 
 import React from 'react';
-import { ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { NueLogo } from './NueLogo';
 import { ThemeToggle } from './ThemeToggle';
-import { AuthButton } from './auth/AuthButton';
 
 interface NueNavbarProps {}
 
 /**
  * Landing navbar. The landing lives at /landing; the working app at
  * /mediamemory (which is also where / redirects). All navigation is
- * route-based — no client view switching.
+ * route-based - no client view switching.
  */
 export function NueNavbar({}: NueNavbarProps = {}) {
   const router = useRouter();
@@ -43,19 +41,8 @@ export function NueNavbar({}: NueNavbarProps = {}) {
           </nav>
         </div>
 
-        {/* Right Controls: Auth, GitHub, and Motion Studio CTA */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
-          <AuthButton />
-
-          {/* Primary CTA: Launch Motion */}
-          <button
-            onClick={() => router.push('/motion')}
-            className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm"
-          >
-            <span className="hidden xs:inline">Launch Studio</span>
-            <span className="xs:hidden">Studio</span>
-            <ArrowRight className="w-3.5 h-3.5 text-[var(--accent)]" />
-          </button>
+        {/* Right Controls: Theme Toggle and User Status */}
+        <div className="flex items-center gap-2.5">
           <ThemeToggle />
         </div>
       </div>

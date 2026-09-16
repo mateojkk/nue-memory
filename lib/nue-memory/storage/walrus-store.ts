@@ -125,7 +125,7 @@ export function decodeMemoryPayload(
 /**
  * Storage adapter connecting Nue Memory to Walrus MemWal.
  *
- * STRICT LIVE-ONLY MODE (per project rules — NO MOCKING):
+ * STRICT LIVE-ONLY MODE (per project rules - NO MOCKING):
  * Requires real Sui Ed25519 delegate keys via MEMWAL_PRIVATE_KEY and
  * MEMWAL_ACCOUNT_ID. Missing credentials raise WalrusConfigError instead
  * of silently degrading to an in-memory mock.
@@ -156,7 +156,7 @@ export class WalrusMemWalStore implements MemoryStore {
       case 'missing_keys':
         return {
           state: 'missing_keys',
-          message: 'Missing MEMWAL_PRIVATE_KEY / MEMWAL_ACCOUNT_ID — live Walrus persistence unavailable.',
+          message: 'Missing MEMWAL_PRIVATE_KEY / MEMWAL_ACCOUNT_ID - live Walrus persistence unavailable.',
         };
       case 'error':
         return { state: 'error', message: this.initError?.message || 'Walrus initialization failed.' };
@@ -232,7 +232,7 @@ export class WalrusMemWalStore implements MemoryStore {
       const res = await client.rememberAndWait(payloadText, this.namespace);
       const returnedId = res?.blob_id || res?.id;
       if (!returnedId) {
-        throw new Error('Walrus MemWal did not return a blob ID — persistence not confirmed.');
+        throw new Error('Walrus MemWal did not return a blob ID - persistence not confirmed.');
       }
       blobId = returnedId;
     } catch (error) {
@@ -492,7 +492,7 @@ export class WalrusMemWalStore implements MemoryStore {
       }
       return { status: 'healthy', version: '0.1.6', mode: 'live' };
     } catch (err) {
-      // Honest failure state — never fabricate a "healthy" response.
+      // Honest failure state - never fabricate a "healthy" response.
       const connection = this.getConnectionState();
       return { status: connection.state, version: '0.1.6', mode: 'live', detail: connection.message } as any;
     }

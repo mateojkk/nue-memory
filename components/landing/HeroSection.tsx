@@ -31,7 +31,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       {/* Supporting Copy */}
       <Reveal delay={120}>
         <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-          AI agents forget between sessions. Nue gives them durable, evolving memory — extracting what matters, resolving conflicts, and persisting preferences across models and workflows.
+          AI agents forget between sessions. Nue gives them durable, evolving memory - extracting what matters, resolving conflicts, and persisting preferences across models and workflows.
         </p>
       </Reveal>
 

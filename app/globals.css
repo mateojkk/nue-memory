@@ -3,7 +3,7 @@
 :root {
   --font-inter: 'Fustat', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  /* mem0.ai EXACT COLORS — LIGHT: near-monochrome white/zinc, blue links */
+  /* mem0.ai EXACT COLORS - LIGHT: near-monochrome white/zinc, blue links */
   --background: #fcfcfc;
   --foreground: #181818;
 
@@ -26,7 +26,7 @@
 }
 
 .dark {
-  /* mem0.ai EXACT COLORS — DARK: zinc-950 canvas */
+  /* mem0.ai EXACT COLORS - DARK: zinc-950 canvas */
   --background: #09090b;
   --foreground: #fcfcfc;
 
@@ -61,7 +61,7 @@
 }
 
 /* mem0 font system: Fustat (sans) everywhere, Fragment Mono for code/labels.
-   Both are vendored via @fontsource — no build-time network dependency. */
+   Both are vendored via @fontsource - no build-time network dependency. */
 * {
   font-family: 'Fustat', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
@@ -218,7 +218,7 @@ h1, h2, h3, h4, h5, h6, b, strong, th {
   56%, 100% { opacity: 0; }
 }
 
-/* Opacity cross-fade for tab/stage switches — mem0's exact tween language */
+/* Opacity cross-fade for tab/stage switches - mem0's exact tween language */
 .nue-fade-swap {
   animation: nue-fade-swap 350ms cubic-bezier(0.12, 0.23, 0.5, 1);
 }

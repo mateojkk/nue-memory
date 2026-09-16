@@ -124,7 +124,7 @@ function heuristicToken(hex6: string): string | null {
     if (lum < 0.82) return 'var(--accent-bright)';
     return 'var(--surface)';
   }
-  return null; // greens, yellows, etc. — leave alone
+  return null; // greens, yellows, etc. - leave alone
 }
 
 for (const root of ROOTS) {

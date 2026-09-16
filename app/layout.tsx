@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-// Fonts are vendored via @fontsource (no build-time Google Fonts fetch —
+// Fonts are vendored via @fontsource (no build-time Google Fonts fetch -
 // a flaky CDN must never be able to break a build).
 import '@fontsource/fustat/400.css';
 import '@fontsource/fustat/500.css';

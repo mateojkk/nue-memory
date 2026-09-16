@@ -1,7 +1,7 @@
 # Nue & Nue Motion
 
 > **Livepeer Agent Hackathon 2026**  
-> **Track 3 — Innovation Track**  
+> **Track 3 - Innovation Track**  
 > *Autonomous video generation with continuous agent memory, powered by Livepeer Agent & Sui Walrus.*
 
 ---
@@ -113,10 +113,10 @@ This repository is built and structured specifically for **Vercel Serverless**:
 
 * **Centrality of Livepeer Agent**: Livepeer Agent is the core media generation engine powering video synthesis across every project.
 * **Product Judgment & UX**: Stripped away all internal blockchain plumbing and raw storage blob IDs from the user interface. Creators simply direct video with an AI assistant that remembers their taste.
-* **Originality**: Introduces continuous, cross-session memory to generative video workflows—solving the single biggest frustration in agentic media creation.
+* **Originality**: Introduces continuous, cross-session memory to generative video workflows-solving the single biggest frustration in agentic media creation.
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details.

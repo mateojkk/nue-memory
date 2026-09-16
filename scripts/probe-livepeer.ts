@@ -3,8 +3,8 @@
  *
  * Verifies the real end-to-end contract used by lib/nue-memory/media-memory/livepeer-agent.ts:
  *   1. MCP initialize handshake (Streamable HTTP, JSON-RPC 2.0)
- *   2. tools/list — confirms create_media exists on the live surface
- *   3. create_media — a real render (defaults to keyless demo credit, ~$10 free)
+ *   2. tools/list - confirms create_media exists on the live surface
+ *   3. create_media - a real render (defaults to keyless demo credit, ~$10 free)
  *
  * Usage:
  *   npx tsx scripts/probe-livepeer.ts [prompt]
@@ -78,20 +78,20 @@ async function main() {
     capabilities: {},
     clientInfo: { name: 'nue-memory-probe', version: '1.0.0' },
   });
-  console.log('✓ initialize — server:', init?.serverInfo?.name, init?.serverInfo?.version || '');
+  console.log('✓ initialize - server:', init?.serverInfo?.name, init?.serverInfo?.version || '');
   await rpc('notifications/initialized').catch(() => undefined);
 
   // 2. Confirm create_media exists on the live surface
   const tools = await rpc('tools/list', {});
   const toolNames: string[] = (tools?.tools || []).map((t: any) => t.name);
-  console.log(`✓ tools/list — ${toolNames.length} tools. create_media present: ${toolNames.includes('create_media')}`);
+  console.log(`✓ tools/list - ${toolNames.length} tools. create_media present: ${toolNames.includes('create_media')}`);
   if (toolNames.includes('get_pricing')) {
     const pricing = await rpc('tools/call', { name: 'get_pricing', arguments: { capability: MODEL } });
     const pText = pricing?.structuredContent || pricing?.content?.[0]?.text || pricing;
     console.log(`✓ get_pricing (${MODEL}):`, JSON.stringify(pText).slice(0, 300));
   }
 
-  // 3. Real render — mirrors livepeer-agent.ts arguments exactly
+  // 3. Real render - mirrors livepeer-agent.ts arguments exactly
   console.log(`\nRendering "${PROMPT}" on ${MODEL} …`);
   const media = await rpc('tools/call', {
     name: 'create_media',
@@ -108,7 +108,7 @@ async function main() {
   console.log('  raw (truncated):', JSON.stringify(media).slice(0, 600));
 
   if (!url) {
-    console.error('\n✗ FAIL: no media URL in response — do NOT treat this as a successful render.');
+    console.error('\n✗ FAIL: no media URL in response - do NOT treat this as a successful render.');
     process.exit(1);
   }
 
@@ -117,7 +117,7 @@ async function main() {
   const type = head.headers.get('content-type') || 'unknown';
   console.log(`\n✓ media fetch check: HTTP ${head.status} · content-type: ${type}`);
   const ok = head.ok && (type.startsWith('image/') || type.startsWith('video/'));
-  console.log(ok ? '\n✅ PROBE PASSED — real Livepeer render confirmed end-to-end.' : '\n✗ PROBE FAILED — URL did not serve image/video bytes.');
+  console.log(ok ? '\n✅ PROBE PASSED - real Livepeer render confirmed end-to-end.' : '\n✗ PROBE FAILED - URL did not serve image/video bytes.');
   process.exit(ok ? 0 : 1);
 }
 

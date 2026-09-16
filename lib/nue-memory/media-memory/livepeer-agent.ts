@@ -155,7 +155,7 @@ export class LivepeerMediaAgent {
     // returning a placeholder URL masquerading as generated media.
     if (!realMediaUrl) {
       throw new Error(
-        'Livepeer Agent did not return generated media. The MCP create_media call failed or returned no URL — no placeholder is substituted (per rules.md NO MOCKING).'
+        'Livepeer Agent did not return generated media. The MCP create_media call failed or returned no URL - no placeholder is substituted (per rules.md NO MOCKING).'
       );
     }
 
