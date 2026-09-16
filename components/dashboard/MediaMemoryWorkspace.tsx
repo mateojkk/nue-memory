@@ -83,9 +83,9 @@ export function MediaMemoryWorkspace({
         </div>
 
         {/* Action Buttons & Project Switcher Pills */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 max-w-full">
           {projects.length > 0 && (
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-2)]/70 max-w-full overflow-x-auto">
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-2)]/70 max-w-full overflow-x-auto no-scrollbar">
               {projects.map((proj, idx) => {
                 const isSelected = currentProjectIndex === idx;
                 return (

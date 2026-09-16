@@ -85,9 +85,9 @@ export function NueDashboard({
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)] font-light flex flex-col">
       {/* Dashboard Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--border)] px-4 sm:px-6 py-3">
+      <header className="sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--border)] px-3 sm:px-6 py-2.5 sm:py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => router.push('/')}
               className="flex items-center gap-2 group hover:opacity-85 transition-all text-left"
@@ -100,14 +100,14 @@ export function NueDashboard({
             </button>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             <AuthButton />
             <ThemeToggle />
           </div>
         </div>
 
         {/* Dashboard Sub-navigation Tabs (Section 21) */}
-        <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 pt-3 overflow-x-auto text-xs font-mono">
+        <div className="max-w-7xl mx-auto flex items-center gap-1 sm:gap-2 pt-2.5 sm:pt-3 overflow-x-auto no-scrollbar text-xs font-mono pb-0.5">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -115,9 +115,9 @@ export function NueDashboard({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all duration-200 whitespace-nowrap hover:-translate-y-0.5 active:scale-95 ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg transition-all duration-200 whitespace-nowrap active:scale-95 shrink-0 ${
                   isActive
-                    ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-sm scale-[1.01]'
+                    ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-sm'
                     : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]/50'
                 }`}
               >

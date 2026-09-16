@@ -130,7 +130,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       </div>
 
       {/* Main Video/Image Viewport */}
-      <div className="relative flex-1 bg-[#0a0a0c] flex items-center justify-center overflow-hidden min-h-[380px]">
+      <div className="relative flex-1 bg-[#0a0a0c] flex items-center justify-center overflow-hidden min-h-[260px] sm:min-h-[380px]">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center gap-3.5 text-center px-6">
             <div className="relative">
@@ -150,7 +150,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
           <div
             className={`relative transition-all duration-300 flex items-center justify-center ${
               aspectMode === '9:16'
-                ? 'w-[250px] h-[440px] rounded-xl overflow-hidden border border-[var(--accent)]/30'
+                ? 'w-[200px] sm:w-[250px] h-[355px] sm:h-[440px] rounded-xl overflow-hidden border border-[var(--accent)]/30'
                 : 'w-full h-full'
             }`}
           >
@@ -291,8 +291,8 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       </div>
 
       {/* Version History Tabs */}
-      <div className="px-4 py-2.5 bg-[var(--surface)] border-t border-[var(--border)] flex items-center gap-2 overflow-x-auto">
-        <span className="text-[11px] font-mono text-[var(--fg-muted)] uppercase tracking-wider flex items-center gap-1 mr-1">
+      <div className="px-4 py-2.5 bg-[var(--surface)] border-t border-[var(--border)] flex items-center gap-2 overflow-x-auto no-scrollbar">
+        <span className="text-[11px] font-mono text-[var(--fg-muted)] uppercase tracking-wider flex items-center gap-1 mr-1 shrink-0">
           <Layers className="w-3 h-3" />
           Versions:
         </span>
