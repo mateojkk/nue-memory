@@ -6,15 +6,16 @@ import { livepeerAgent } from '@/lib/livepeer/agent';
 
 export async function POST(request: Request) {
   try {
-    const { brief, versionNumber = 1, projectTitle = 'Media Project', feedbackContext } = await request.json();
+    const { brief, versionNumber = 1, projectTitle = 'Media Project', feedbackContext, userId, email } = await request.json();
+    const effectiveUserId = userId || email || undefined;
 
     if (!brief) {
       return NextResponse.json({ success: false, error: 'Brief is required' }, { status: 400 });
     }
 
-    // Step 1: Initialize Nue Memory layer and retrieve active preferences from Walrus MemWal
+    // Step 1: Initialize Nue Memory layer and retrieve active preferences from Walrus MemWal for this user's namespace
     await nue.initialize();
-    const storedMemories = await memWalService.getAllPreferencesAsync(false);
+    const storedMemories = await memWalService.getAllPreferencesAsync(effectiveUserId, false);
     const { relevantMemories, enrichedBrief, creativeDirectives, summaryTokens } = retrieveAndEnrichBrief(brief, storedMemories);
 
     // Step 2: Send enriched context to Livepeer Agent

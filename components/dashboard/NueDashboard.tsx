@@ -49,6 +49,8 @@ interface NueDashboardProps {
   projects: CreativeProject[];
   currentProjectIndex: number;
   onSelectProject: (index: number) => void;
+  userNamespace?: string;
+  userEmail?: string;
 }
 
 export function NueDashboard({
@@ -72,6 +74,8 @@ export function NueDashboard({
   projects,
   currentProjectIndex,
   onSelectProject,
+  userNamespace,
+  userEmail,
 }: NueDashboardProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
@@ -143,6 +147,8 @@ export function NueDashboard({
             memories={activeMemories}
             onForget={onForgetMemory}
             onOpenStudio={() => setActiveTab('media-memory')}
+            userNamespace={userNamespace}
+            userEmail={userEmail}
           />
         )}
 

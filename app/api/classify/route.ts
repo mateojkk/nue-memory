@@ -3,13 +3,18 @@ import { classifyFeedback } from '@/lib/nue-memory/extractor';
 
 export async function POST(request: Request) {
   try {
-    const { feedback, projectTitle, currentBrief } = await request.json();
+    const { feedback, projectTitle, currentBrief, userId, email } = await request.json();
+    const effectiveUserId = userId || email || undefined;
 
     if (!feedback) {
       return NextResponse.json({ success: false, error: 'Feedback required' }, { status: 400 });
     }
 
-    const classification = classifyFeedback(feedback, { projectTitle, currentBrief });
+    const classification = classifyFeedback(feedback, {
+      projectTitle,
+      currentBrief,
+      userId: effectiveUserId,
+    });
 
     return NextResponse.json({
       success: true,

@@ -31,6 +31,38 @@ export class WalrusConfigError extends Error {
 const META_DELIMITER = '__NUE_META__';
 
 /**
+ * Deterministically derives a MemWal namespace for a given user.
+ * Each signed up user gets their own dedicated namespace under the master account key.
+ *
+ * Pattern:
+ * - Empty or "default_user" or "global": falls back to "nue-memory"
+ * - Valid email or user id: converts to a sanitized string prefixed with "nue-u-"
+ *   e.g. "alice@example.com" -> "nue-u-alice-example-com"
+ */
+export function getUserNamespace(userId?: string): string {
+  if (!userId || userId === 'default_user' || userId === 'global') {
+    return 'nue-memory';
+  }
+  const clean = userId
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  if (clean.length > 0 && clean.length <= 48) {
+    return `nue-u-${clean}`;
+  }
+
+  // Fallback for long or unusual identifiers: deterministic 16-char hash
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  }
+  return `nue-u-${hash.toString(16)}`;
+}
+
+
+/**
  * Encodes a StructuredMemory object into a dual-layer string:
  * 1. Semantic header: optimized for vector embedding and token search in Walrus MemWal
  * 2. Structured metadata envelope: preserves full provenance and state upon retrieval
@@ -64,7 +96,8 @@ export function encodeMemoryPayload(memory: StructuredMemory): string {
 export function decodeMemoryPayload(
   rawText: string,
   blobId?: string,
-  fallbackCreatedAt?: string
+  fallbackCreatedAt?: string,
+  fallbackUserId = 'default_user'
 ): StructuredMemory {
   const startIdx = rawText.indexOf(META_DELIMITER);
   if (startIdx !== -1) {
@@ -75,7 +108,7 @@ export function decodeMemoryPayload(
         const parsed = JSON.parse(jsonStr);
         return {
           id: parsed.id || `mem-${Math.random().toString(36).substring(2, 9)}`,
-          userId: parsed.userId || 'default_user',
+          userId: parsed.userId || fallbackUserId,
           type: parsed.type || 'preference',
           category: parsed.category || 'general',
           value: parsed.value || rawText.substring(0, startIdx).trim(),
@@ -104,7 +137,7 @@ export function decodeMemoryPayload(
   const cleanText = rawText.replace(/__NUE_META__.*?__NUE_META__/gs, '').trim();
   return {
     id: `mem-${blobId || Math.random().toString(36).substring(2, 9)}`,
-    userId: 'default_user',
+    userId: fallbackUserId,
     type: 'preference',
     category: 'general',
     value: cleanText || rawText,
@@ -131,8 +164,8 @@ export function decodeMemoryPayload(
  * of silently degrading to an in-memory mock.
  */
 export class WalrusMemWalStore implements MemoryStore {
-  private namespace: string;
-  private client: any = null;
+  private defaultNamespace: string;
+  private clientMap: Map<string, any> = new Map();
   private isInitialized = false;
   private config: WalrusStoreConfig;
   private connectionState: WalrusConnectionState = 'uninitialized';
@@ -142,65 +175,96 @@ export class WalrusMemWalStore implements MemoryStore {
 
   constructor(config: WalrusStoreConfig = {}) {
     this.config = config;
-    this.namespace = config.namespace || 'nue-memory';
+    this.defaultNamespace = config.namespace || 'nue-memory';
   }
 
   /**
    * Reports the current Walrus connection state so the UI/API can display
-   * honest status instead of fabricated "healthy" responses.
+   * honest status instead of fabricated responses.
    */
-  public getConnectionState(): { state: WalrusConnectionState; message: string } {
+  public getConnectionState(userId?: string): { state: WalrusConnectionState; message: string; namespace: string } {
+    const ns = userId ? getUserNamespace(userId) : this.defaultNamespace;
     switch (this.connectionState) {
       case 'connected':
-        return { state: 'connected', message: `Walrus Relayer connected (namespace: ${this.namespace}).` };
+        return { state: 'connected', message: `Walrus Relayer connected (namespace: ${ns}).`, namespace: ns };
       case 'missing_keys':
         return {
           state: 'missing_keys',
-          message: 'Missing MEMWAL_PRIVATE_KEY / MEMWAL_ACCOUNT_ID - live Walrus persistence unavailable.',
+          message: 'Missing MEMWAL_PRIVATE_KEY / MEMWAL_ACCOUNT_ID: live Walrus persistence unavailable.',
+          namespace: ns,
         };
       case 'error':
-        return { state: 'error', message: this.initError?.message || 'Walrus initialization failed.' };
+        return { state: 'error', message: this.initError?.message || 'Walrus initialization failed.', namespace: ns };
       default:
-        return { state: 'uninitialized', message: 'Walrus store not initialized yet.' };
+        return { state: 'uninitialized', message: 'Walrus store not initialized yet.', namespace: ns };
     }
   }
 
-  private async requireClient(): Promise<any> {
+  /**
+   * Retrieves or instantiates a MemWal SDK client for a specific namespace
+   */
+  public async getClientForNamespace(namespace: string): Promise<any> {
     await this.initialize();
-    if (!this.client) {
+
+    const cached = this.clientMap.get(namespace);
+    if (cached) return cached;
+
+    const privateKey = this.config.privateKey || process.env.MEMWAL_PRIVATE_KEY;
+    const accountId = this.config.accountId || process.env.MEMWAL_ACCOUNT_ID;
+    const serverUrl =
+      this.config.serverUrl ||
+      process.env.MEMWAL_SERVER_URL ||
+      'https://relayer.memory.walrus.xyz';
+
+    if (!privateKey || !accountId) {
       throw this.initError || new WalrusConfigError();
     }
-    return this.client;
+
+    const { MemWal } = await import('@mysten-incubation/memwal');
+    const client = MemWal.create({
+      key: privateKey,
+      accountId,
+      serverUrl,
+      namespace,
+    });
+
+    this.clientMap.set(namespace, client);
+    return client;
+  }
+
+  private async requireClient(namespace?: string): Promise<any> {
+    const ns = namespace || this.defaultNamespace;
+    return this.getClientForNamespace(ns);
   }
 
   public async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
     try {
-      const memwalModule = await import('@mysten-incubation/memwal');
-      const { MemWal } = memwalModule;
-
       const privateKey = this.config.privateKey || process.env.MEMWAL_PRIVATE_KEY;
       const accountId = this.config.accountId || process.env.MEMWAL_ACCOUNT_ID;
-      const serverUrl =
-        this.config.serverUrl ||
-        process.env.MEMWAL_SERVER_URL ||
-        'https://relayer.memory.walrus.xyz';
 
       if (!privateKey || !accountId) {
-        // STRICT: never fall back to MemWalMock. Fail fast with a clear error.
         this.connectionState = 'missing_keys';
         this.initError = new WalrusConfigError();
         throw this.initError;
       }
 
-      this.client = MemWal.create({
+      // Pre-warm the default namespace client to verify connectivity
+      const serverUrl =
+        this.config.serverUrl ||
+        process.env.MEMWAL_SERVER_URL ||
+        'https://relayer.memory.walrus.xyz';
+
+      const { MemWal } = await import('@mysten-incubation/memwal');
+      const client = MemWal.create({
         key: privateKey,
         accountId,
         serverUrl,
-        namespace: this.namespace,
+        namespace: this.defaultNamespace,
       });
 
+      this.clientMap.set(this.defaultNamespace, client);
       this.connectionState = 'connected';
       this.initError = null;
       this.isInitialized = true;
@@ -209,35 +273,32 @@ export class WalrusMemWalStore implements MemoryStore {
       if (this.connectionState !== 'missing_keys') {
         this.connectionState = 'error';
       }
-      // Initialization is lazy and idempotent: methods using the client must
-      // call requireClient() and surface the failure instead of silently
-      // degrading to fake local state.
       this.isInitialized = true;
       throw this.initError;
     }
   }
 
   /**
-   * Persists a StructuredMemory into Walrus MemWal
+   * Persists a StructuredMemory into Walrus MemWal under the user's specific namespace
    */
   public async save(
     memory: StructuredMemory
-  ): Promise<{ blobId?: string; memory: StructuredMemory }> {
-    const client = await this.requireClient();
+  ): Promise<{ blobId?: string; memory: StructuredMemory; namespace: string }> {
+    const userNamespace = getUserNamespace(memory.userId);
+    const client = await this.getClientForNamespace(userNamespace);
 
     const payloadText = encodeMemoryPayload(memory);
 
     let blobId: string;
     try {
-      const res = await client.rememberAndWait(payloadText, this.namespace);
+      const res = await client.rememberAndWait(payloadText, userNamespace);
       const returnedId = res?.blob_id || res?.id;
       if (!returnedId) {
-        throw new Error('Walrus MemWal did not return a blob ID - persistence not confirmed.');
+        throw new Error('Walrus MemWal did not return a blob ID: persistence not confirmed.');
       }
       blobId = returnedId;
     } catch (error) {
-      // STRICT: never fabricate a blob ID on failure. Surface the real error.
-      console.error('[WalrusStore] rememberAndWait failed:', error);
+      console.error(`[WalrusStore] rememberAndWait failed for namespace ${userNamespace}:`, error);
       throw error instanceof Error ? error : new Error(String(error));
     }
 
@@ -250,7 +311,7 @@ export class WalrusMemWalStore implements MemoryStore {
     this.memoryCache.set(persisted.id, persisted);
     this.blobToMemoryId.set(blobId, persisted.id);
 
-    return { blobId, memory: persisted };
+    return { blobId, memory: persisted, namespace: userNamespace };
   }
 
   /**
@@ -265,7 +326,8 @@ export class WalrusMemWalStore implements MemoryStore {
    * Performs semantic query against MemWal and applies domain-level filters and ranking
    */
   public async search(query: MemoryQuery): Promise<MemorySearchResult[]> {
-    const client = await this.requireClient();
+    const targetNamespace = getUserNamespace(query.userId);
+    const client = await this.getClientForNamespace(targetNamespace);
 
     let recalledBlobs: Array<{ blob_id: string; text: string; distance: number; created_at?: string }> = [];
 
@@ -273,8 +335,10 @@ export class WalrusMemWalStore implements MemoryStore {
       if (client?.recall) {
         const recallRes = await client.recall({
           query: query.query,
+          namespace: targetNamespace,
           topK: (query.limit || 10) * 2, // oversample to allow filtering
           maxDistance: 1.5,
+          sort: 'recent',
         });
 
         if (recallRes?.results) {
@@ -282,7 +346,7 @@ export class WalrusMemWalStore implements MemoryStore {
         }
       }
     } catch (err) {
-      console.warn('[WalrusStore] Error during MemWal recall:', err);
+      console.warn(`[WalrusStore] Error during MemWal recall for namespace ${targetNamespace}:`, err);
     }
 
     const candidateMemories: Array<{ memory: StructuredMemory; distance: number }> = [];
@@ -294,7 +358,7 @@ export class WalrusMemWalStore implements MemoryStore {
       let mem = existingId ? this.memoryCache.get(existingId) : null;
 
       if (!mem) {
-        mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at);
+        mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, query.userId || 'default_user');
         this.memoryCache.set(mem.id, mem);
         this.blobToMemoryId.set(item.blob_id, mem.id);
       }
@@ -305,8 +369,11 @@ export class WalrusMemWalStore implements MemoryStore {
       }
     }
 
-    // Fallback: If MemWal returned fewer results, check cached memories for keyword overlap
+    // Fallback: Check cached memories belonging to this user for keyword overlap
     for (const mem of Array.from(this.memoryCache.values())) {
+      if (query.userId && mem.userId !== query.userId && mem.userId !== 'default_user') {
+        continue;
+      }
       if (!seenIds.has(mem.id)) {
         const q = query.query.toLowerCase();
         const matchesKeyword =
@@ -413,13 +480,13 @@ export class WalrusMemWalStore implements MemoryStore {
     if (!existing) return false;
 
     if (existing.storageBlobId) {
-      const client = await this.requireClient();
+      const userNamespace = getUserNamespace(existing.userId);
+      const client = await this.getClientForNamespace(userNamespace);
       if (client?.forget) {
         try {
           await client.forget(existing.storageBlobId);
         } catch (err) {
-          // Surface real deletion failures instead of pretending success.
-          console.error('[WalrusStore] Forget failed:', err);
+          console.error(`[WalrusStore] Forget failed for ${existing.storageBlobId}:`, err);
           throw err instanceof Error ? err : new Error(String(err));
         }
       }
@@ -447,7 +514,7 @@ export class WalrusMemWalStore implements MemoryStore {
       all = all.filter((m) => m.isActive);
     }
     if (filter?.userId) {
-      all = all.filter((m) => m.userId === filter.userId);
+      all = all.filter((m) => m.userId === filter.userId || m.userId === 'default_user');
     }
     if (filter?.domain) {
       all = all.filter((m) => m.domain === filter.domain || m.domain === 'general');
@@ -465,22 +532,25 @@ export class WalrusMemWalStore implements MemoryStore {
   }
 
   /**
-   * Lists memories according to filters, querying live MemWal storage via recall
+   * Lists memories according to filters, querying live MemWal storage via recall in user's namespace
    */
   public async list(filter?: {
     userId?: string;
     domain?: string;
     activeOnly?: boolean;
   }): Promise<StructuredMemory[]> {
+    const targetNamespace = getUserNamespace(filter?.userId);
     try {
-      const client = await this.requireClient();
+      const client = await this.getClientForNamespace(targetNamespace);
       const recallRes = await client.recall({
-        query: 'preference video visual style pacing duration captions audio',
+        query: 'preference video visual style pacing duration captions audio model layout',
+        namespace: targetNamespace,
         limit: 50,
+        sort: 'recent',
       });
       if (recallRes?.results) {
         for (const item of recallRes.results) {
-          const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at);
+          const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, filter?.userId || 'default_user');
           this.memoryCache.set(mem.id, mem);
           if (item.blob_id) {
             this.blobToMemoryId.set(item.blob_id, mem.id);
@@ -488,7 +558,7 @@ export class WalrusMemWalStore implements MemoryStore {
         }
       }
     } catch (err) {
-      console.warn('[WalrusStore] Notice recalling live memories from MemWal:', err);
+      console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
     }
     return this.listSynchronous(filter);
   }
@@ -509,7 +579,6 @@ export class WalrusMemWalStore implements MemoryStore {
       }
       return { status: 'healthy', version: '0.1.6', mode: 'live' };
     } catch (err) {
-      // Honest failure state - never fabricate a "healthy" response.
       const connection = this.getConnectionState();
       return { status: connection.state, version: '0.1.6', mode: 'live', detail: connection.message } as any;
     }
@@ -519,19 +588,17 @@ export class WalrusMemWalStore implements MemoryStore {
    * Restores/reconstructs indexed entries from Walrus storage
    */
   public async restore(namespace?: string): Promise<{ restored: number; total: number }> {
-    const client = await this.requireClient();
-    const ns = namespace || this.namespace;
+    const ns = namespace || this.defaultNamespace;
+    const client = await this.getClientForNamespace(ns);
     if (client?.restore) {
       try {
         const res = await client.restore(ns);
         return { restored: res.restored || 0, total: res.total || 0 };
       } catch (err) {
-        console.warn('[WalrusStore] Restore warning:', err);
+        console.warn(`[WalrusStore] Restore warning for namespace ${ns}:`, err);
         throw err instanceof Error ? err : new Error(String(err));
       }
     }
-    // No restore capability on this client: report honest zero counts instead
-    // of pretending cached entries were restored from Walrus.
     return { restored: 0, total: 0 };
   }
 }

@@ -9,9 +9,17 @@ interface MemoriesViewProps {
   memories: MediaPreference[];
   onForget: (id: string) => void;
   onOpenStudio?: () => void;
+  userNamespace?: string;
+  userEmail?: string;
 }
 
-export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewProps) {
+export function MemoriesView({
+  memories,
+  onForget,
+  onOpenStudio,
+  userNamespace,
+  userEmail,
+}: MemoriesViewProps) {
   const [selectedMemory, setSelectedMemory] = useState<MediaPreference | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'superseded'>('all');
   const { health, isLoading } = useSystemHealth();
@@ -32,9 +40,17 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
       {/* View Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
-            Agent Memories
-          </h2>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
+              Agent Memories
+            </h2>
+            {userNamespace && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/40 text-cyan-400 border border-cyan-800/50 text-[11px] font-mono" title="Isolated Sui Walrus MemWal Namespace">
+                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Walrus Namespace: {userNamespace}</span>
+              </span>
+            )}
+          </div>
           <p className="text-[var(--fg-muted)] text-xs sm:text-sm mt-1">
             Review and manage the creative preferences your agent has learned from your feedback.
           </p>

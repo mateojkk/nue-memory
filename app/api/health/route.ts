@@ -8,8 +8,10 @@ export const dynamic = 'force-dynamic';
  * Never fabricates "healthy" - reports real configuration and connection state.
  * No secrets are exposed, only presence/absence of configuration.
  */
-export async function GET() {
-  const walrus = await memWalService.getConnectionState();
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId') || searchParams.get('email') || undefined;
+  const walrus = await memWalService.getConnectionState(userId);
 
   const livepeerConfigured = Boolean(
     process.env.LIVEPEER_API_KEY || process.env.LIVEPEER_AGENT_KEY

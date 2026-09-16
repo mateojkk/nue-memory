@@ -36,6 +36,7 @@ export interface MediaPreference {
   updatedAt: string;
   projectId?: string;
   projectTitle?: string;
+  userId?: string;
   memwalBlobId?: string;
   supersedesId?: string; // If this memory updated/replaced an older one
   isActive: boolean;

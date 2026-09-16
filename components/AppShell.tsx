@@ -88,6 +88,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
 
   // Memory & Confirmation State
   const [activeMemories, setActiveMemories] = useState<MediaPreference[]>([]);
+  const [activeNamespace, setActiveNamespace] = useState<string>('nue-memory');
   const [pendingPreferences, setPendingPreferences] = useState<
     Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[]
   >([]);
@@ -134,17 +135,21 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     }
   };
 
-  // Load initial memories directly from MemWal on Walrus
+  // Load memories directly from MemWal on Walrus for the current user's namespace
   useEffect(() => {
-    fetchMemories();
-  }, []);
+    fetchMemories(email || undefined);
+  }, [email]);
 
-  const fetchMemories = async () => {
+  const fetchMemories = async (userEmail?: string) => {
     try {
-      const res = await fetch('/api/memwal');
+      const url = userEmail ? `/api/memwal?email=${encodeURIComponent(userEmail)}` : '/api/memwal';
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.preferences)) {
         setActiveMemories(data.preferences);
+      }
+      if (data.namespace) {
+        setActiveNamespace(data.namespace);
       }
     } catch (e) {
       console.warn('Failed to load memories from MemWal:', e);
@@ -173,6 +178,8 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           versionNumber,
           projectTitle: targetTitle,
           feedbackContext,
+          email: email || undefined,
+          userId: email || undefined,
         }),
       });
 
@@ -287,6 +294,8 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           feedback: text,
           projectTitle: currentProj.title,
           currentBrief: currentProj.initialPrompt,
+          email: email || undefined,
+          userId: email || undefined,
         }),
       });
 
@@ -314,11 +323,17 @@ export function NueApp({ view, initialTab }: NueAppProps) {
             const memRes = await fetch('/api/memwal', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'remember', preferences: autoSaveCandidates }),
+              body: JSON.stringify({
+                action: 'remember',
+                preferences: autoSaveCandidates,
+                email: email || undefined,
+                userId: email || undefined,
+              }),
             });
             const memData = await memRes.json();
             if (memData.success) {
-              const getRes = await fetch('/api/memwal');
+              const getUrl = email ? `/api/memwal?email=${encodeURIComponent(email)}` : '/api/memwal';
+              const getRes = await fetch(getUrl);
               const getData = await getRes.json();
               if (getData.success && getData.preferences) {
                 setActiveMemories(getData.preferences);
@@ -371,12 +386,18 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       const res = await fetch('/api/memwal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'remember', preferences: pendingPreferences }),
+        body: JSON.stringify({
+          action: 'remember',
+          preferences: pendingPreferences,
+          email: email || undefined,
+          userId: email || undefined,
+        }),
       });
 
       const data = await res.json();
       if (data.success) {
-        const getRes = await fetch('/api/memwal');
+        const getUrl = email ? `/api/memwal?email=${encodeURIComponent(email)}` : '/api/memwal';
+        const getRes = await fetch(getUrl);
         const getData = await getRes.json();
         if (getData.success && getData.preferences) {
           setActiveMemories(getData.preferences);
@@ -458,7 +479,12 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       await fetch('/api/memwal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'forget', id }),
+        body: JSON.stringify({
+          action: 'forget',
+          id,
+          email: email || undefined,
+          userId: email || undefined,
+        }),
       });
       setActiveMemories((prev) => prev.filter((m) => m.id !== id));
     } catch (e) {
@@ -518,6 +544,8 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           projects={projects}
           currentProjectIndex={currentProjectIndex}
           onSelectProject={(index) => setCurrentProjectIndex(index)}
+          userNamespace={activeNamespace}
+          userEmail={email || undefined}
         />
       </>
     );

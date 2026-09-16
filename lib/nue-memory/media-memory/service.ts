@@ -18,6 +18,7 @@ export function structuredToMediaPref(mem: StructuredMemory): MediaPreference {
     updatedAt: mem.updatedAt,
     projectId: mem.source.projectId,
     projectTitle: mem.source.eventContext,
+    userId: mem.userId,
     memwalBlobId: mem.storageBlobId,
     supersedesId: mem.supersedesId,
     isActive: mem.isActive,
@@ -30,7 +31,7 @@ export function structuredToMediaPref(mem: StructuredMemory): MediaPreference {
 export function mediaPrefToStructured(pref: MediaPreference): StructuredMemory {
   return {
     id: pref.id || `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    userId: 'default_user',
+    userId: pref.userId || 'default_user',
     type: 'preference',
     category: pref.category,
     value: pref.preference,
@@ -77,14 +78,14 @@ export class MemWalService {
 
   /**
    * Honest connection state for UI indicators: Disconnected / Missing Keys
-   * vs. Walrus Relayer (Connected).
+   * vs. Walrus Relayer (Connected), scoped to user namespace.
    */
-  public async getConnectionState(): Promise<{ state: string; message: string }> {
+  public async getConnectionState(userId?: string): Promise<{ state: string; message: string; namespace?: string }> {
     try {
       await this.store.initialize();
-      return this.store.getConnectionState();
+      return this.store.getConnectionState(userId);
     } catch (err) {
-      const conn = this.store.getConnectionState();
+      const conn = this.store.getConnectionState(userId);
       return conn.state !== 'uninitialized' ? conn : {
         state: 'error',
         message: err instanceof Error ? err.message : String(err),
@@ -93,19 +94,20 @@ export class MemWalService {
   }
 
   /**
-   * Persists a structured MediaPreference to Walrus Memory via MemWal
+   * Persists a structured MediaPreference to Walrus Memory via MemWal in the user's namespace
    */
   public async rememberPreference(
     preference: MediaPreference
-  ): Promise<{ blobId: string; preference: MediaPreference }> {
+  ): Promise<{ blobId: string; preference: MediaPreference; namespace?: string }> {
     await this.initialize();
 
     const structured = mediaPrefToStructured(preference);
-    const { blobId, memory } = await this.store.save(structured);
+    const { blobId, memory, namespace } = await this.store.save(structured);
 
     const updatedPref: MediaPreference = {
       ...preference,
       id: memory.id,
+      userId: memory.userId,
       memwalBlobId: blobId || memory.storageBlobId,
       supersedesId: memory.supersedesId,
       isActive: memory.isActive,
@@ -113,18 +115,19 @@ export class MemWalService {
     };
 
     this.memoryCache.set(updatedPref.id, updatedPref);
-    return { blobId: updatedPref.memwalBlobId as string, preference: updatedPref };
+    return { blobId: updatedPref.memwalBlobId as string, preference: updatedPref, namespace };
   }
 
   /**
-   * Recalls preferences relevant to a given query or brief using MemWal semantic vector search
+   * Recalls preferences relevant to a given query or brief using MemWal semantic vector search in user's namespace
    */
-  public async recallPreferences(query: string): Promise<MediaPreference[]> {
+  public async recallPreferences(query: string, userId?: string): Promise<MediaPreference[]> {
     await this.initialize();
 
     const searchResults = await this.store.search({
       query,
       domain: 'media',
+      userId,
       includeSuperseded: false,
       limit: 10,
     });
@@ -139,19 +142,19 @@ export class MemWalService {
   }
 
   /**
-   * Returns all stored preferences (both active and evolved/superseded)
+   * Returns all stored preferences (both active and evolved/superseded) for a user
    */
-  public getAllPreferences(includeInactive = false): MediaPreference[] {
-    const list = this.store.listSynchronous({ activeOnly: !includeInactive });
+  public getAllPreferences(userId?: string, includeInactive = false): MediaPreference[] {
+    const list = this.store.listSynchronous({ userId, activeOnly: !includeInactive });
     return list.map(structuredToMediaPref);
   }
 
   /**
-   * Returns all stored preferences asynchronously
+   * Returns all stored preferences asynchronously for a user from their Walrus namespace
    */
-  public async getAllPreferencesAsync(includeInactive = false): Promise<MediaPreference[]> {
+  public async getAllPreferencesAsync(userId?: string, includeInactive = false): Promise<MediaPreference[]> {
     await this.initialize();
-    const list = await this.store.list({ activeOnly: !includeInactive });
+    const list = await this.store.list({ userId, activeOnly: !includeInactive });
     return list.map(structuredToMediaPref);
   }
 

@@ -18,17 +18,21 @@ function errorResponse(error: unknown) {
   return NextResponse.json({ success: false, error: err?.message || String(error) }, { status: 500 });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId') || searchParams.get('email') || undefined;
+
     await memWalService.initialize();
-    const preferences = await memWalService.getAllPreferencesAsync(true);
-    const connection = await memWalService.getConnectionState();
+    const preferences = await memWalService.getAllPreferencesAsync(userId, true);
+    const connection = await memWalService.getConnectionState(userId);
     return NextResponse.json({
       success: true,
       preferences,
       count: preferences.filter((p) => p.isActive).length,
       totalCount: preferences.length,
       storageLayer: 'MemWal (Walrus Memory on Sui)',
+      namespace: connection.namespace,
       connection,
     });
   } catch (error) {
@@ -39,22 +43,25 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { action, preference, preferences, id } = body;
+    const { action, preference, preferences, id, userId, email } = body;
+    const effectiveUserId = userId || email || undefined;
 
     if (action === 'remember') {
       const itemsToRemember: MediaPreference[] = preferences || (preference ? [preference] : []);
       if (itemsToRemember.length > 0) {
-        const storedItems: { blobId: string; preference: MediaPreference }[] = [];
+        const storedItems: { blobId: string; preference: MediaPreference; namespace?: string }[] = [];
         let allSuperseded: MediaPreference[] = [];
 
         for (const item of itemsToRemember) {
-          const currentPreferences = memWalService.getAllPreferences(true);
+          const itemUserId = item.userId || effectiveUserId || 'default_user';
+          const currentPreferences = memWalService.getAllPreferences(itemUserId, true);
           const evolution = evolveMemories(currentPreferences, item);
           const newId = item.id || `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
           for (const superseded of evolution.supersededMemories) {
             const updatedSuperseded: MediaPreference = {
               ...superseded,
+              userId: itemUserId,
               isActive: false,
               updatedAt: new Date().toISOString(),
             };
@@ -65,6 +72,7 @@ export async function POST(request: Request) {
           const preferenceToPersist: MediaPreference = {
             ...item,
             id: newId,
+            userId: itemUserId,
             createdAt: item.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isActive: true,
@@ -75,7 +83,7 @@ export async function POST(request: Request) {
           storedItems.push(result);
         }
 
-        const activeList = memWalService.getAllPreferences(false);
+        const activeList = memWalService.getAllPreferences(effectiveUserId, false);
 
         return NextResponse.json({
           success: true,
@@ -83,6 +91,7 @@ export async function POST(request: Request) {
           storedPreferences: storedItems.map((s) => s.preference),
           blobId: storedItems[storedItems.length - 1]?.blobId,
           blobIds: storedItems.map((s) => s.blobId),
+          namespace: storedItems[storedItems.length - 1]?.namespace,
           superseded: allSuperseded,
           totalActiveCount: activeList.length,
         });

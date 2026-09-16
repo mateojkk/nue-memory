@@ -9,11 +9,12 @@ export { extractCoreMemories as extractMemories };
  */
 export function classifyFeedback(
   feedbackText: string,
-  projectContext?: { projectTitle?: string; currentBrief?: string }
+  projectContext?: { projectTitle?: string; currentBrief?: string; userId?: string }
 ): FeedbackClassification {
   const result = extractCoreMemories(feedbackText, {
     domain: 'media',
     sessionContext: projectContext?.projectTitle,
+    userId: projectContext?.userId,
   });
 
   const extractedPreferences: Omit<
@@ -27,6 +28,7 @@ export function classifyFeedback(
     scope: c.scope === 'domain' ? 'media' : c.scope === 'session' ? 'project' : c.scope,
     source: 'user_feedback',
     projectTitle: projectContext?.projectTitle,
+    userId: projectContext?.userId,
   }));
 
   return {
