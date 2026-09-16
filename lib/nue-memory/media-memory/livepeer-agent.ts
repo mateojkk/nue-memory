@@ -309,9 +309,17 @@ export class LivepeerMediaAgent {
       ? `Applied ${appliedPreferences.length} remembered preferences from Nue Memory: ${appliedPreferences.map((p) => p.category).join(', ')}.`
       : 'Standard baseline generation without prior preferences.';
 
-    const agentNotes = `Livepeer Agent composed version ${versionNumber} via [${livepeerCapability}]. ${appliedSummary}`;
+    const captionHighlight = projectTitle && !projectTitle.toLowerCase().includes('project')
+      ? projectTitle.toUpperCase()
+      : (visualTheme.includes('Apparel')
+          ? 'ELEVATE YOUR STYLE'
+          : visualTheme.includes('Mobile') || visualTheme.includes('Application')
+          ? 'NEXT GENERATION EXPERIENCE'
+          : brief.slice(0, 32).toUpperCase());
 
-    const captionHighlight = visualTheme.includes('Apparel') ? 'ELEVATE YOUR STYLE' : 'THE FUTURE OF APPS IS HERE';
+    const captionSubtext = brief.length > 50 ? `${brief.slice(0, 48)}...` : brief;
+
+    const agentNotes = `Livepeer Agent composed version ${versionNumber} via [${livepeerCapability}]. ${appliedSummary}`;
 
     return {
       versionNumber,
@@ -327,9 +335,7 @@ export class LivepeerMediaAgent {
         enabled: true,
         size: captionSize,
         highlight: captionHighlight,
-        text: captionSize === 'large'
-          ? 'FAST DISCOVERY • INSTANT ACCESS • SEAMLESS FLOW'
-          : 'Discover what is next with effortless performance.',
+        text: captionSubtext,
       },
       audioStyle: {
         enabled: audioTempo !== 'none',

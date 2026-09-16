@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink, Download } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink, Download, Subtitles } from 'lucide-react';
 import { MediaVersion } from '@/lib/types';
 
 interface MediaPreviewProps {
@@ -33,6 +33,8 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [showCaptions, setShowCaptions] = useState(false);
   const [aspectMode, setAspectMode] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [displayMode, setDisplayMode] = useState<'video' | 'keyframe'>('video');
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -89,6 +91,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     if (!videoRef.current) return;
     const curr = videoRef.current.currentTime;
     const dur = videoRef.current.duration || 1;
+    setCurrentTime(curr);
     setProgress((curr / dur) * 100);
   };
 
@@ -349,25 +352,29 @@ ${version.captionStyle.text}
               <span className="truncate max-w-[150px]">{version.audioStyle.style}</span>
             </div>
 
-            {/* Dynamic Animated Captions */}
-            {version.captionStyle?.enabled && displayMode === 'video' && (
-              <div className="absolute bottom-16 inset-x-4 z-20 flex flex-col items-center text-center pointer-events-none">
-                <div
-                  className={`transition-all duration-200 uppercase font-medium tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] ${
-                    version.captionStyle.size === 'large'
-                      ? 'text-lg sm:text-2xl text-[#fef08a] bg-[var(--border)]/90 px-4 py-1.5 rounded-md border border-[var(--accent)]/50'
-                      : 'text-xs sm:text-sm text-[var(--fg)] bg-black/60 px-3 py-1 rounded border border-white/20'
-                  }`}
-                >
-                  {version.captionStyle.highlight}
-                </div>
-                <div
-                  className={`mt-1 font-medium text-[var(--fg)]/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${
-                    version.captionStyle.size === 'large' ? 'text-xs sm:text-sm' : 'text-[11px] text-zinc-300'
-                  }`}
-                >
-                  {version.captionStyle.text}
-                </div>
+            {/* Dynamic Animated Captions (Controlled via CC toggle and timed with playback) */}
+            {version.captionStyle?.enabled && showCaptions && displayMode === 'video' && (
+              <div className="absolute bottom-16 inset-x-4 z-20 flex flex-col items-center text-center pointer-events-none animate-fadeIn">
+                {currentTime < (version.generationDurationSeconds ? version.generationDurationSeconds * 0.6 : 3) && (
+                  <div
+                    className={`transition-all duration-300 uppercase font-medium tracking-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)] ${
+                      version.captionStyle.size === 'large'
+                        ? 'text-base sm:text-xl text-[#fef08a] bg-black/80 px-4 py-1.5 rounded-md border border-[var(--accent)]/50'
+                        : 'text-xs sm:text-sm text-[var(--fg)] bg-black/60 px-3 py-1 rounded border border-white/20'
+                    }`}
+                  >
+                    {version.captionStyle.highlight}
+                  </div>
+                )}
+                {currentTime >= 1 && (
+                  <div
+                    className={`mt-1 font-medium text-[var(--fg)]/90 drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] transition-opacity duration-300 ${
+                      version.captionStyle.size === 'large' ? 'text-xs sm:text-sm' : 'text-[11px] text-zinc-300'
+                    }`}
+                  >
+                    {version.captionStyle.text}
+                  </div>
+                )}
               </div>
             )}
 
@@ -415,9 +422,25 @@ ${version.captionStyle.text}
           <button
             onClick={toggleMute}
             className="p-1.5 rounded-lg text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] hover:scale-110 active:scale-90 transition-all duration-200"
+            title={isMuted ? 'Unmute' : 'Mute'}
           >
             {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
+
+          {version?.captionStyle && (
+            <button
+              onClick={() => setShowCaptions(!showCaptions)}
+              className={`px-2 py-1 rounded-md text-[11px] font-mono transition-all duration-200 flex items-center gap-1 ${
+                showCaptions
+                  ? 'bg-[var(--accent-deep)] text-[#4a2c0e] font-medium shadow-xs'
+                  : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]'
+              }`}
+              title="Toggle On-Screen Captions (CC)"
+            >
+              <Subtitles className="w-3.5 h-3.5" />
+              <span>CC</span>
+            </button>
+          )}
         </div>
 
         {/* Applied Preferences Bar */}
