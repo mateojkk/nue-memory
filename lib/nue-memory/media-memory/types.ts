@@ -46,6 +46,15 @@ export interface FeedbackClassification {
   extractedPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
 }
 
+export interface StoryboardScene {
+  sceneNumber: number;
+  title: string;
+  durationSeconds: number;
+  prompt: string;
+  mediaUrl: string;
+  model: string;
+}
+
 export interface MediaVersion {
   versionNumber: number;
   createdAt: string;
@@ -71,6 +80,7 @@ export interface MediaVersion {
   agentNotes: string;
   generationDurationSeconds: number;
   livepeerCapability?: string;
+  scenes?: StoryboardScene[];
 }
 
 export interface ChatMessage {

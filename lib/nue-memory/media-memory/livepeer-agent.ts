@@ -108,26 +108,33 @@ export class LivepeerMediaAgent {
       if (pref.category === 'duration' || pref.category === 'length') {
         const match = pref.preference.match(/(\d+)\s*(?:seconds?|secs?|s)/i);
         if (match) {
-          targetDuration = Math.min(8, Math.max(3, parseInt(match[1], 10)));
+          targetDuration = Math.max(3, parseInt(match[1], 10));
         }
       }
     }
     if (feedbackContext) {
       const match = feedbackContext.match(/(\d+)\s*(?:seconds?|secs?|s)/i);
       if (match) {
-        targetDuration = Math.min(8, Math.max(3, parseInt(match[1], 10)));
+        targetDuration = Math.max(3, parseInt(match[1], 10));
       }
     }
-    // pixverse-t2v supports 3, 5, or 8 seconds
-    const supportedDuration = targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3;
+
+    // Determine model dispatch strategy based on target duration:
+    // 1. If targetDuration > 8s: Attempt long-form take via seedance-25-t2v (up to 30s)
+    // 2. Otherwise: Use pixverse-t2v clamped to 3, 5, or 8 seconds
+    const isLongForm = targetDuration > 8;
+    const modelToUse = isLongForm ? 'seedance-25-t2v' : 'pixverse-t2v';
+    const effectiveDuration = isLongForm
+      ? Math.min(30, Math.max(10, targetDuration))
+      : (targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3);
 
     // Build Livepeer prompt that includes prompt directives
     const livepeerPrompt = `${brief}. Visual style: ${visualTheme}. Pacing: ${pacing}. Composition: ${aspectRatio}.`;
 
     // Attempt real live render call via Livepeer Agent MCP create_media tool
     let realMediaUrl: string | null = null;
-    let livepeerCapability = 'pixverse-t2v';
-    let generationDuration = supportedDuration;
+    let livepeerCapability = modelToUse;
+    let generationDuration = effectiveDuration;
 
     try {
       const mcpCallRes = await fetch(this.endpoint, {
@@ -146,8 +153,8 @@ export class LivepeerMediaAgent {
             arguments: {
               action: 'generate',
               prompt: livepeerPrompt,
-              model_override: 'pixverse-t2v',
-              duration: supportedDuration,
+              model_override: modelToUse,
+              duration: effectiveDuration,
             },
           },
         }),
@@ -167,10 +174,50 @@ export class LivepeerMediaAgent {
         console.error('[LivepeerAgent] MCP create_media HTTP failure:', mcpCallRes.status, await mcpCallRes.text().catch(() => ''));
       }
     } catch (err) {
-      console.error('[LivepeerAgent] MCP pixverse-t2v call failed:', err);
+      console.error(`[LivepeerAgent] MCP ${modelToUse} call failed:`, err);
     }
 
-    // Fallback: If pixverse-t2v timed out or errored, generate visual asset with flux-schnell
+    // Secondary attempt: if seedance-25-t2v was tried and failed, fallback to pixverse-t2v (8s)
+    if (!realMediaUrl && isLongForm) {
+      try {
+        console.log('[LivepeerAgent] seedance-25-t2v fallback: attempting pixverse-t2v (8s)...');
+        const pixverseRes = await fetch(this.endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json, text/event-stream',
+            ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: Date.now(),
+            method: 'tools/call',
+            params: {
+              name: 'create_media',
+              arguments: {
+                action: 'generate',
+                prompt: livepeerPrompt,
+                model_override: 'pixverse-t2v',
+                duration: 8,
+              },
+            },
+          }),
+        });
+
+        if (pixverseRes.ok) {
+          const pixverseData = await pixverseRes.json();
+          if (pixverseData.result?.structuredContent?.url) {
+            realMediaUrl = pixverseData.result.structuredContent.url;
+            livepeerCapability = 'pixverse-t2v';
+            generationDuration = 8;
+          }
+        }
+      } catch (pvErr) {
+        console.error('[LivepeerAgent] Secondary pixverse fallback failed:', pvErr);
+      }
+    }
+
+    // Tertiary Fallback: If video models timed out or errored, generate visual asset with flux-schnell
     if (!realMediaUrl) {
       try {
         console.log('[LivepeerAgent] Attempting fast visual render fallback via flux-schnell...');
@@ -220,6 +267,44 @@ export class LivepeerMediaAgent {
     const finalMediaUrl = realMediaUrl;
     const finalImageUrl = realMediaUrl;
 
+    // Build multi-scene storyboard breakdown for professional long-form sequencing
+    const storyboardScenes = isLongForm
+      ? [
+          {
+            sceneNumber: 1,
+            title: 'Hook / Problem Intro',
+            durationSeconds: Math.round(generationDuration * 0.25),
+            prompt: `${brief} - Establishing hook. Visual style: ${visualTheme}.`,
+            mediaUrl: finalMediaUrl,
+            model: livepeerCapability,
+          },
+          {
+            sceneNumber: 2,
+            title: 'Feature Demonstration',
+            durationSeconds: Math.round(generationDuration * 0.35),
+            prompt: `${brief} - Core demonstration sequence. Pacing: ${pacing}.`,
+            mediaUrl: finalMediaUrl,
+            model: livepeerCapability,
+          },
+          {
+            sceneNumber: 3,
+            title: 'Impact / Result',
+            durationSeconds: Math.round(generationDuration * 0.25),
+            prompt: `${brief} - Dynamic high-energy impact.`,
+            mediaUrl: finalMediaUrl,
+            model: livepeerCapability,
+          },
+          {
+            sceneNumber: 4,
+            title: 'Call to Action',
+            durationSeconds: Math.round(generationDuration * 0.15),
+            prompt: `${brief} - Final call to action frame.`,
+            mediaUrl: finalMediaUrl,
+            model: livepeerCapability,
+          },
+        ]
+      : undefined;
+
     const appliedSummary = appliedPreferences.length > 0
       ? `Applied ${appliedPreferences.length} remembered preferences from Nue Memory: ${appliedPreferences.map((p) => p.category).join(', ')}.`
       : 'Standard baseline generation without prior preferences.';
@@ -255,6 +340,7 @@ export class LivepeerMediaAgent {
       agentNotes,
       generationDurationSeconds: generationDuration,
       livepeerCapability,
+      scenes: storyboardScenes,
     };
   }
 }

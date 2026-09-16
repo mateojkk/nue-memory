@@ -204,28 +204,32 @@ ${version.captionStyle.text}
             </div>
           )}
 
-          {/* Aspect Ratio Switcher */}
-          <div className="flex bg-[var(--surface-2)]/80 p-0.5 rounded-lg text-xs font-mono">
-            <button
-              onClick={() => setAspectMode('16:9')}
-              className={`px-2.5 py-1 rounded-md transition-all duration-200 ${
-                aspectMode === '16:9'
-                  ? 'bg-[var(--surface)] text-[var(--fg)] font-medium shadow-xs scale-[1.02]'
-                  : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
-              }`}
-            >
-              16:9
-            </button>
-            <button
-              onClick={() => setAspectMode('9:16')}
-              className={`px-2.5 py-1 rounded-md transition-all duration-200 ${
-                aspectMode === '9:16'
-                  ? 'bg-[var(--surface)] text-[var(--fg)] font-medium shadow-xs scale-[1.02]'
-                  : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
-              }`}
-            >
-              9:16
-            </button>
+          {/* Platform Format Presets & Aspect Switcher */}
+          <div className="flex items-center gap-1">
+            <div className="flex bg-[var(--surface-2)]/80 p-0.5 rounded-lg text-xs font-mono">
+              <button
+                onClick={() => setAspectMode('16:9')}
+                className={`px-2.5 py-1 rounded-md transition-all duration-200 ${
+                  aspectMode === '16:9'
+                    ? 'bg-[var(--surface)] text-[var(--fg)] font-medium shadow-xs scale-[1.02]'
+                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
+                }`}
+                title="YouTube / Web (1920x1080 Widescreen)"
+              >
+                16:9 Web
+              </button>
+              <button
+                onClick={() => setAspectMode('9:16')}
+                className={`px-2.5 py-1 rounded-md transition-all duration-200 ${
+                  aspectMode === '9:16'
+                    ? 'bg-[var(--surface)] text-[var(--fg)] font-medium shadow-xs scale-[1.02]'
+                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
+                }`}
+                title="TikTok / YouTube Shorts / Reels (1080x1920 Vertical)"
+              >
+                9:16 Reel
+              </button>
+            </div>
           </div>
 
           {/* Export / Download Actions */}
@@ -235,7 +239,7 @@ ${version.captionStyle.text}
                 onClick={handleExportMp4}
                 disabled={isExporting}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg)] text-xs font-mono border border-[var(--border)] transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50"
-                title="Download MP4 Video directly"
+                title="Download direct MP4 binary"
               >
                 <Download className="w-3 h-3 text-[var(--accent)]" />
                 <span>{isExporting ? 'Exporting...' : 'Export MP4'}</span>
@@ -244,7 +248,7 @@ ${version.captionStyle.text}
                 <button
                   onClick={handleExportVtt}
                   className="flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] text-[11px] font-mono border border-[var(--border)] transition-all duration-200"
-                  title="Export .VTT Subtitles file"
+                  title="Export synchronized .VTT Subtitles file for YouTube / TikTok"
                 >
                   <span>.VTT</span>
                 </button>
@@ -436,6 +440,28 @@ ${version.captionStyle.text}
             <span className="text-[var(--fg-muted)] font-mono text-[10px]">
               {version.generationDurationSeconds}s · {version.livepeerCapability}
             </span>
+          </div>
+        )}
+
+        {/* Storyboard Multi-Scene Sequence Breakdown */}
+        {version?.scenes && version.scenes.length > 0 && (
+          <div className="pt-2 border-t border-[var(--border)]/40 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            <span className="text-[10px] font-mono text-[var(--accent)] uppercase shrink-0 font-medium">
+              Storyboard ({version.scenes.length} Takes):
+            </span>
+            <div className="flex items-center gap-1.5">
+              {version.scenes.map((sc) => (
+                <div
+                  key={sc.sceneNumber}
+                  className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[10px] font-mono text-[var(--fg)] border border-[var(--border)] flex items-center gap-1 shrink-0"
+                  title={sc.prompt}
+                >
+                  <span className="text-[var(--accent)] font-semibold">#{sc.sceneNumber}</span>
+                  <span>{sc.title}</span>
+                  <span className="text-[var(--fg-faint)]">({sc.durationSeconds}s)</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
