@@ -19,16 +19,35 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   onSelectVersion,
   isLoading = false,
 }) => {
+  const isVideoAsset = Boolean(
+    version?.mediaUrl &&
+    (version.mediaUrl.endsWith('.mp4') ||
+     version.mediaUrl.endsWith('.webm') ||
+     version.mediaUrl.includes('.mp4') ||
+     version.mediaUrl.includes('video'))
+  );
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [aspectMode, setAspectMode] = useState<'16:9' | '9:16' | '1:1'>('16:9');
-  const [displayMode, setDisplayMode] = useState<'video' | 'keyframe'>('video');
+  const [displayMode, setDisplayMode] = useState<'video' | 'keyframe'>(() => {
+    if (version?.mediaUrl && !isVideoAsset) return 'keyframe';
+    return 'video';
+  });
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
     if (version?.aspectRatio) {
       setAspectMode(version.aspectRatio);
+    }
+    if (version?.mediaUrl) {
+      const isVid =
+        version.mediaUrl.endsWith('.mp4') ||
+        version.mediaUrl.endsWith('.webm') ||
+        version.mediaUrl.includes('.mp4') ||
+        version.mediaUrl.includes('video');
+      setDisplayMode(isVid ? 'video' : 'keyframe');
     }
   }, [version]);
 
@@ -154,17 +173,17 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
                 : 'w-full h-full'
             }`}
           >
-            {/* If Keyframe mode and thumbnail exists */}
-            {displayMode === 'keyframe' && version.thumbnailUrl ? (
+            {/* If Keyframe mode, or asset is an image/fallback */}
+            {(displayMode === 'keyframe' || !isVideoAsset) ? (
               <div className="relative w-full h-full flex items-center justify-center bg-zinc-950">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={version.thumbnailUrl}
-                  alt="Livepeer Rendered Keyframe"
+                  src={version.thumbnailUrl || version.mediaUrl}
+                  alt="Livepeer Rendered Asset"
                   className="w-full h-full object-cover"
                 />
                 <a
-                  href={version.thumbnailUrl}
+                  href={version.mediaUrl || version.thumbnailUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="absolute bottom-3 right-3 z-30 px-2.5 py-1 rounded-md bg-black/80 hover:bg-black text-[11px] font-mono text-[var(--accent-bright)] hover:text-[var(--fg)] border border-[var(--accent)]/30 flex items-center gap-1.5 backdrop-blur-md transition"
@@ -180,11 +199,18 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
                 src={version.mediaUrl}
                 loop
                 playsInline
+                autoPlay
+                muted={isMuted}
+                onError={() => {
+                  // If browser fails to decode as video, seamlessly switch to high-res viewer
+                  setDisplayMode('keyframe');
+                }}
                 onTimeUpdate={handleTimeUpdate}
                 className="w-full h-full object-cover"
                 onClick={togglePlay}
               />
             )}
+
 
             {/* Overlays reflecting applied preferences */}
             {/* Pacing Badge */}

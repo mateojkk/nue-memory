@@ -167,21 +167,49 @@ export function MediaMemoryWorkspace({
             </div>
           )}
 
-          {/* Workspace Split Layout: Media Preview (7 cols) + Agent Chat (5 cols) */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[580px]">
-            {/* Left Column: Media Preview Player */}
-            <div className="lg:col-span-7 flex flex-col">
-              <MediaPreview
-                version={activeVersion}
-                allVersions={allVersions}
-                selectedVersionIndex={activeProject.currentVersionIndex}
-                onSelectVersion={onSelectVersion}
-                isLoading={isGenerating}
-              />
-            </div>
+          {/* Workspace Layout: Conditional Video Viewer vs Full Creative Agent Chat */}
+          {activeVersion || isGenerating ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[580px]">
+              {/* Left Column: Media Preview Player */}
+              <div className="lg:col-span-7 flex flex-col">
+                <MediaPreview
+                  version={activeVersion}
+                  allVersions={allVersions}
+                  selectedVersionIndex={activeProject.currentVersionIndex}
+                  onSelectVersion={onSelectVersion}
+                  isLoading={isGenerating}
+                />
+              </div>
 
-            {/* Right Column: Agent Chat & Extraction Confirmation */}
-            <div className="lg:col-span-5 flex flex-col space-y-4">
+              {/* Right Column: Agent Chat & Extraction Confirmation */}
+              <div className="lg:col-span-5 flex flex-col space-y-4">
+                <AgentChat
+                  messages={messages}
+                  onSendMessage={onSendMessage}
+                  onRegenerate={onRegenerate}
+                  isLoading={isGenerating}
+                  onSelectSuggestion={(sugg) => onSendMessage(sugg)}
+                  suggestions={[
+                    'Create a 20-second product promo for my new app.',
+                    'The intro is too slow. Make the captions much larger and remove the dramatic music.',
+                    'Create a launch video for my new product.',
+                  ]}
+                />
+
+                {/* Pending Memory Confirmation Trigger */}
+                {pendingPreferences.length > 0 && (
+                  <MemoryConfirmation
+                    detectedPreferences={pendingPreferences}
+                    onConfirmRemember={onConfirmRemember}
+                    onDismiss={onDismissPending}
+                    isSaving={isSavingMemory}
+                  />
+                )}
+              </div>
+            </div>
+          ) : (
+            /* When no video has been generated yet, present full focused Creative Agent interface */
+            <div className="max-w-3xl mx-auto flex flex-col space-y-4 min-h-[540px]">
               <AgentChat
                 messages={messages}
                 onSendMessage={onSendMessage}
@@ -190,8 +218,8 @@ export function MediaMemoryWorkspace({
                 onSelectSuggestion={(sugg) => onSendMessage(sugg)}
                 suggestions={[
                   'Create a 20-second product promo for my new app.',
-                  'The intro is too slow. Make the captions much larger and remove the dramatic music.',
-                  'Create a launch video for my new product.',
+                  'Create a cinematic trailer for an autonomous AI platform.',
+                  'Synthesize a punchy teaser video with high-contrast text and upbeat audio.',
                 ]}
               />
 
@@ -205,7 +233,7 @@ export function MediaMemoryWorkspace({
                 />
               )}
             </div>
-          </div>
+          )}
         </>
       )}
 
