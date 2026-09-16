@@ -203,16 +203,17 @@ export function NueApp({ view, initialTab }: NueAppProps) {
             ? `\n\n✨ Automatically applied ${appliedCount} remembered preference(s) from Nue Memory.`
             : '';
 
-        const durationNotice = newVersion.generationDurationSeconds
-          ? ` (${newVersion.generationDurationSeconds}s clip on ${newVersion.livepeerCapability || 'Livepeer'})`
-          : '';
+        const dur = newVersion.generationDurationSeconds || 5;
+        const cap = newVersion.livepeerCapability || 'pixverse-t2v';
+        const durationNotice = ` (${dur}s clip on ${cap})`;
+        const multiSceneTip = dur <= 8 ? `\n\nTip: Single-shot neural video models render up to 8s takes. Direct feedback like "make it faster" or "add next scene" will compose additional takes into your storyboard.` : '';
 
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-${Date.now()}`,
             sender: 'agent',
-            content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}`,
+            content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}${multiSceneTip}`,
             timestamp: new Date().toISOString(),
             versionNumber: newVersion.versionNumber,
           },

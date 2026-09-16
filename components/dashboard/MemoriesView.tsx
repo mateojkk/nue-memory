@@ -128,7 +128,14 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
 
               {/* Footer Meta */}
               <div className="pt-4 mt-4 border-t border-[var(--surface-2)] text-[10px] font-mono text-[var(--fg-faint)] flex items-center justify-between">
-                <span>Confidence: {mem.strength === 'high' ? '96%' : '88%'}</span>
+                <div className="flex items-center gap-2">
+                  <span>Confidence: {mem.strength === 'high' ? '96%' : '88%'}</span>
+                  {mem.memwalBlobId && (
+                    <span className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent)] font-mono text-[9px] border border-[var(--border)]" title={`Walrus Blob ID: ${mem.memwalBlobId}`}>
+                      Walrus: {mem.memwalBlobId.slice(0, 6)}...
+                    </span>
+                  )}
+                </div>
                 <span className="text-[var(--fg-muted)] group-hover:text-[var(--accent)] transition flex items-center gap-1">
                   <span>Details</span>
                   <Eye className="w-3 h-3" />
@@ -182,6 +189,29 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
                   </span>
                 </div>
               </div>
+
+              {/* Walrus Decentralized Storage Verification */}
+              {selectedMemory.memwalBlobId && (
+                <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-900/40 space-y-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-cyan-400 uppercase font-mono flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-cyan-400" />
+                      Sui Walrus Decentralized Proof
+                    </span>
+                    <a
+                      href={`https://walruscan.com/testnet/blob/${selectedMemory.memwalBlobId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-mono"
+                    >
+                      Walruscan &rarr;
+                    </a>
+                  </div>
+                  <div className="font-mono text-[10px] text-[var(--fg-muted)] truncate bg-black/40 px-2 py-1 rounded">
+                    Blob ID: {selectedMemory.memwalBlobId}
+                  </div>
+                </div>
+              )}
 
               {/* Attribution */}
               <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] space-y-1 text-xs">

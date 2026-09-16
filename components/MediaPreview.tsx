@@ -102,6 +102,61 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     setProgress(clampedPos * 100);
   };
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportMp4 = async () => {
+    if (!version?.mediaUrl) return;
+    setIsExporting(true);
+    try {
+      const response = await fetch(version.mediaUrl);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `nue-v${version.versionNumber}-${version.visualTheme.replace(/\s+/g, '-').toLowerCase()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.warn('[MediaPreview] Direct blob download fallback:', err);
+      // Fallback: direct window download
+      window.open(version.mediaUrl, '_blank');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportVtt = () => {
+    if (!version?.captionStyle) return;
+    const dur = version.generationDurationSeconds || 5;
+    const formatTime = (sec: number) => {
+      const s = Math.floor(sec);
+      const ms = Math.floor((sec - s) * 1000);
+      return `00:00:${String(s).padStart(2, '0')}.${String(ms).padStart(3, '0')}`;
+    };
+
+    const vtt = `WEBVTT - Nue Motion Subtitle Export
+
+00:00:00.500 --> ${formatTime(Math.min(3, dur))}
+${version.captionStyle.highlight}
+
+00:00:01.000 --> ${formatTime(dur)}
+${version.captionStyle.text}
+`;
+
+    const blob = new Blob([vtt], { type: 'text/vtt;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nue-v${version.versionNumber}-subtitles.vtt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm flex flex-col overflow-hidden h-full">
       {/* Top Media Info Bar */}
@@ -175,24 +230,31 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
 
           {/* Export / Download Actions */}
           {version?.mediaUrl && (
-            <div className="flex items-center gap-1">
-              <a
-                href={version.mediaUrl}
-                download={`nue-version-${version.versionNumber}.mp4`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg)] text-xs font-mono border border-[var(--border)] transition-all duration-200 hover:scale-105 active:scale-95"
-                title="Download / Export Video Asset"
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleExportMp4}
+                disabled={isExporting}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg)] text-xs font-mono border border-[var(--border)] transition-all duration-200 hover:scale-105 active:scale-95 disabled:opacity-50"
+                title="Download MP4 Video directly"
               >
                 <Download className="w-3 h-3 text-[var(--accent)]" />
-                <span>Export</span>
-              </a>
+                <span>{isExporting ? 'Exporting...' : 'Export MP4'}</span>
+              </button>
+              {version.captionStyle && (
+                <button
+                  onClick={handleExportVtt}
+                  className="flex items-center gap-1 px-2 py-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] text-[11px] font-mono border border-[var(--border)] transition-all duration-200"
+                  title="Export .VTT Subtitles file"
+                >
+                  <span>.VTT</span>
+                </button>
+              )}
               <a
                 href={version.mediaUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 rounded-md bg-[var(--surface-2)]/80 hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] border border-[var(--border)] transition"
-                title="Open in new tab"
+                title="Open raw stream in new tab"
               >
                 <ExternalLink className="w-3 h-3" />
               </a>
