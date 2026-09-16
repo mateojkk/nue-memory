@@ -199,7 +199,7 @@ export function MemoriesView({ memories, onForget, onOpenStudio }: MemoriesViewP
                       Sui Walrus Decentralized Proof
                     </span>
                     <a
-                      href={`https://walruscan.com/testnet/blob/${selectedMemory.memwalBlobId}`}
+                      href={`https://walruscan.com/${process.env.NEXT_PUBLIC_WALRUS_NETWORK === 'testnet' ? 'testnet' : 'mainnet'}/blob/${selectedMemory.memwalBlobId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[10px] text-cyan-400 hover:text-cyan-300 underline font-mono"
