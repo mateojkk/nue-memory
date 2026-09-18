@@ -64,12 +64,14 @@ export interface NueAppProps {
   view: 'landing' | 'dashboard';
   /** Dashboard tab to open when view is 'dashboard'. */
   initialTab?: DashboardTab;
+  /** Active project id to open when view is 'dashboard'. */
+  initialProjectId?: string;
 }
 
-export function NueApp({ view, initialTab }: NueAppProps) {
+export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const router = useRouter();
   const currentView = view;
-  const { authenticated, email, deductCredits } = useAuth();
+  const { ready, authenticated, email, deductCredits } = useAuth();
 
   // Projects State (Saved and retrieved from Supabase DB)
   const [projects, setProjects] = useState<CreativeProject[]>([]);
@@ -116,6 +118,27 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       const data = await res.json();
       if (data.success && Array.isArray(data.projects) && data.projects.length > 0) {
         setProjects(data.projects);
+
+        // Restore active project from initialProjectId, URL param, or localStorage
+        let targetId = initialProjectId;
+        if (!targetId && typeof window !== 'undefined') {
+          try {
+            const urlParams = new URLSearchParams(window.location.search);
+            targetId = urlParams.get('project') || localStorage.getItem('nue_active_project_id') || undefined;
+          } catch {
+            // Ignore
+          }
+        }
+
+        if (targetId) {
+          const targetIndex = data.projects.findIndex((p: CreativeProject) => p.id === targetId);
+          if (targetIndex >= 0) {
+            setCurrentProjectIndex(targetIndex);
+            if (data.projects[targetIndex].messages && data.projects[targetIndex].messages.length > 0) {
+              setMessages(data.projects[targetIndex].messages);
+            }
+          }
+        }
       }
     } catch (e) {
       console.warn('Failed to load user projects from DB:', e);
@@ -442,6 +465,16 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     const newIndex = projects.length;
     setProjects((prev) => [...prev, newProj]);
     setCurrentProjectIndex(newIndex);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nue_active_project_id', newProj.id);
+        const url = new URL(window.location.href);
+        url.searchParams.set('project', newProj.id);
+        window.history.replaceState(null, '', url.toString());
+      } catch {
+        // Ignore
+      }
+    }
     setPendingPreferences([]);
     persistProjectToDb(newProj);
 
@@ -456,6 +489,27 @@ export function NueApp({ view, initialTab }: NueAppProps) {
 
     if (initialPrompt) {
       handleGenerate(initialPrompt, 1, undefined, newIndex, projectTitle);
+    }
+  };
+
+  // Select Project with persistence
+  const handleSelectProject = (index: number) => {
+    setCurrentProjectIndex(index);
+    const selected = projects[index];
+    if (selected && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nue_active_project_id', selected.id);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('project') !== selected.id) {
+          url.searchParams.set('project', selected.id);
+          window.history.replaceState(null, '', url.toString());
+        }
+      } catch {
+        // Ignore
+      }
+      if (selected.messages && selected.messages.length > 0) {
+        setMessages(selected.messages);
+      }
     }
   };
 
@@ -485,12 +539,30 @@ export function NueApp({ view, initialTab }: NueAppProps) {
       console.warn('Failed to delete project from DB:', e);
     }
 
-    setProjects((prev) => {
-      const updated = prev.filter((p) => p.id !== projectId);
-      return updated;
-    });
+    const remaining = projects.filter((p) => p.id !== projectId);
+    setProjects(remaining);
 
-    setCurrentProjectIndex((prevIndex) => Math.max(0, prevIndex - 1));
+    const nextIdx = Math.max(0, Math.min(currentProjectIndex, remaining.length - 1));
+    setCurrentProjectIndex(nextIdx);
+
+    if (typeof window !== 'undefined') {
+      try {
+        if (remaining[nextIdx]) {
+          localStorage.setItem('nue_active_project_id', remaining[nextIdx].id);
+          const url = new URL(window.location.href);
+          url.searchParams.set('project', remaining[nextIdx].id);
+          window.history.replaceState(null, '', url.toString());
+        } else {
+          localStorage.removeItem('nue_active_project_id');
+          const url = new URL(window.location.href);
+          url.searchParams.delete('project');
+          window.history.replaceState(null, '', url.toString());
+        }
+      } catch {
+        // Ignore
+      }
+    }
+
     setPendingPreferences([]);
     setMessages((prev) => [
       ...prev,
@@ -554,7 +626,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
   if (currentView === 'dashboard') {
     return (
       <>
-        {!authenticated && <AuthGuardModal isOpen={true} />}
+        {!authenticated && ready && <AuthGuardModal isOpen={true} />}
         <NueDashboard
           initialTab={initialTab}
           activeProject={activeProject}
@@ -604,7 +676,7 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           onForgetMemory={handleForgetMemory}
           projects={projects}
           currentProjectIndex={currentProjectIndex}
-          onSelectProject={(index) => setCurrentProjectIndex(index)}
+          onSelectProject={handleSelectProject}
           userNamespace={activeNamespace}
           userEmail={email || undefined}
         />

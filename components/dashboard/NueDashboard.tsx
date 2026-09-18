@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { MemoriesView } from './MemoriesView';
 import { MediaMemoryWorkspace } from './MediaMemoryWorkspace';
@@ -26,6 +26,29 @@ export type DashboardTab =
   | 'projects'
   | 'usage'
   | 'api-keys';
+
+const VALID_TABS: DashboardTab[] = ['media-memory', 'memories', 'projects', 'usage', 'api-keys'];
+
+function getResolvedTab(initialTab?: DashboardTab): DashboardTab {
+  if (typeof window !== 'undefined') {
+    try {
+      const urlTab = new URLSearchParams(window.location.search).get('tab') as DashboardTab | null;
+      if (urlTab && VALID_TABS.includes(urlTab)) {
+        return urlTab;
+      }
+      const savedTab = localStorage.getItem('nue_active_tab') as DashboardTab | null;
+      if (savedTab && VALID_TABS.includes(savedTab)) {
+        return savedTab;
+      }
+    } catch {
+      // In case of restricted storage environments
+    }
+  }
+  if (initialTab && VALID_TABS.includes(initialTab)) {
+    return initialTab;
+  }
+  return 'media-memory';
+}
 
 interface NueDashboardProps {
   /** Tab to open on first render. Defaults to 'media-memory'. */
@@ -82,7 +105,59 @@ export function NueDashboard({
   userEmail,
 }: NueDashboardProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab);
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() => getResolvedTab(initialTab));
+
+  const handleTabChange = (newTab: DashboardTab) => {
+    setActiveTab(newTab);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nue_active_tab', newTab);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('tab') !== newTab) {
+          url.searchParams.set('tab', newTab);
+          window.history.replaceState(null, '', url.toString());
+        }
+      } catch {
+        // Fallback for restricted storage environments
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const currentResolved = getResolvedTab(initialTab);
+    if (currentResolved !== activeTab) {
+      setActiveTab(currentResolved);
+    }
+
+    try {
+      localStorage.setItem('nue_active_tab', currentResolved);
+      const url = new URL(window.location.href);
+      if (url.searchParams.get('tab') !== currentResolved) {
+        url.searchParams.set('tab', currentResolved);
+        window.history.replaceState(null, '', url.toString());
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
+    const handlePopState = () => {
+      try {
+        const p = new URLSearchParams(window.location.search);
+        const t = p.get('tab') as DashboardTab | null;
+        if (t && VALID_TABS.includes(t)) {
+          setActiveTab(t);
+          localStorage.setItem('nue_active_tab', t);
+        }
+      } catch {
+        // Ignore storage errors
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [initialTab]);
 
   const navItems = [
     { id: 'media-memory' as DashboardTab, label: 'Motion', icon: Video, highlight: true },
@@ -124,7 +199,7 @@ export function NueDashboard({
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleTabChange(item.id)}
                 className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg transition-all duration-200 whitespace-nowrap active:scale-95 shrink-0 ${
                   isActive
                     ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-sm'
@@ -150,7 +225,7 @@ export function NueDashboard({
           <MemoriesView
             memories={activeMemories}
             onForget={onForgetMemory}
-            onOpenStudio={() => setActiveTab('media-memory')}
+            onOpenStudio={() => handleTabChange('media-memory')}
             userNamespace={userNamespace}
             userEmail={userEmail}
           />
@@ -190,14 +265,14 @@ export function NueDashboard({
             onRenameProject={onRenameProject}
             onDeleteProject={onDeleteProject}
             onResetProject={onResetProject}
-            onOpenWorkspace={() => setActiveTab('media-memory')}
+            onOpenWorkspace={() => handleTabChange('media-memory')}
           />
         )}
 
         {activeTab === 'usage' && (
           <UsageView
             versions={projects.flatMap((p) => p.versions || [])}
-            onOpenStudio={() => setActiveTab('media-memory')}
+            onOpenStudio={() => handleTabChange('media-memory')}
           />
         )}
 

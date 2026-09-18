@@ -10,7 +10,7 @@ export function useAuth() {
   // Fallback demo user state when Magic key is not yet set in environment
   const [demoUser, setDemoUser] = useState<{ email: string } | null>(() => {
     if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('nue_demo_user');
+      const saved = localStorage.getItem('nue_demo_user') || sessionStorage.getItem('nue_demo_user');
       return saved ? JSON.parse(saved) : null;
     }
     return null;
@@ -102,6 +102,7 @@ export function useAuth() {
       const u = { email: targetEmail };
       setDemoUser(u);
       if (typeof window !== 'undefined') {
+        localStorage.setItem('nue_demo_user', JSON.stringify(u));
         sessionStorage.setItem('nue_demo_user', JSON.stringify(u));
       }
       return { success: true, fallback: true };
@@ -133,6 +134,7 @@ export function useAuth() {
     setUser(null);
     setDemoUser(null);
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('nue_demo_user');
       sessionStorage.removeItem('nue_demo_user');
     }
   };

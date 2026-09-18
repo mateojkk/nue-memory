@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Database, Clock, Eye, Trash2, X, Check, ShieldCheck, ArrowRight } from 'lucide-react';
 import { MediaPreference, StructuredMemory } from '@/lib/types';
 import { useSystemHealth, connectionIndicator } from '@/lib/hooks/useSystemHealth';
@@ -13,6 +13,26 @@ interface MemoriesViewProps {
   userEmail?: string;
 }
 
+const VALID_FILTERS: Array<'all' | 'active' | 'superseded'> = ['all', 'active', 'superseded'];
+
+function getResolvedFilter(): 'all' | 'active' | 'superseded' {
+  if (typeof window !== 'undefined') {
+    try {
+      const urlFilter = new URLSearchParams(window.location.search).get('filter') as 'all' | 'active' | 'superseded' | null;
+      if (urlFilter && VALID_FILTERS.includes(urlFilter)) {
+        return urlFilter;
+      }
+      const savedFilter = localStorage.getItem('nue_memories_filter') as 'all' | 'active' | 'superseded' | null;
+      if (savedFilter && VALID_FILTERS.includes(savedFilter)) {
+        return savedFilter;
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }
+  return 'all';
+}
+
 export function MemoriesView({
   memories,
   onForget,
@@ -21,9 +41,33 @@ export function MemoriesView({
   userEmail,
 }: MemoriesViewProps) {
   const [selectedMemory, setSelectedMemory] = useState<MediaPreference | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'superseded'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'superseded'>(getResolvedFilter);
   const { health, isLoading } = useSystemHealth();
   const walrusIndicator = connectionIndicator(health.walrus.state, isLoading);
+
+  const handleFilterChange = (filter: 'all' | 'active' | 'superseded') => {
+    setActiveTab(filter);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nue_memories_filter', filter);
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('filter') !== filter) {
+          url.searchParams.set('filter', filter);
+          window.history.replaceState(null, '', url.toString());
+        }
+      } catch {
+        // Ignore
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const resolved = getResolvedFilter();
+    if (resolved !== activeTab) {
+      setActiveTab(resolved);
+    }
+  }, []);
 
   const activeMemories = memories.filter((m) => m.isActive);
   const supersededMemories = memories.filter((m) => !m.isActive);
@@ -59,7 +103,7 @@ export function MemoriesView({
         {/* Filter Tabs */}
         <div className="flex items-center gap-1.5 p-1 bg-[var(--surface-2)] rounded-lg text-xs font-medium">
           <button
-            onClick={() => setActiveTab('all')}
+            onClick={() => handleFilterChange('all')}
             className={`px-3 py-1.5 rounded-md transition ${
               activeTab === 'all' ? 'bg-[var(--surface)] text-[var(--fg)] font-medium shadow-xs' : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
             }`}
@@ -67,7 +111,7 @@ export function MemoriesView({
             All ({memories.length})
           </button>
           <button
-            onClick={() => setActiveTab('active')}
+            onClick={() => handleFilterChange('active')}
             className={`px-3 py-1.5 rounded-md transition ${
               activeTab === 'active' ? 'bg-[var(--surface)] text-emerald-500 font-medium shadow-xs' : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
             }`}
@@ -75,7 +119,7 @@ export function MemoriesView({
             Active ({activeMemories.length})
           </button>
           <button
-            onClick={() => setActiveTab('superseded')}
+            onClick={() => handleFilterChange('superseded')}
             className={`px-3 py-1.5 rounded-md transition ${
               activeTab === 'superseded' ? 'bg-[var(--surface)] text-amber-500 font-medium shadow-xs' : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
             }`}
