@@ -42,7 +42,30 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memories ENABLE ROW LEVEL SECURITY;
 
--- Allow public access with Anon Key for Hackathon demo
-CREATE POLICY "Public profiles access" ON public.profiles FOR ALL USING (true);
-CREATE POLICY "Public projects access" ON public.projects FOR ALL USING (true);
-CREATE POLICY "Public memories access" ON public.memories FOR ALL USING (true);
+-- Production Security Policies:
+-- Restricts rows so callers can only view and update their own records matching their verified identity.
+-- When using Supabase JWT / Auth:
+CREATE POLICY "User profiles self access"
+    ON public.profiles
+    FOR ALL
+    USING (email = auth.jwt() ->> 'email' OR auth.role() = 'service_role')
+    WITH CHECK (email = auth.jwt() ->> 'email' OR auth.role() = 'service_role');
+
+CREATE POLICY "User projects self access"
+    ON public.projects
+    FOR ALL
+    USING (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role')
+    WITH CHECK (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role');
+
+CREATE POLICY "User memories self access"
+    ON public.memories
+    FOR ALL
+    USING (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role')
+    WITH CHECK (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role');
+
+-- Performance and Security Indexes
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles (email);
+CREATE INDEX IF NOT EXISTS idx_projects_user_id ON public.projects (user_id);
+CREATE INDEX IF NOT EXISTS idx_memories_user_id ON public.memories (user_id);
+CREATE INDEX IF NOT EXISTS idx_memories_is_active ON public.memories (user_id, is_active);
+

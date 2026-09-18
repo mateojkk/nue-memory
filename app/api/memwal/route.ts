@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { memWalService } from '@/lib/walrus-memwal/client';
 import { evolveMemories } from '@/lib/nue-memory/evolution';
 import { MediaPreference } from '@/lib/types';
+import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
+import { sanitizeText } from '@/lib/security/sanitize';
+import { authenticateRequest } from '@/lib/auth/server';
 
 /**
  * Maps Walrus configuration failures to an explicit 503 so the UI can render
@@ -21,11 +24,25 @@ function errorResponse(error: unknown) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId') || searchParams.get('email') || undefined;
+    const userParam = searchParams.get('userId') || searchParams.get('email') || undefined;
+
+    // Authenticate caller identity
+    const auth = await authenticateRequest(request, userParam);
+    const effectiveUserId = auth.email || userParam || undefined;
+
+    // Rate limit: 45 requests per minute
+    const clientId = getClientIdentifier(request, effectiveUserId);
+    const rateCheck = checkRateLimit(`memwal:get:${clientId}`, 45, 60000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.resetSeconds) } }
+      );
+    }
 
     await memWalService.initialize();
-    const preferences = await memWalService.getAllPreferencesAsync(userId, true);
-    const connection = await memWalService.getConnectionState(userId);
+    const preferences = await memWalService.getAllPreferencesAsync(effectiveUserId, true);
+    const connection = await memWalService.getConnectionState(effectiveUserId);
     return NextResponse.json({
       success: true,
       preferences,
@@ -44,7 +61,20 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { action, preference, preferences, id, userId, email } = body;
-    const effectiveUserId = userId || email || undefined;
+
+    // Authenticate caller identity
+    const auth = await authenticateRequest(request, userId || email);
+    const effectiveUserId = auth.email || userId || email || undefined;
+
+    // Rate limit: 30 mutations per minute
+    const clientId = getClientIdentifier(request, effectiveUserId);
+    const rateCheck = checkRateLimit(`memwal:post:${clientId}`, 30, 60000);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, error: 'Too many requests. Please slow down.' },
+        { status: 429, headers: { 'Retry-After': String(rateCheck.resetSeconds) } }
+      );
+    }
 
     if (action === 'remember') {
       const itemsToRemember: MediaPreference[] = preferences || (preference ? [preference] : []);
