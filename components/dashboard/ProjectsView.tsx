@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Video, Calendar, ArrowRight, Layers, Edit2, CheckCheck, X } from 'lucide-react';
+import { Plus, Video, Calendar, ArrowRight, Layers, Edit2, CheckCheck, X, Trash2, RotateCcw } from 'lucide-react';
 import { CreativeProject } from '@/lib/types';
 
 interface ProjectsViewProps {
@@ -10,6 +10,8 @@ interface ProjectsViewProps {
   onSelectProject: (index: number) => void;
   onNewProject: (title?: string, prompt?: string) => void;
   onRenameProject?: (projectId: string, newTitle: string) => void;
+  onDeleteProject?: (projectId: string) => void;
+  onResetProject?: (projectId: string) => void;
   onOpenWorkspace: () => void;
 }
 
@@ -19,6 +21,8 @@ export function ProjectsView({
   onSelectProject,
   onNewProject,
   onRenameProject,
+  onDeleteProject,
+  onResetProject,
   onOpenWorkspace,
 }: ProjectsViewProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -159,7 +163,7 @@ export function ProjectsView({
                   </div>
                 </div>
 
-                <div className="pt-5 mt-5 border-t border-[var(--border)]/50 flex items-center justify-between">
+                <div className="pt-5 mt-5 border-t border-[var(--border)]/50 flex items-center justify-between gap-2 flex-wrap">
                   <button
                     onClick={() => {
                       onSelectProject(idx);
@@ -170,6 +174,29 @@ export function ProjectsView({
                     <span>Open in Media Studio</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </button>
+
+                  <div className="flex items-center gap-1">
+                    {onResetProject && (
+                      <button
+                        onClick={() => onResetProject(proj.id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
+                        title="Reset all generated versions in this project"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Reset</span>
+                      </button>
+                    )}
+                    {onDeleteProject && (
+                      <button
+                        onClick={() => onDeleteProject(proj.id)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono text-red-400 hover:text-red-300 hover:bg-red-950/30 transition"
+                        title="Delete project"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );

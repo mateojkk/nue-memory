@@ -473,6 +473,65 @@ export function NueApp({ view, initialTab }: NueAppProps) {
     });
   };
 
+  // Delete Project
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      if (email) {
+        await fetch(`/api/projects?id=${encodeURIComponent(projectId)}&email=${encodeURIComponent(email)}`, {
+          method: 'DELETE',
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to delete project from DB:', e);
+    }
+
+    setProjects((prev) => {
+      const updated = prev.filter((p) => p.id !== projectId);
+      return updated;
+    });
+
+    setCurrentProjectIndex((prevIndex) => Math.max(0, prevIndex - 1));
+    setPendingPreferences([]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `msg-delete-${Date.now()}`,
+        sender: 'agent',
+        content: 'Project deleted. Your persistent memories on Walrus remain intact.',
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+  };
+
+  // Reset Project (clears generated versions and chat while preserving project and memory)
+  const handleResetProject = (projectId: string) => {
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === projectId) {
+          const resetProj: CreativeProject = {
+            ...p,
+            currentVersionIndex: 0,
+            versions: [],
+          };
+          persistProjectToDb(resetProj);
+          return resetProj;
+        }
+        return p;
+      });
+      return updated;
+    });
+
+    setPendingPreferences([]);
+    setMessages([
+      {
+        id: `msg-reset-${Date.now()}`,
+        sender: 'agent',
+        content: 'Project reset. Generated media versions have been cleared. Ready for your next creative prompt.',
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+  };
+
   // Forget memory
   const handleForgetMemory = async (id: string) => {
     try {
@@ -539,6 +598,8 @@ export function NueApp({ view, initialTab }: NueAppProps) {
           isSavingMemory={isSavingMemory}
           onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
           onRenameProject={handleRenameProject}
+          onDeleteProject={handleDeleteProject}
+          onResetProject={handleResetProject}
           activeMemories={activeMemories}
           onForgetMemory={handleForgetMemory}
           projects={projects}

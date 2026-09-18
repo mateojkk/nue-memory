@@ -228,7 +228,7 @@ h1, h2, h3, h4, h5, h6, b, strong, th {
   to { opacity: 1; }
 }
 
-/* ---- Elimination of focus rings, outline rings, and box rings everywhere ---- */
+/* ---- Elimination of focus rings, outline rings, box rings, and unwanted borders ---- */
 *,
 *::before,
 *::after,
@@ -263,6 +263,15 @@ div:focus-visible {
   --tw-ring-offset-width: 0px !important;
   --tw-ring-inset: var(--tw-empty,/*!*/ /*!*/) !important;
   --tw-ring-offset-color: transparent !important;
+}
+
+/* Seamless borderless styling for buttons and cards */
+button,
+.interactive-card,
+.nue-card,
+.nue-btn-secondary,
+.nue-btn-primary {
+  border: none !important;
 }
 
 

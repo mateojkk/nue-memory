@@ -5,7 +5,7 @@ import { MediaPreview } from '@/components/MediaPreview';
 import { AgentChat } from '@/components/AgentChat';
 import { MemoryConfirmation } from '@/components/MemoryConfirmation';
 import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
-import { Plus, Layers, Check, X, Sparkles, FolderPlus, Edit2, CheckCheck } from 'lucide-react';
+import { Plus, Layers, Check, X, Sparkles, FolderPlus, Edit2, CheckCheck, Trash2, RotateCcw } from 'lucide-react';
 
 interface MediaMemoryWorkspaceProps {
   activeProject: CreativeProject | null;
@@ -22,6 +22,8 @@ interface MediaMemoryWorkspaceProps {
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
   onRenameProject?: (projectId: string, newTitle: string) => void;
+  onDeleteProject?: (projectId: string) => void;
+  onResetProject?: (projectId: string) => void;
   activeMemories: MediaPreference[];
   projects?: CreativeProject[];
   currentProjectIndex?: number;
@@ -43,6 +45,8 @@ export function MediaMemoryWorkspace({
   isSavingMemory,
   onNewProject,
   onRenameProject,
+  onDeleteProject,
+  onResetProject,
   activeMemories,
   projects = [],
   currentProjectIndex = 0,
@@ -126,6 +130,26 @@ export function MediaMemoryWorkspace({
                       <span>{activeProject.title}</span>
                       <Edit2 className="w-2.5 h-2.5 opacity-40 group-hover:opacity-100 transition" />
                     </span>
+
+                    {onResetProject && (
+                      <button
+                        onClick={() => onResetProject(activeProject.id)}
+                        className="p-1 rounded text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
+                        title="Reset all versions in this project"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </button>
+                    )}
+
+                    {onDeleteProject && (
+                      <button
+                        onClick={() => onDeleteProject(activeProject.id)}
+                        className="p-1 rounded text-[var(--fg-muted)] hover:text-red-400 hover:bg-red-950/20 transition"
+                        title="Delete this project"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 )}
               </>

@@ -44,6 +44,8 @@ interface NueDashboardProps {
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
   onRenameProject?: (projectId: string, newTitle: string) => void;
+  onDeleteProject?: (projectId: string) => void;
+  onResetProject?: (projectId: string) => void;
   activeMemories: MediaPreference[];
   onForgetMemory: (id: string) => void;
   projects: CreativeProject[];
@@ -69,6 +71,8 @@ export function NueDashboard({
   isSavingMemory,
   onNewProject,
   onRenameProject,
+  onDeleteProject,
+  onResetProject,
   activeMemories,
   onForgetMemory,
   projects,
@@ -168,6 +172,8 @@ export function NueDashboard({
             isSavingMemory={isSavingMemory}
             onNewProject={onNewProject}
             onRenameProject={onRenameProject}
+            onDeleteProject={onDeleteProject}
+            onResetProject={onResetProject}
             activeMemories={activeMemories}
             projects={projects}
             currentProjectIndex={currentProjectIndex}
@@ -182,6 +188,8 @@ export function NueDashboard({
             onSelectProject={onSelectProject}
             onNewProject={onNewProject}
             onRenameProject={onRenameProject}
+            onDeleteProject={onDeleteProject}
+            onResetProject={onResetProject}
             onOpenWorkspace={() => setActiveTab('media-memory')}
           />
         )}
