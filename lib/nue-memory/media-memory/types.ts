@@ -92,6 +92,7 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   versionNumber?: number;
+  imageUrl?: string;
 }
 
 export interface CreativeProject {
@@ -112,6 +113,7 @@ export interface GenerateMediaRequest {
   projectTitle: string;
   feedbackContext?: string;
   creativeDirectives?: RetrievalResult['creativeDirectives'];
+  imageUrl?: string;
 }
 
 export interface RetrievalResult {

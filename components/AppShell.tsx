@@ -130,14 +130,14 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           }
         }
 
+        let targetIndex = 0;
         if (targetId) {
-          const targetIndex = data.projects.findIndex((p: CreativeProject) => p.id === targetId);
-          if (targetIndex >= 0) {
-            setCurrentProjectIndex(targetIndex);
-            if (data.projects[targetIndex].messages && data.projects[targetIndex].messages.length > 0) {
-              setMessages(data.projects[targetIndex].messages);
-            }
-          }
+          const foundIdx = data.projects.findIndex((p: CreativeProject) => p.id === targetId);
+          if (foundIdx >= 0) targetIndex = foundIdx;
+        }
+        setCurrentProjectIndex(targetIndex);
+        if (data.projects[targetIndex]?.messages && data.projects[targetIndex].messages.length > 0) {
+          setMessages(data.projects[targetIndex].messages);
         }
       }
     } catch (e) {
@@ -185,7 +185,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     versionNumber = 1,
     feedbackContext?: string,
     overrideProjectIndex?: number,
-    overrideProjectTitle?: string
+    overrideProjectTitle?: string,
+    imageUrl?: string
   ) => {
     setIsGenerating(true);
 
@@ -203,25 +204,13 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           feedbackContext,
           email: email || undefined,
           userId: email || undefined,
+          imageUrl: imageUrl || undefined,
         }),
       });
 
       const data = await res.json();
       if (data.success && data.mediaVersion) {
         const newVersion: MediaVersion = data.mediaVersion;
-
-        // Update Project with new Version
-        setProjects((prev) => {
-          const updated = [...prev];
-          if (updated[targetIndex]) {
-            const proj = { ...updated[targetIndex] };
-            proj.versions = [...proj.versions, newVersion];
-            proj.currentVersionIndex = proj.versions.length - 1;
-            updated[targetIndex] = proj;
-            persistProjectToDb(proj);
-          }
-          return updated;
-        });
 
         // Deduct compute cost ($0.05) from user profile in Supabase
         deductCredits?.(0.05);
@@ -237,23 +226,36 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         const cap = newVersion.livepeerCapability || 'pixverse-t2v';
         const durationNotice = ` (${dur}s clip on ${cap})`;
         const storyboardDetails = newVersion.scenes && newVersion.scenes.length > 0
-          ? `\n\n🎬 Composed into a ${newVersion.scenes.length}-take storyboard reel: ${newVersion.scenes.map((s) => `#${s.sceneNumber} ${s.title} (${s.durationSeconds}s)`).join(' → ')}.`
+          ? `\n\n🎬 Composed into a ${newVersion.scenes.length}-take storyboard reel: ${newVersion.scenes.map((s) => `#${s.sceneNumber} ${s.title} (${s.durationSeconds}s)`).join(' -> ')}.`
           : (dur <= 8 ? `\n\nTip: Single-shot neural video models render up to 8s takes. Say "make it 30 seconds" to render a full long-form take on seedance-25-t2v or chain multiple scenes.` : '');
 
         const audioNotice = newVersion.audioStyle?.audioUrl
           ? `\n\n🎵 Synchronized with Livepeer AI soundtrack: ${newVersion.audioStyle.style}.`
           : '';
 
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-${Date.now()}`,
-            sender: 'agent',
-            content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}${audioNotice}${storyboardDetails}`,
-            timestamp: new Date().toISOString(),
-            versionNumber: newVersion.versionNumber,
-          },
-        ]);
+        const agentMsg: ChatMessage = {
+          id: `msg-${Date.now()}`,
+          sender: 'agent',
+          content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}${audioNotice}${storyboardDetails}`,
+          timestamp: new Date().toISOString(),
+          versionNumber: newVersion.versionNumber,
+        };
+
+        // Update Project with new Version and Agent message, then persist directly to Supabase DB
+        setProjects((prev) => {
+          const updated = [...prev];
+          if (updated[targetIndex]) {
+            const proj = { ...updated[targetIndex] };
+            proj.versions = [...proj.versions, newVersion];
+            proj.currentVersionIndex = proj.versions.length - 1;
+            proj.messages = [...(proj.messages || []), agentMsg];
+            updated[targetIndex] = proj;
+            persistProjectToDb(proj);
+          }
+          return updated;
+        });
+
+        setMessages((prev) => [...prev, agentMsg]);
       }
     } catch (err) {
       console.error('Generation error:', err);
@@ -263,12 +265,13 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   };
 
   // Handle User Message / Feedback
-  const handleSendMessage = async (text: string) => {
+  const handleSendMessage = async (text: string, imageUrl?: string) => {
     const userMsg: ChatMessage = {
       id: `msg-user-${Date.now()}`,
       sender: 'user',
       content: text,
       timestamp: new Date().toISOString(),
+      ...(imageUrl ? { imageUrl } : {}),
     };
     setMessages((prev) => [...prev, userMsg]);
 
@@ -277,7 +280,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
     // If there is no active project yet, create Project 1
     if (!currentProj) {
-      const generatedTitle = text.length > 25 ? `${text.slice(0, 25).trim()}…` : text;
+      const generatedTitle = text.length > 25 ? `${text.slice(0, 25).trim()}...` : text;
       const newProj: CreativeProject = {
         id: `proj-${Date.now()}`,
         title: generatedTitle,
@@ -285,14 +288,26 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         createdAt: new Date().toISOString(),
         currentVersionIndex: 0,
         versions: [],
+        messages: [userMsg],
       };
       setProjects([newProj]);
       setCurrentProjectIndex(0);
-      currentProj = newProj;
-      targetIndex = 0;
-      await handleGenerate(text, 1, undefined, 0, newProj.title);
+      persistProjectToDb(newProj);
+      await handleGenerate(text, 1, undefined, 0, newProj.title, imageUrl);
       return;
     }
+
+    // Persist the user message into the current project directly in Supabase DB immediately
+    setProjects((prev) => {
+      const updated = [...prev];
+      if (updated[targetIndex]) {
+        const proj = { ...updated[targetIndex] };
+        proj.messages = [...(proj.messages || []), userMsg];
+        updated[targetIndex] = proj;
+        persistProjectToDb(proj);
+      }
+      return updated;
+    });
 
     // If project has no versions yet, this is the first generation
     if (currentProj.versions.length === 0) {
@@ -305,7 +320,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           return updated;
         });
       }
-      await handleGenerate(text, 1, undefined, targetIndex, currentProj.title);
+      await handleGenerate(text, 1, undefined, targetIndex, currentProj.title, imageUrl);
       return;
     }
 
@@ -367,15 +382,23 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
               }
               const blobSummary = memData.blobIds?.length ? ` (Walrus: ${memData.blobIds[0].substring(0, 10)}...)` : '';
               const prefText = autoSaveCandidates.map((c: any) => c.preference).join('; ');
-              setMessages((prev) => [
-                ...prev,
-                {
-                  id: `msg-auto-mem-${Date.now()}`,
-                  sender: 'agent',
-                  content: `✨ Remembered preference: "${prefText}". Saved to Walrus MemWal persistent decentralized memory${blobSummary}.`,
-                  timestamp: new Date().toISOString(),
-                },
-              ]);
+              const memNoticeMsg: ChatMessage = {
+                id: `msg-auto-mem-${Date.now()}`,
+                sender: 'agent',
+                content: `✨ Remembered preference: "${prefText}". Saved to Walrus MemWal persistent decentralized memory${blobSummary}.`,
+                timestamp: new Date().toISOString(),
+              };
+              setMessages((prev) => [...prev, memNoticeMsg]);
+              setProjects((prev) => {
+                const updated = [...prev];
+                if (updated[targetIndex]) {
+                  const proj = { ...updated[targetIndex] };
+                  proj.messages = [...(proj.messages || []), memNoticeMsg];
+                  updated[targetIndex] = proj;
+                  persistProjectToDb(proj);
+                }
+                return updated;
+              });
             }
           } catch (memErr) {
             console.warn('[AppShell] Auto-persist memory error:', memErr);
@@ -396,7 +419,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         nextVersionNumber,
         text,
         targetIndex,
-        currentProj.title
+        currentProj.title,
+        imageUrl
       );
     } catch (e) {
       console.error('Feedback handling error:', e);
@@ -431,15 +455,23 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         }
 
         const blobSummary = data.blobIds?.length ? ` (Blob: ${data.blobIds[0]})` : '';
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `msg-saved-${Date.now()}`,
-            sender: 'agent',
-            content: `✨ Saved ${pendingPreferences.length} preference(s) to persistent memory${blobSummary}. These will automatically persist and enrich all future agent generations.`,
-            timestamp: new Date().toISOString(),
-          },
-        ]);
+        const memSavedMsg: ChatMessage = {
+          id: `msg-saved-${Date.now()}`,
+          sender: 'agent',
+          content: `✨ Saved ${pendingPreferences.length} preference(s) to persistent memory${blobSummary}. These will automatically persist and enrich all future agent generations.`,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, memSavedMsg]);
+        setProjects((prev) => {
+          const updated = [...prev];
+          if (updated[currentProjectIndex]) {
+            const proj = { ...updated[currentProjectIndex] };
+            proj.messages = [...(proj.messages || []), memSavedMsg];
+            updated[currentProjectIndex] = proj;
+            persistProjectToDb(proj);
+          }
+          return updated;
+        });
       }
 
       setPendingPreferences([]);
@@ -457,6 +489,12 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   ) => {
     const projectTitle = title?.trim() || `Project ${projects.length + 1}`;
     const initialPrompt = prompt?.trim() || '';
+    const initMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: 'agent',
+      content: `Created new project: "${projectTitle}".\nEnter a creative prompt below to generate your first media version with persistent memory recall.`,
+      timestamp: new Date().toISOString(),
+    };
     const newProj: CreativeProject = {
       id: `proj-${Date.now()}`,
       title: projectTitle,
@@ -464,6 +502,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       createdAt: new Date().toISOString(),
       currentVersionIndex: 0,
       versions: [],
+      messages: [initMsg],
     };
 
     const newIndex = projects.length;
@@ -481,15 +520,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
     setPendingPreferences([]);
     persistProjectToDb(newProj);
-
-    setMessages([
-      {
-        id: `msg-${Date.now()}`,
-        sender: 'agent',
-        content: `Created new project: "${projectTitle}".\nEnter a creative prompt below to generate your first media version with persistent memory recall.`,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+    setMessages([initMsg]);
 
     if (initialPrompt) {
       handleGenerate(initialPrompt, 1, undefined, newIndex, projectTitle);
@@ -500,19 +531,29 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const handleSelectProject = (index: number) => {
     setCurrentProjectIndex(index);
     const selected = projects[index];
-    if (selected && typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('nue_active_project_id', selected.id);
-        const url = new URL(window.location.href);
-        if (url.searchParams.get('project') !== selected.id) {
-          url.searchParams.set('project', selected.id);
-          window.history.replaceState(null, '', url.toString());
+    if (selected) {
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('nue_active_project_id', selected.id);
+          const url = new URL(window.location.href);
+          if (url.searchParams.get('project') !== selected.id) {
+            url.searchParams.set('project', selected.id);
+            window.history.replaceState(null, '', url.toString());
+          }
+        } catch {
+          // Ignore
         }
-      } catch {
-        // Ignore
       }
       if (selected.messages && selected.messages.length > 0) {
         setMessages(selected.messages);
+      } else {
+        const defaultMsg: ChatMessage = {
+          id: `msg-sel-${Date.now()}`,
+          sender: 'agent',
+          content: `Loaded "${selected.title}". Ready for your creative instructions.`,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages([defaultMsg]);
       }
     }
   };
@@ -579,8 +620,15 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     ]);
   };
 
-  // Reset Project (clears generated versions and chat while preserving project and memory)
+  // Reset Project (clears generated versions and chat while preserving project and memory in DB)
   const handleResetProject = (projectId: string) => {
+    const resetMsg: ChatMessage = {
+      id: `msg-reset-${Date.now()}`,
+      sender: 'agent',
+      content: 'Project reset. Generated media versions have been cleared. Ready for your next creative prompt.',
+      timestamp: new Date().toISOString(),
+    };
+
     setProjects((prev) => {
       const updated = prev.map((p) => {
         if (p.id === projectId) {
@@ -588,6 +636,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
             ...p,
             currentVersionIndex: 0,
             versions: [],
+            messages: [resetMsg],
           };
           persistProjectToDb(resetProj);
           return resetProj;
@@ -598,14 +647,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     });
 
     setPendingPreferences([]);
-    setMessages([
-      {
-        id: `msg-reset-${Date.now()}`,
-        sender: 'agent',
-        content: 'Project reset. Generated media versions have been cleared. Ready for your next creative prompt.',
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+    setMessages([resetMsg]);
   };
 
   // Forget memory

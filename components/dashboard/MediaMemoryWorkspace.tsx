@@ -14,7 +14,7 @@ interface MediaMemoryWorkspaceProps {
   onSelectVersion: (index: number) => void;
   isGenerating: boolean;
   messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
   pendingPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
   onConfirmRemember: () => void;

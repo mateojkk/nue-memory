@@ -25,14 +25,30 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, projects: [] });
     }
 
-    const projects = (dbProjects || []).map((p) => ({
-      id: p.id,
-      title: p.title,
-      initialPrompt: p.initial_prompt || '',
-      currentVersionIndex: p.current_version_index || 0,
-      versions: Array.isArray(p.versions) ? p.versions : [],
-      createdAt: p.created_at,
-    }));
+    const projects = (dbProjects || []).map((p) => {
+      let prompt = p.initial_prompt || '';
+      let messages: any[] = [];
+
+      if (prompt.startsWith('{') && prompt.includes('"messages"')) {
+        try {
+          const parsed = JSON.parse(prompt);
+          prompt = parsed.text || '';
+          messages = Array.isArray(parsed.messages) ? parsed.messages : [];
+        } catch {
+          // Fallback to raw string
+        }
+      }
+
+      return {
+        id: p.id,
+        title: p.title,
+        initialPrompt: prompt,
+        currentVersionIndex: p.current_version_index || 0,
+        versions: Array.isArray(p.versions) ? p.versions : [],
+        messages,
+        createdAt: p.created_at,
+      };
+    });
 
     return NextResponse.json({ success: true, projects });
   } catch (err: any) {
@@ -53,11 +69,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, project, fallback: true });
     }
 
+    let initialPromptPayload = project.initialPrompt || '';
+    if (Array.isArray(project.messages) && project.messages.length > 0) {
+      initialPromptPayload = JSON.stringify({
+        text: project.initialPrompt || '',
+        messages: project.messages,
+      });
+    }
+
     const row = {
       id: project.id,
       user_id: email,
       title: project.title,
-      initial_prompt: project.initialPrompt || '',
+      initial_prompt: initialPromptPayload,
       current_version_index: project.currentVersionIndex || 0,
       versions: project.versions || [],
       updated_at: new Date().toISOString(),

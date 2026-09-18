@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Send, Bot, User, Sparkles, RefreshCw, ArrowRight } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Send, Bot, User, Sparkles, RefreshCw, ArrowRight, ImagePlus, X } from 'lucide-react';
 import { ChatMessage } from '@/lib/types';
 
 interface AgentChatProps {
   messages: ChatMessage[];
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
   isLoading?: boolean;
   onSelectSuggestion?: (text: string) => void;
@@ -26,17 +26,101 @@ export const AgentChat: React.FC<AgentChatProps> = ({
   ],
 }) => {
   const [inputText, setInputText] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const hasUserSentMessage = messages.some((msg) => msg.sender === 'user');
+
+  const processImageFile = (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    setImageFileName(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (!result) return;
+
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1280;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.88);
+            setSelectedImage(compressed);
+            return;
+          }
+        }
+        setSelectedImage(result);
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processImageFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    if (e.clipboardData.items) {
+      const item = Array.from(e.clipboardData.items).find((i) => i.type.startsWith('image/'));
+      if (item) {
+        const file = item.getAsFile();
+        if (file) {
+          processImageFile(file);
+        }
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim() || isLoading) return;
-    onSendMessage(inputText.trim());
+    if ((!inputText.trim() && !selectedImage) || isLoading) return;
+    const promptToSend = inputText.trim() || 'Animate and bring this image to life with cinematic motion and depth.';
+    onSendMessage(promptToSend, selectedImage || undefined);
     setInputText('');
+    setSelectedImage(null);
+    setImageFileName(null);
   };
 
   return (
-    <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm flex flex-col overflow-hidden h-full">
+    <div
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm flex flex-col overflow-hidden h-full transition-all ${
+        isDragging ? 'ring-2 ring-[var(--accent)] bg-[var(--surface-2)]/50' : ''
+      }`}
+    >
       {/* Chat Header */}
       <div className="px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -82,6 +166,15 @@ export const AgentChat: React.FC<AgentChatProps> = ({
                   : 'bg-[var(--surface)] text-[var(--fg)] shadow-xs rounded-tl-xs'
               }`}
             >
+              {msg.imageUrl && (
+                <div className="mb-2 overflow-hidden rounded-xl border border-[var(--border)] max-w-[260px] bg-black/20">
+                  <img
+                    src={msg.imageUrl}
+                    alt="Chat attachment"
+                    className="w-full h-auto max-h-[180px] object-cover"
+                  />
+                </div>
+              )}
               <div className="whitespace-pre-wrap">{msg.content}</div>
               <div
                 className={`mt-1 text-[9px] font-mono ${
@@ -125,20 +218,72 @@ export const AgentChat: React.FC<AgentChatProps> = ({
         </div>
       )}
 
+      {/* Image Preview Chip Above Input */}
+      {selectedImage && (
+        <div className="px-3 pt-2.5 pb-1 bg-[var(--surface)] border-t border-[var(--border)]/60 flex items-center gap-2.5 animate-fadeIn">
+          <div className="relative group rounded-lg overflow-hidden border border-[var(--border)] w-12 h-12 bg-black/30 shrink-0">
+            <img src={selectedImage} alt="Attachment preview" className="w-full h-full object-cover" />
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedImage(null);
+                setImageFileName(null);
+              }}
+              className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition-colors"
+              title="Remove image"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-medium text-[var(--fg)] truncate">
+              {imageFileName || 'Image attached'}
+            </p>
+            <p className="text-[10px] text-[var(--fg-muted)] truncate">
+              Ready for image animation and creative direction
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Message Input Box */}
       <form onSubmit={handleSubmit} className="p-3 bg-[var(--surface)] border-t border-[var(--border)]/60">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files && e.target.files[0]) {
+              processImageFile(e.target.files[0]);
+            }
+          }}
+        />
+
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isLoading}
+            className="p-2 rounded-lg text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] disabled:opacity-40 transition-colors shrink-0"
+            title="Upload picture to animate"
+          >
+            <ImagePlus className="w-4 h-4" />
+          </button>
+
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Direct the creative agent or review revisions..."
+            onPaste={handlePaste}
+            placeholder={selectedImage ? "Direct how to animate this picture..." : "Direct the creative agent or review revisions..."}
             disabled={isLoading}
             className="flex-1 bg-[var(--bg)] rounded-lg px-3.5 py-2 text-xs text-[var(--fg)] placeholder-[var(--fg-muted)] transition-all"
           />
+
           <button
             type="submit"
-            disabled={!inputText.trim() || isLoading}
+            disabled={(!inputText.trim() && !selectedImage) || isLoading}
             className="p-2 rounded-lg bg-[var(--accent-deep)] text-[#4a2c0e] hover:bg-[var(--accent)] disabled:opacity-30 font-medium shadow-sm transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center shrink-0"
             title="Send prompt"
           >

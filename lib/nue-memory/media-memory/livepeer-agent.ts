@@ -156,10 +156,76 @@ export class LivepeerMediaAgent {
   }
 
   /**
+   * Uploads an image (base64 data URL or external URL) to Livepeer storage via MCP upload_image tool
+   */
+  public async uploadImage(imageSource: string): Promise<string | null> {
+    try {
+      await this.initializeMcp();
+      let dataPayload: string | undefined;
+      let sourceUrlPayload: string | undefined;
+      let mimeType: any = 'image/png';
+
+      if (imageSource.startsWith('data:')) {
+        const matches = imageSource.match(/^data:([^;]+);base64,(.+)$/);
+        if (matches) {
+          const rawMime = matches[1].toLowerCase();
+          if (['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'].includes(rawMime)) {
+            mimeType = rawMime;
+          }
+          dataPayload = matches[2];
+        } else {
+          dataPayload = imageSource;
+        }
+      } else if (imageSource.startsWith('http://') || imageSource.startsWith('https://')) {
+        sourceUrlPayload = imageSource;
+      } else {
+        dataPayload = imageSource;
+      }
+
+      const args: Record<string, any> = { mime_type: mimeType };
+      if (sourceUrlPayload) {
+        args.source_url = sourceUrlPayload;
+      } else if (dataPayload) {
+        args.data = dataPayload;
+      }
+
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'upload_image',
+            arguments: args,
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const content = json.result?.structuredContent;
+        if (content?.url) {
+          console.log(`[LivepeerAgent] Image uploaded successfully! URL: ${content.url}`);
+          return content.url;
+        }
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] uploadImage notice:', err);
+    }
+    return null;
+  }
+
+  /**
    * Generates a new media version based on the enriched brief and applied preferences
    */
   public async generateMedia(request: GenerateMediaRequest): Promise<MediaVersion> {
-    const { brief, enrichedBrief, appliedPreferences, versionNumber, projectTitle, feedbackContext, creativeDirectives } = request;
+    const { brief, enrichedBrief, appliedPreferences, versionNumber, projectTitle, feedbackContext, creativeDirectives, imageUrl } = request;
 
     await this.initializeMcp();
 
@@ -246,12 +312,27 @@ export class LivepeerMediaAgent {
       (feedbackContext && feedbackContext.toLowerCase().includes('ltx')) ||
       brief.toLowerCase().includes('ltx');
 
+    // Handle Image-to-Video if imageUrl is provided
+    let hostedImageUrl: string | null = null;
+    if (imageUrl) {
+      console.log('[LivepeerAgent] Uploading provided image for image-to-video workflow...');
+      hostedImageUrl = await this.uploadImage(imageUrl);
+      if (hostedImageUrl) {
+        console.log(`[LivepeerAgent] Uploaded image hosted at: ${hostedImageUrl}`);
+      }
+    }
+
+    const isImageToVideo = Boolean(hostedImageUrl);
+
     // Determine model dispatch strategy:
-    // 1. If explicitly requested seedance OR targetDuration > 8s: Dispatch seedance-25-t2v (up to 30s)
-    // 2. If explicitly requested ltx: Dispatch ltx-25-t2v-pro (up to 10s)
-    // 3. Otherwise: Use pixverse-t2v clamped to 3, 5, or 8 seconds
-    const isLongForm = explicitSeedance || (!explicitPixverse && !explicitLtx && targetDuration > 8);
-    const modelToUse = isLongForm
+    // 1. If image provided: Dispatch pixverse-i2v animate action
+    // 2. If explicitly requested seedance OR targetDuration > 8s: Dispatch seedance-25-t2v (up to 30s)
+    // 3. If explicitly requested ltx: Dispatch ltx-25-t2v-pro (up to 10s)
+    // 4. Otherwise: Use pixverse-t2v clamped to 3, 5, or 8 seconds
+    const isLongForm = !isImageToVideo && (explicitSeedance || (!explicitPixverse && !explicitLtx && targetDuration > 8));
+    const modelToUse = isImageToVideo
+      ? (explicitSeedance ? 'seedance-25-i2v' : 'pixverse-i2v')
+      : isLongForm
       ? 'seedance-25-t2v'
       : explicitLtx
       ? 'ltx-25-t2v-pro'
@@ -273,6 +354,18 @@ export class LivepeerMediaAgent {
     let livepeerCapability = modelToUse;
     let generationDuration = effectiveDuration;
 
+    const actionToUse = isImageToVideo ? 'animate' : 'generate';
+    const mcpArguments: Record<string, any> = {
+      action: actionToUse,
+      prompt: livepeerPrompt,
+      model_override: modelToUse,
+    };
+    if (isImageToVideo && hostedImageUrl) {
+      mcpArguments.source_url = hostedImageUrl;
+    } else {
+      mcpArguments.duration = effectiveDuration;
+    }
+
     try {
       const mcpCallRes = await fetch(this.endpoint, {
         method: 'POST',
@@ -287,12 +380,7 @@ export class LivepeerMediaAgent {
           method: 'tools/call',
           params: {
             name: 'create_media',
-            arguments: {
-              action: 'generate',
-              prompt: livepeerPrompt,
-              model_override: modelToUse,
-              duration: effectiveDuration,
-            },
+            arguments: mcpArguments,
           },
         }),
       });
@@ -535,7 +623,7 @@ export class LivepeerMediaAgent {
       enrichedBrief,
       appliedPreferences,
       mediaUrl: finalMediaUrl,
-      thumbnailUrl: finalImageUrl,
+      thumbnailUrl: hostedImageUrl || finalImageUrl,
       aspectRatio,
       pacing,
       captionStyle: {

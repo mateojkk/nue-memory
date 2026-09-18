@@ -6,27 +6,30 @@ import { livepeerAgent } from '@/lib/livepeer/agent';
 
 export async function POST(request: Request) {
   try {
-    const { brief, versionNumber = 1, projectTitle = 'Media Project', feedbackContext, userId, email } = await request.json();
+    const { brief, versionNumber = 1, projectTitle = 'Media Project', feedbackContext, userId, email, imageUrl } = await request.json();
     const effectiveUserId = userId || email || undefined;
 
-    if (!brief) {
-      return NextResponse.json({ success: false, error: 'Brief is required' }, { status: 400 });
+    if (!brief && !imageUrl) {
+      return NextResponse.json({ success: false, error: 'Brief or image is required' }, { status: 400 });
     }
+
+    const effectiveBrief = brief || 'Animate and bring this image to life with cinematic motion and depth.';
 
     // Step 1: Initialize Nue Memory layer and retrieve active preferences from Walrus MemWal for this user's namespace
     await nue.initialize();
     const storedMemories = await memWalService.getAllPreferencesAsync(effectiveUserId, false);
-    const { relevantMemories, enrichedBrief, creativeDirectives, summaryTokens } = retrieveAndEnrichBrief(brief, storedMemories);
+    const { relevantMemories, enrichedBrief, creativeDirectives, summaryTokens } = retrieveAndEnrichBrief(effectiveBrief, storedMemories);
 
     // Step 2: Send enriched context to Livepeer Agent
     const mediaVersion = await livepeerAgent.generateMedia({
-      brief,
+      brief: effectiveBrief,
       enrichedBrief,
       appliedPreferences: relevantMemories,
       versionNumber,
       projectTitle,
       feedbackContext,
       creativeDirectives,
+      imageUrl,
     });
 
     return NextResponse.json({
