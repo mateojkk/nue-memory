@@ -10,9 +10,9 @@ interface RateLimitRecord {
 
 const rateLimitStore = new Map<string, RateLimitRecord>();
 
-// Periodic garbage collection every 3 minutes
+// Periodic garbage collection every 3 minutes (unref so timer does not block process exit)
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
+  const timer = setInterval(() => {
     const now = Date.now();
     for (const [key, record] of rateLimitStore.entries()) {
       record.timestamps = record.timestamps.filter((ts) => now - ts < 300000);
@@ -21,6 +21,9 @@ if (typeof setInterval !== 'undefined') {
       }
     }
   }, 180000);
+  if (typeof timer.unref === 'function') {
+    timer.unref();
+  }
 }
 
 export interface RateLimitResult {
