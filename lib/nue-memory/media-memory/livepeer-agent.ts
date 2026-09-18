@@ -42,6 +42,120 @@ export class LivepeerMediaAgent {
   }
 
   /**
+   * Generates a custom soundtrack via Livepeer MCP music capability
+   */
+  private async generateAudioTrack(audioPrompt: string): Promise<string | null> {
+    try {
+      console.log(`[LivepeerAgent] Initiating AI soundtrack generation: "${audioPrompt}"...`);
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'create_media',
+            arguments: {
+              action: 'music',
+              prompt: audioPrompt,
+            },
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      if (content?.url) {
+        return content.url;
+      }
+      if (content?.job_id) {
+        const jobId = content.job_id;
+        // Poll for audio completion (up to 12 attempts * 4s = 48s)
+        for (let i = 0; i < 12; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 4000));
+          const pollRes = await fetch(this.endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json, text/event-stream',
+              ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+            },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: Date.now(),
+              method: 'tools/call',
+              params: {
+                name: 'get_create_media',
+                arguments: { job_id: jobId },
+              },
+            }),
+          });
+          if (pollRes.ok) {
+            const pollData = await pollRes.json();
+            const pollContent = pollData.result?.structuredContent;
+            if (pollContent?.status === 'done' && pollContent.url) {
+              console.log(`[LivepeerAgent] AI soundtrack completed! URL: ${pollContent.url}`);
+              return pollContent.url;
+            }
+            if (pollContent?.status === 'failed') {
+              break;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] Soundtrack generation notice:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Muxes video clip with audio track using Livepeer assemble tool (ffmpeg-mux)
+   */
+  private async muxVideoAndAudio(videoUrl: string, audioUrl: string): Promise<string | null> {
+    try {
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'assemble',
+            arguments: {
+              clips: [{ src: videoUrl }],
+              music: audioUrl,
+              stitch: true,
+            },
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.result?.structuredContent;
+        if (content?.url && (!content?.warnings || content.warnings.length === 0)) {
+          return content.url;
+        }
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] Video-audio mux notice:', err);
+    }
+    return null;
+  }
+
+  /**
    * Generates a new media version based on the enriched brief and applied preferences
    */
   public async generateMedia(request: GenerateMediaRequest): Promise<MediaVersion> {
@@ -150,6 +264,9 @@ export class LivepeerMediaAgent {
 
     // Build Livepeer prompt that includes prompt directives
     const livepeerPrompt = `${brief}. Visual style: ${visualTheme}. Pacing: ${pacing}. Composition: ${aspectRatio}.`;
+    const shouldGenerateSound = audioTempo !== 'none';
+    const audioPrompt = `${audioStyle} soundtrack, ${audioTempo === 'energetic' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation matching ${visualTheme}`;
+    const audioPromise = shouldGenerateSound ? this.generateAudioTrack(audioPrompt) : Promise.resolve(null);
 
     // Attempt real live render call via Livepeer Agent MCP create_media tool
     let realMediaUrl: string | null = null;
@@ -329,8 +446,30 @@ export class LivepeerMediaAgent {
       );
     }
 
-    const finalMediaUrl = realMediaUrl;
+    // Await parallel audio generation if triggered
+    let audioUrl: string | null = null;
+    try {
+      audioUrl = await audioPromise;
+    } catch {
+      audioUrl = null;
+    }
+
+    let finalMediaUrl = realMediaUrl;
     const finalImageUrl = realMediaUrl;
+
+    // If both video and audio are ready, attempt Livepeer assemble mux (ffmpeg-mux)
+    if (audioUrl) {
+      try {
+        console.log('[LivepeerAgent] Muxing video with AI soundtrack via Livepeer assemble...');
+        const muxedUrl = await this.muxVideoAndAudio(realMediaUrl, audioUrl);
+        if (muxedUrl) {
+          console.log(`[LivepeerAgent] Mux succeeded! Final muxed URL: ${muxedUrl}`);
+          finalMediaUrl = muxedUrl;
+        }
+      } catch (muxErr) {
+        console.warn('[LivepeerAgent] Livepeer mux notice:', muxErr);
+      }
+    }
 
     // Build multi-scene storyboard breakdown for professional long-form sequencing
     const storyboardScenes = isLongForm
@@ -384,7 +523,10 @@ export class LivepeerMediaAgent {
 
     const captionSubtext = brief.length > 50 ? `${brief.slice(0, 48)}...` : brief;
 
-    const agentNotes = `Livepeer Agent composed version ${versionNumber} via [${livepeerCapability}]. ${appliedSummary}`;
+    const audioSummary = audioUrl
+      ? ` Synchronized with Livepeer AI soundtrack (${audioStyle}).`
+      : '';
+    const agentNotes = `Livepeer Agent composed version ${versionNumber} via [${livepeerCapability}]. ${appliedSummary}${audioSummary}`;
 
     return {
       versionNumber,
@@ -406,6 +548,7 @@ export class LivepeerMediaAgent {
         enabled: audioTempo !== 'none',
         style: audioStyle,
         tempo: audioTempo,
+        audioUrl: audioUrl || undefined,
       },
       visualTheme,
       agentNotes,

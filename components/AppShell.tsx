@@ -240,12 +240,16 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           ? `\n\n🎬 Composed into a ${newVersion.scenes.length}-take storyboard reel: ${newVersion.scenes.map((s) => `#${s.sceneNumber} ${s.title} (${s.durationSeconds}s)`).join(' → ')}.`
           : (dur <= 8 ? `\n\nTip: Single-shot neural video models render up to 8s takes. Say "make it 30 seconds" to render a full long-form take on seedance-25-t2v or chain multiple scenes.` : '');
 
+        const audioNotice = newVersion.audioStyle?.audioUrl
+          ? `\n\n🎵 Synchronized with Livepeer AI soundtrack: ${newVersion.audioStyle.style}.`
+          : '';
+
         setMessages((prev) => [
           ...prev,
           {
             id: `msg-${Date.now()}`,
             sender: 'agent',
-            content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}${storyboardDetails}`,
+            content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}${audioNotice}${storyboardDetails}`,
             timestamp: new Date().toISOString(),
             versionNumber: newVersion.versionNumber,
           },

@@ -38,6 +38,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   const [aspectMode, setAspectMode] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [displayMode, setDisplayMode] = useState<'video' | 'keyframe'>('video');
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -57,6 +58,10 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       setIsPlaying(false);
       setProgress(0);
     }
+    if (version?.audioStyle?.audioUrl && audioRef.current) {
+      audioRef.current.src = version.audioStyle.audioUrl;
+      audioRef.current.currentTime = 0;
+    }
   }, [version]);
 
   const togglePlay = () => {
@@ -64,7 +69,12 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     if (videoRef.current.paused) {
       videoRef.current
         .play()
-        .then(() => setIsPlaying(true))
+        .then(() => {
+          setIsPlaying(true);
+          if (audioRef.current && version?.audioStyle?.audioUrl) {
+            audioRef.current.play().catch(() => {});
+          }
+        })
         .catch((err) => {
           console.warn('[MediaPreview] Playback failed or was blocked by browser:', err);
           // Try playing muted if autoplay policy blocked audio playback
@@ -76,6 +86,9 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         });
     } else {
       videoRef.current.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
       setIsPlaying(false);
     }
   };
@@ -84,6 +97,12 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     if (!videoRef.current) return;
     const nextMuted = !isMuted;
     videoRef.current.muted = nextMuted;
+    if (audioRef.current) {
+      audioRef.current.muted = nextMuted;
+      if (!nextMuted && isPlaying) {
+        audioRef.current.play().catch(() => {});
+      }
+    }
     setIsMuted(nextMuted);
   };
 
@@ -101,7 +120,11 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     const clickPos = (e.clientX - rect.left) / rect.width;
     const clampedPos = Math.max(0, Math.min(1, clickPos));
     const dur = videoRef.current.duration || 1;
-    videoRef.current.currentTime = clampedPos * dur;
+    const newTime = clampedPos * dur;
+    videoRef.current.currentTime = newTime;
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
     setProgress(clampedPos * 100);
   };
 
@@ -316,26 +339,36 @@ ${version.captionStyle.text}
               </div>
             ) : (
               /* Full Video Playback */
-              <video
-                ref={videoRef}
-                src={version.mediaUrl}
-                loop
-                playsInline
-                autoPlay
-                muted={isMuted}
-                onPlay={() => setIsPlaying(true)}
-                onPause={() => setIsPlaying(false)}
-                onEnded={() => setIsPlaying(false)}
-                onError={() => {
-                  // If browser fails to decode as video, seamlessly switch to high-res viewer
-                  setDisplayMode('keyframe');
-                }}
-                onTimeUpdate={handleTimeUpdate}
-                className="w-full h-full object-cover cursor-pointer"
-                onClick={togglePlay}
-              />
+              <>
+                <video
+                  ref={videoRef}
+                  src={version.mediaUrl}
+                  loop
+                  playsInline
+                  autoPlay
+                  muted={isMuted}
+                  onPlay={() => setIsPlaying(true)}
+                  onPause={() => setIsPlaying(false)}
+                  onEnded={() => setIsPlaying(false)}
+                  onError={() => {
+                    // If browser fails to decode as video, seamlessly switch to high-res viewer
+                    setDisplayMode('keyframe');
+                  }}
+                  onTimeUpdate={handleTimeUpdate}
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={togglePlay}
+                />
+                {version.audioStyle?.audioUrl && (
+                  <audio
+                    ref={audioRef}
+                    src={version.audioStyle.audioUrl}
+                    loop
+                    muted={isMuted}
+                    playsInline
+                  />
+                )}
+              </>
             )}
-
 
             {/* Overlays reflecting applied preferences */}
             {/* Pacing Badge */}
@@ -350,6 +383,9 @@ ${version.captionStyle.text}
             <div className="absolute top-3.5 right-3.5 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/75 backdrop-blur-md border border-[var(--accent)]/30 text-[11px] font-mono text-[var(--accent-bright)]">
               <Volume2 className="w-3 h-3 text-[var(--accent)]" />
               <span className="truncate max-w-[150px]">{version.audioStyle.style}</span>
+              {version.audioStyle?.audioUrl && (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Livepeer AI Soundtrack Active" />
+              )}
             </div>
 
             {/* Dynamic Animated Captions (Controlled via CC toggle and timed with playback) */}

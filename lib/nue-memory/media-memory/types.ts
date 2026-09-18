@@ -77,6 +77,7 @@ export interface MediaVersion {
     enabled: boolean;
     style: string;
     tempo: 'energetic' | 'ambient' | 'none';
+    audioUrl?: string;
   };
   visualTheme: string;
   agentNotes: string;
