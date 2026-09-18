@@ -88,12 +88,6 @@ export function MemoriesView({
             <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
               Agent Memories
             </h2>
-            {userNamespace && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-cyan-950/40 text-cyan-400 border border-cyan-800/50 text-[11px] font-mono" title="Isolated Sui Walrus MemWal Namespace">
-                <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Walrus Namespace: {userNamespace}</span>
-              </span>
-            )}
           </div>
           <p className="text-[var(--fg-muted)] text-xs sm:text-sm mt-1">
             Review and manage the creative preferences your agent has learned from your feedback.
