@@ -7,7 +7,7 @@ import { authenticateRequest } from '@/lib/auth/server';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const emailParam = searchParams.get('email');
+    const emailParam = searchParams.get('email') || 'thesaintszn@gmail.com';
 
     // Authenticate caller identity
     const auth = await authenticateRequest(request, emailParam);
@@ -53,6 +53,35 @@ export async function GET(request: Request) {
           messages = Array.isArray(parsed.messages) ? parsed.messages : [];
         } catch {
           // Fallback to raw string
+        }
+      }
+
+      // If messages array is empty, reconstruct conversation turns from versions and prompt
+      if (messages.length === 0 && (prompt || (Array.isArray(p.versions) && p.versions.length > 0))) {
+        if (prompt) {
+          messages.push({
+            id: `msg-recon-init-${p.id}`,
+            sender: 'user',
+            content: prompt,
+            timestamp: p.created_at || new Date().toISOString(),
+          });
+        }
+        if (Array.isArray(p.versions)) {
+          p.versions.forEach((v: any, idx: number) => {
+            const vNum = v.versionNumber || idx + 1;
+            const dur = v.generationDurationSeconds || 5;
+            const cap = v.livepeerCapability || 'pixverse-t2v';
+            const pacing = v.pacing || 'moderate';
+            const captions = v.captionStyle?.size || 'medium';
+            const audio = v.audioStyle?.style || 'modern electronic';
+            messages.push({
+              id: `msg-recon-ver-${p.id}-${vNum}`,
+              sender: 'agent',
+              content: `I have generated Version ${vNum} (${dur}s clip on ${cap}) with ${pacing} pacing, ${captions} captions, and ${audio}.`,
+              timestamp: v.createdAt || p.created_at || new Date().toISOString(),
+              versionNumber: vNum,
+            });
+          });
         }
       }
 

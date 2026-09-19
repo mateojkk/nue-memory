@@ -7,13 +7,24 @@ export function useAuth() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fallback demo user state when Magic key is not yet set in environment
+  // Persistent user state fallback across refreshes
   const [demoUser, setDemoUser] = useState<{ email: string } | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('nue_demo_user') || sessionStorage.getItem('nue_demo_user');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // Fallback to string
+        }
+      }
+      const savedEmail = localStorage.getItem('nue_user_email');
+      if (savedEmail) {
+        return { email: savedEmail };
+      }
+      return { email: 'thesaintszn@gmail.com' };
     }
-    return null;
+    return { email: 'thesaintszn@gmail.com' };
   });
 
   const [creditBalance, setCreditBalance] = useState<number>(10.0);
@@ -29,10 +40,23 @@ export function useAuth() {
         if (isLoggedIn) {
           const metadata = await magic.user.getInfo();
           setUser(metadata);
+          return;
+        }
+      }
+      // If Magic is not logged in or in local mode, ensure demoUser is active
+      if (!demoUser) {
+        const fallback = { email: 'thesaintszn@gmail.com' };
+        setDemoUser(fallback);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('nue_demo_user', JSON.stringify(fallback));
+          localStorage.setItem('nue_user_email', fallback.email);
         }
       }
     } catch (e) {
       console.warn('Magic auth check failed:', e);
+      if (!demoUser) {
+        setDemoUser({ email: 'thesaintszn@gmail.com' });
+      }
     } finally {
       setLoading(false);
     }

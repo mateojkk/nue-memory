@@ -76,8 +76,8 @@ export class LivepeerMediaAgent {
       }
       if (content?.job_id) {
         const jobId = content.job_id;
-        // Poll for audio completion (up to 12 attempts * 4s = 48s)
-        for (let i = 0; i < 12; i++) {
+        // Poll for audio completion (up to 25 attempts * 4s = 100s)
+        for (let i = 0; i < 25; i++) {
           await new Promise((resolve) => setTimeout(resolve, 4000));
           const pollRes = await fetch(this.endpoint, {
             method: 'POST',
@@ -267,17 +267,54 @@ export class LivepeerMediaAgent {
       if (lowerFeedback.includes('larger') || lowerFeedback.includes('bigger') || lowerFeedback.includes('captions')) {
         captionSize = 'large';
       }
-      if (lowerFeedback.includes('music') || lowerFeedback.includes('remove') || lowerFeedback.includes("don't like") || lowerFeedback.includes('avoid')) {
+      // Audio intent: check affirmative audio requests first
+      if (
+        lowerFeedback.includes('with audio') ||
+        lowerFeedback.includes('some audio') ||
+        lowerFeedback.includes('ambient audio') ||
+        lowerFeedback.includes('with music') ||
+        lowerFeedback.includes('ambient sound') ||
+        lowerFeedback.includes('add music') ||
+        lowerFeedback.includes('soundtrack')
+      ) {
+        audioTempo = 'ambient';
+        audioStyle = 'Deep ambient atmospheric cinematic soundtrack';
+      } else if (
+        lowerFeedback.includes('no audio') ||
+        lowerFeedback.includes('remove audio') ||
+        lowerFeedback.includes('mute audio') ||
+        lowerFeedback.includes('no music') ||
+        lowerFeedback.includes('remove music') ||
+        lowerFeedback.includes('mute music')
+      ) {
         audioTempo = 'none';
-        audioStyle = 'Minimal low-frequency rhythm (cinematic strings muted)';
+        audioStyle = 'Muted';
+      }
+
+      // Visual styling in feedback
+      if (
+        lowerFeedback.includes('monochrome') ||
+        lowerFeedback.includes('black and white') ||
+        lowerFeedback.includes('b&w') ||
+        lowerFeedback.includes('grayscale') ||
+        lowerFeedback.includes('greyscale')
+      ) {
+        visualTheme = 'Cinematic Monochrome, High Contrast Black and White Film';
+      } else if (
+        lowerFeedback.includes('cyberpunk') ||
+        lowerFeedback.includes('neon')
+      ) {
+        visualTheme = 'Cyberpunk Neon Nocturne';
       }
     }
 
-    // Determine visual subject theme
-    if (projectTitle.toLowerCase().includes('clothing') || brief.toLowerCase().includes('clothing') || brief.toLowerCase().includes('fashion')) {
-      visualTheme = 'Contemporary Urban Apparel';
-    } else if (projectTitle.toLowerCase().includes('app') || brief.toLowerCase().includes('app') || brief.toLowerCase().includes('promo')) {
-      visualTheme = 'Next-Gen Mobile Application';
+    // Determine visual subject theme if not overridden by feedback
+    if (!feedbackContext || (!feedbackContext.toLowerCase().includes('monochrome') && !feedbackContext.toLowerCase().includes('cyberpunk'))) {
+      if (projectTitle.toLowerCase().includes('clothing') || brief.toLowerCase().includes('clothing') || brief.toLowerCase().includes('fashion')) {
+        visualTheme = 'Contemporary Urban Apparel';
+      } else if (projectTitle.toLowerCase().includes('app') || brief.toLowerCase().includes('app') || brief.toLowerCase().includes('promo')) {
+        visualTheme = 'Next-Gen Mobile Application';
+      }
     }
 
     // Duration parsing: check creativeDirectives, remembered preferences, and feedbackContext
@@ -343,8 +380,11 @@ export class LivepeerMediaAgent {
       ? Math.min(10, Math.max(3, targetDuration))
       : (targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3);
 
-    // Build Livepeer prompt that includes prompt directives
-    const livepeerPrompt = `${brief}. Visual style: ${visualTheme}. Pacing: ${pacing}. Composition: ${aspectRatio}.`;
+    // Build Livepeer prompt that combines original brief, feedback directives, and styling
+    const basePrompt = feedbackContext
+      ? `${brief}. Revision directive: ${feedbackContext}`
+      : brief;
+    const livepeerPrompt = `${basePrompt}. Visual style: ${visualTheme}. Pacing: ${pacing}. Composition: ${aspectRatio}.`;
     const shouldGenerateSound = audioTempo !== 'none';
     const audioPrompt = `${audioStyle} soundtrack, ${audioTempo === 'energetic' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation matching ${visualTheme}`;
     const audioPromise = shouldGenerateSound ? this.generateAudioTrack(audioPrompt) : Promise.resolve(null);
