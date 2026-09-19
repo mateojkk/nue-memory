@@ -30,6 +30,13 @@ export async function GET(request: Request) {
     const auth = await authenticateRequest(request, userParam);
     const effectiveUserId = auth.email || userParam || undefined;
 
+    if (!effectiveUserId) {
+      return NextResponse.json(
+        { success: false, error: 'User email or identity is required. Generic fallback namespaces are disabled.' },
+        { status: 400 }
+      );
+    }
+
     // Rate limit: 45 requests per minute
     const clientId = getClientIdentifier(request, effectiveUserId);
     const rateCheck = checkRateLimit(`memwal:get:${clientId}`, 45, 60000);
@@ -65,6 +72,13 @@ export async function POST(request: Request) {
     // Authenticate caller identity
     const auth = await authenticateRequest(request, userId || email);
     const effectiveUserId = auth.email || userId || email || undefined;
+
+    if (!effectiveUserId) {
+      return NextResponse.json(
+        { success: false, error: 'User email or identity is required. Generic fallback namespaces are disabled.' },
+        { status: 401 }
+      );
+    }
 
     // Rate limit: 30 mutations per minute
     const clientId = getClientIdentifier(request, effectiveUserId);

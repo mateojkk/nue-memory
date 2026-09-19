@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { nue } from '@/lib/nue-memory/sdk';
-import { memWalService } from '@/lib/walrus-memwal/client';
-import { retrieveAndEnrichBrief } from '@/lib/nue-memory/retrieval';
+import { directCreativeBrief } from '@/lib/ai/nue-director';
 import { livepeerAgent } from '@/lib/livepeer/agent';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
@@ -87,30 +85,74 @@ export async function POST(request: Request) {
       }
     }
 
-    // Step 6: Initialize Nue Memory layer and retrieve active preferences from Walrus MemWal
-    await nue.initialize();
-    const storedMemories = await memWalService.getAllPreferencesAsync(effectiveUserId, false);
-    const { relevantMemories, enrichedBrief, creativeDirectives, summaryTokens } = retrieveAndEnrichBrief(sanitizedBrief, storedMemories);
+    // Step 6: LLM Creative Director (Groq + withMemWal)
+    // withMemWal automatically recalls user memories from Walrus BEFORE the LLM call
+    // and auto-saves new preferences to Walrus AFTER the LLM responds
+    const directorBrief = await directCreativeBrief(sanitizedBrief, {
+      email: effectiveUserId,
+      feedbackContext: sanitizedFeedback,
+      projectTitle: sanitizedTitle,
+      imageUrl: validatedImageUrl,
+    });
 
-    // Step 7: Send enriched context to Livepeer Agent
+    // Build appliedPreferences-compatible array from director output for backward compat
+    const syntheticPreferences = [];
+    if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Modern Product Showcase') {
+      syntheticPreferences.push({
+        id: `dir-visual-${Date.now()}`,
+        type: 'media_preference' as const,
+        category: 'visual_style' as const,
+        preference: directorBrief.visualTheme,
+        strength: 'high' as const,
+        scope: 'media' as const,
+        source: 'user_feedback' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      });
+    }
+    if (directorBrief.audioEnabled && directorBrief.audioStyle) {
+      syntheticPreferences.push({
+        id: `dir-audio-${Date.now()}`,
+        type: 'media_preference' as const,
+        category: 'audio' as const,
+        preference: directorBrief.audioStyle,
+        strength: 'high' as const,
+        scope: 'media' as const,
+        source: 'user_feedback' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      });
+    }
+
+    // Step 7: Send director brief to Livepeer Agent for media generation
     const mediaVersion = await livepeerAgent.generateMedia({
       brief: sanitizedBrief,
-      enrichedBrief,
-      appliedPreferences: relevantMemories,
+      enrichedBrief: directorBrief.enrichedPrompt,
+      appliedPreferences: syntheticPreferences,
       versionNumber: Number(versionNumber) || 1,
       projectTitle: sanitizedTitle,
       feedbackContext: sanitizedFeedback,
-      creativeDirectives,
+      creativeDirectives: {
+        pacing: directorBrief.pacing,
+        audioStyle: directorBrief.audioStyle,
+        aspectRatio: directorBrief.aspectRatio,
+        visualStyle: directorBrief.visualTheme,
+        duration: directorBrief.duration,
+        model: directorBrief.model,
+      },
       imageUrl: validatedImageUrl,
     });
 
     return NextResponse.json({
       success: true,
       mediaVersion,
-      enrichedBrief,
-      appliedMemories: relevantMemories,
-      summaryTokens,
-      retrievalCount: relevantMemories.length,
+      enrichedBrief: directorBrief.enrichedPrompt,
+      appliedMemories: syntheticPreferences,
+      directorMessage: directorBrief.agentMessage,
+      summaryTokens: [directorBrief.visualTheme, directorBrief.pacing, `${directorBrief.duration}s`],
+      retrievalCount: syntheticPreferences.length,
     });
   } catch (error) {
     const err = error as Error & { code?: string };
@@ -120,6 +162,7 @@ export async function POST(request: Request) {
         { status: 503 }
       );
     }
+    console.error('[generate] Error:', err?.message || error);
     return NextResponse.json({ success: false, error: err?.message || String(error) }, { status: 500 });
   }
 }

@@ -90,7 +90,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
   // Memory & Confirmation State
   const [activeMemories, setActiveMemories] = useState<MediaPreference[]>([]);
-  const [activeNamespace, setActiveNamespace] = useState<string>('nue-memory');
+  const [activeNamespace, setActiveNamespace] = useState<string>('');
   const [pendingPreferences, setPendingPreferences] = useState<
     Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[]
   >([]);
@@ -160,12 +160,17 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
   // Load memories directly from MemWal on Walrus for the current user's namespace
   useEffect(() => {
-    fetchMemories(email || undefined);
+    if (email) {
+      fetchMemories(email);
+    } else {
+      setActiveMemories([]);
+      setActiveNamespace('');
+    }
   }, [email]);
 
-  const fetchMemories = async (userEmail?: string) => {
+  const fetchMemories = async (userEmail: string) => {
     try {
-      const url = userEmail ? `/api/memwal?email=${encodeURIComponent(userEmail)}` : '/api/memwal';
+      const url = `/api/memwal?email=${encodeURIComponent(userEmail)}`;
       const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.preferences)) {
@@ -215,28 +220,23 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         // Deduct compute cost ($0.05) from user profile in Supabase
         deductCredits?.(0.05);
 
-        // Add Agent Response message
-        const appliedCount = newVersion.appliedPreferences.length;
-        const memoryDetails =
-          appliedCount > 0
-            ? `\n\n✨ Automatically applied ${appliedCount} remembered preference(s) from Nue Memory.`
-            : '';
-
+        // Build agent response - use LLM director message when available
         const dur = newVersion.generationDurationSeconds || 5;
         const cap = newVersion.livepeerCapability || 'pixverse-t2v';
         const durationNotice = ` (${dur}s clip on ${cap})`;
-        const storyboardDetails = newVersion.scenes && newVersion.scenes.length > 0
-          ? `\n\n🎬 Composed into a ${newVersion.scenes.length}-take storyboard reel: ${newVersion.scenes.map((s) => `#${s.sceneNumber} ${s.title} (${s.durationSeconds}s)`).join(' -> ')}.`
-          : (dur <= 8 ? `\n\nTip: Single-shot neural video models render up to 8s takes. Say "make it 30 seconds" to render a full long-form take on seedance-25-t2v or chain multiple scenes.` : '');
 
         const audioNotice = newVersion.audioStyle?.audioUrl
           ? `\n\n🎵 Synchronized with Livepeer AI soundtrack: ${newVersion.audioStyle.style}.`
           : '';
 
+        const agentContent = data.directorMessage
+          ? `${data.directorMessage}${durationNotice}${audioNotice}`
+          : `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing and ${newVersion.audioStyle.style}.${audioNotice}`;
+
         const agentMsg: ChatMessage = {
           id: `msg-${Date.now()}`,
           sender: 'agent',
-          content: `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing, ${newVersion.captionStyle.size} captions, and ${newVersion.audioStyle.style}.${memoryDetails}${audioNotice}${storyboardDetails}`,
+          content: agentContent,
           timestamp: new Date().toISOString(),
           versionNumber: newVersion.versionNumber,
         };
@@ -325,107 +325,17 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
 
     // Otherwise, this is review feedback on the current version
-    setIsGenerating(true);
-
-    try {
-      // Step 1: Classify feedback and extract preferences via Nue
-      const classifyRes = await fetch('/api/classify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feedback: text,
-          projectTitle: currentProj.title,
-          currentBrief: currentProj.initialPrompt,
-          email: email || undefined,
-          userId: email || undefined,
-        }),
-      });
-
-      const classifyData = await classifyRes.json();
-
-      if (
-        classifyData.success &&
-        classifyData.classification?.extractedPreferences?.length > 0
-      ) {
-        const extracted = classifyData.classification.extractedPreferences;
-        const autoSaveCandidates = extracted.filter(
-          (p: any) =>
-            p.strength === 'high' ||
-            p.category === 'duration' ||
-            p.category === 'model' ||
-            p.category === 'pacing' ||
-            p.category === 'audio' ||
-            p.category === 'typography' ||
-            p.category === 'captions'
-        );
-        const manualCandidates = extracted.filter((p: any) => !autoSaveCandidates.includes(p));
-
-        if (autoSaveCandidates.length > 0) {
-          try {
-            const memRes = await fetch('/api/memwal', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                action: 'remember',
-                preferences: autoSaveCandidates,
-                email: email || undefined,
-                userId: email || undefined,
-              }),
-            });
-            const memData = await memRes.json();
-            if (memData.success) {
-              const getUrl = email ? `/api/memwal?email=${encodeURIComponent(email)}` : '/api/memwal';
-              const getRes = await fetch(getUrl);
-              const getData = await getRes.json();
-              if (getData.success && getData.preferences) {
-                setActiveMemories(getData.preferences);
-              }
-              const blobSummary = memData.blobIds?.length ? ` (Walrus: ${memData.blobIds[0].substring(0, 10)}...)` : '';
-              const prefText = autoSaveCandidates.map((c: any) => c.preference).join('; ');
-              const memNoticeMsg: ChatMessage = {
-                id: `msg-auto-mem-${Date.now()}`,
-                sender: 'agent',
-                content: `✨ Remembered preference: "${prefText}". Saved to Walrus MemWal persistent decentralized memory${blobSummary}.`,
-                timestamp: new Date().toISOString(),
-              };
-              setMessages((prev) => [...prev, memNoticeMsg]);
-              setProjects((prev) => {
-                const updated = [...prev];
-                if (updated[targetIndex]) {
-                  const proj = { ...updated[targetIndex] };
-                  proj.messages = [...(proj.messages || []), memNoticeMsg];
-                  updated[targetIndex] = proj;
-                  persistProjectToDb(proj);
-                }
-                return updated;
-              });
-            }
-          } catch (memErr) {
-            console.warn('[AppShell] Auto-persist memory error:', memErr);
-          }
-        }
-
-        if (manualCandidates.length > 0) {
-          setPendingPreferences(manualCandidates);
-        } else {
-          setPendingPreferences([]);
-        }
-      }
-
-      // Step 2: Livepeer Agent regenerates revised version with Nue context
-      const nextVersionNumber = currentProj.versions.length + 1;
-      await handleGenerate(
-        currentProj.initialPrompt,
-        nextVersionNumber,
-        text,
-        targetIndex,
-        currentProj.title,
-        imageUrl
-      );
-    } catch (e) {
-      console.error('Feedback handling error:', e);
-      setIsGenerating(false);
-    }
+    // Memory recall and preference saving are handled automatically by
+    // withMemWal inside the /api/generate route (Groq LLM + MemWal AI SDK)
+    const nextVersionNumber = currentProj.versions.length + 1;
+    await handleGenerate(
+      currentProj.initialPrompt,
+      nextVersionNumber,
+      text,
+      targetIndex,
+      currentProj.title,
+      imageUrl
+    );
   };
 
   // Confirm and persist remembered preferences to Walrus via MemWal

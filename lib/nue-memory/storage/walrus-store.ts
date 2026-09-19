@@ -41,7 +41,7 @@ const META_DELIMITER = '__NUE_META__';
  */
 export function getUserNamespace(userId?: string): string {
   if (!userId || userId === 'default_user' || userId === 'global') {
-    return 'nue-memory';
+    throw new Error('User identity is required to determine MemWal namespace. Generic fallback namespaces are not allowed.');
   }
   const clean = userId.trim().toLowerCase();
   return clean.startsWith('nue-') ? clean : `nue-${clean}`;
@@ -161,7 +161,7 @@ export class WalrusMemWalStore implements MemoryStore {
 
   constructor(config: WalrusStoreConfig = {}) {
     this.config = config;
-    this.defaultNamespace = config.namespace || 'nue-memory';
+    this.defaultNamespace = config.namespace || '';
   }
 
   /**
@@ -169,10 +169,17 @@ export class WalrusMemWalStore implements MemoryStore {
    * honest status instead of fabricated responses.
    */
   public getConnectionState(userId?: string): { state: WalrusConnectionState; message: string; namespace: string } {
-    const ns = userId ? getUserNamespace(userId) : this.defaultNamespace;
+    let ns = '';
+    try {
+      if (userId) {
+        ns = getUserNamespace(userId);
+      }
+    } catch {
+      // User not authenticated yet
+    }
     switch (this.connectionState) {
       case 'connected':
-        return { state: 'connected', message: `Walrus Relayer connected (namespace: ${ns}).`, namespace: ns };
+        return { state: 'connected', message: ns ? `Walrus Relayer connected (namespace: ${ns}).` : 'Walrus Relayer connected.', namespace: ns };
       case 'missing_keys':
         return {
           state: 'missing_keys',
@@ -236,21 +243,22 @@ export class WalrusMemWalStore implements MemoryStore {
         throw this.initError;
       }
 
-      // Pre-warm the default namespace client to verify connectivity
-      const serverUrl =
-        this.config.serverUrl ||
-        process.env.MEMWAL_SERVER_URL ||
-        'https://relayer.memory.walrus.xyz';
+      if (this.defaultNamespace) {
+        const serverUrl =
+          this.config.serverUrl ||
+          process.env.MEMWAL_SERVER_URL ||
+          'https://relayer.memory.walrus.xyz';
 
-      const { MemWal } = await import('@mysten-incubation/memwal');
-      const client = MemWal.create({
-        key: privateKey,
-        accountId,
-        serverUrl,
-        namespace: this.defaultNamespace,
-      });
+        const { MemWal } = await import('@mysten-incubation/memwal');
+        const client = MemWal.create({
+          key: privateKey,
+          accountId,
+          serverUrl,
+          namespace: this.defaultNamespace,
+        });
 
-      this.clientMap.set(this.defaultNamespace, client);
+        this.clientMap.set(this.defaultNamespace, client);
+      }
       this.connectionState = 'connected';
       this.initError = null;
       this.isInitialized = true;
@@ -324,7 +332,6 @@ export class WalrusMemWalStore implements MemoryStore {
           namespace: targetNamespace,
           topK: (query.limit || 10) * 2, // oversample to allow filtering
           maxDistance: 1.5,
-          sort: 'recent',
         });
 
         if (recallRes?.results) {
