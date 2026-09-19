@@ -256,9 +256,26 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         });
 
         setMessages((prev) => [...prev, agentMsg]);
+      } else {
+        // API returned an error - show it to the user
+        const errorMsg: ChatMessage = {
+          id: `msg-err-${Date.now()}`,
+          sender: 'agent',
+          content: `Sorry, generation failed: ${data.error || 'Unknown error'}. Please try again.`,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, errorMsg]);
+        console.error('[AppShell] Generate API error:', data.error);
       }
     } catch (err) {
       console.error('Generation error:', err);
+      const errorMsg: ChatMessage = {
+        id: `msg-err-${Date.now()}`,
+        sender: 'agent',
+        content: `Sorry, something went wrong: ${err instanceof Error ? err.message : 'Network error'}. Please try again.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsGenerating(false);
     }
