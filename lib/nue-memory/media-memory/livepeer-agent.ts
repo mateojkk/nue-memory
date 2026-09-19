@@ -625,108 +625,107 @@ export class LivepeerMediaAgent {
         // If we have unique scene prompts from the director, render each scene in parallel
         let clipUrls: string[] = [];
 
-        if (scenePrompts && scenePrompts.length > 0 && clipCount > 1) {
-          console.log(`[LivepeerAgent] Rendering ${clipCount} unique scenes in parallel...`);
-          const sceneRenderPromises = scenePrompts.slice(0, clipCount).map(async (scenePrompt, idx) => {
-            const fullScenePrompt = `${scenePrompt}. Visual style: ${visualTheme}. Pacing: ${pacing}. Composition: ${aspectRatio}.`;
-            try {
-              const sceneRes = await fetch(this.endpoint, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Accept: 'application/json, text/event-stream',
-                  ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-                },
-                body: JSON.stringify({
-                  jsonrpc: '2.0',
-                  id: Date.now() + idx,
-                  method: 'tools/call',
-                  params: {
-                    name: 'create_media',
-                    arguments: {
-                      action: 'generate',
-                      prompt: fullScenePrompt,
-                      model_override: modelToUse,
-                      duration: singleTakeDuration,
-                    },
+        if (clipCount > 1 && realMediaUrl) {
+          clipUrls = [realMediaUrl];
+          const remainingPrompts =
+            scenePrompts && scenePrompts.length > 1 ? scenePrompts.slice(1, clipCount) : [];
+
+          if (remainingPrompts.length > 0) {
+            console.log(
+              `[LivepeerAgent] Scene 1 already rendered (${realMediaUrl}). Rendering ${remainingPrompts.length} additional scene(s) in parallel...`
+            );
+            onProgress?.(60, `Rendering additional scenes (${remainingPrompts.length}) in parallel...`);
+            const sceneRenderPromises = remainingPrompts.map(async (scenePrompt, idx) => {
+              const sceneIndex = idx + 2;
+              const fullScenePrompt = `${scenePrompt}. Visual style: ${visualTheme}. Pacing: ${pacing}. Composition: ${aspectRatio}.`;
+              try {
+                const sceneRes = await fetch(this.endpoint, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json, text/event-stream',
+                    ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
                   },
-                }),
-              });
+                  body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: Date.now() + idx,
+                    method: 'tools/call',
+                    params: {
+                      name: 'create_media',
+                      arguments: {
+                        action: 'generate',
+                        prompt: fullScenePrompt,
+                        model_override: modelToUse,
+                        duration: singleTakeDuration,
+                      },
+                    },
+                  }),
+                });
 
-              if (sceneRes.ok) {
-                const sceneData = await sceneRes.json();
-                const content = sceneData.result?.structuredContent;
+                if (sceneRes.ok) {
+                  const sceneData = await sceneRes.json();
+                  const content = sceneData.result?.structuredContent;
 
-                if (content?.url) {
-                  console.log(`[LivepeerAgent] Scene ${idx + 1} rendered immediately: ${content.url}`);
-                  return content.url;
-                }
+                  if (content?.url) {
+                    console.log(`[LivepeerAgent] Scene ${sceneIndex} rendered immediately: ${content.url}`);
+                    return content.url;
+                  }
 
-                // Handle async job (poll for completion)
-                if (content?.job_id && (content.status === 'pending' || content.status === 'running')) {
-                  const jobId = content.job_id;
-                  console.log(`[LivepeerAgent] Scene ${idx + 1} async job ${jobId} - polling...`);
-                  for (let attempt = 0; attempt < 30; attempt++) {
-                    await new Promise((resolve) => setTimeout(resolve, 5000));
-                    try {
-                      const pollRes = await fetch(this.endpoint, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          Accept: 'application/json, text/event-stream',
-                          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-                        },
-                        body: JSON.stringify({
-                          jsonrpc: '2.0',
-                          id: Date.now(),
-                          method: 'tools/call',
-                          params: {
-                            name: 'get_create_media',
-                            arguments: { job_id: jobId },
+                  // Handle async job (poll for completion)
+                  if (content?.job_id && (content.status === 'pending' || content.status === 'running')) {
+                    const jobId = content.job_id;
+                    console.log(`[LivepeerAgent] Scene ${sceneIndex} async job ${jobId} - polling...`);
+                    for (let attempt = 0; attempt < 25; attempt++) {
+                      await new Promise((resolve) => setTimeout(resolve, 5000));
+                      try {
+                        const pollRes = await fetch(this.endpoint, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json, text/event-stream',
+                            ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
                           },
-                        }),
-                      });
-                      if (pollRes.ok) {
-                        const pollData = await pollRes.json();
-                        if (pollData.result?.structuredContent?.url) {
-                          console.log(`[LivepeerAgent] Scene ${idx + 1} completed: ${pollData.result.structuredContent.url}`);
-                          return pollData.result.structuredContent.url;
+                          body: JSON.stringify({
+                            jsonrpc: '2.0',
+                            id: Date.now(),
+                            method: 'tools/call',
+                            params: {
+                              name: 'get_create_media',
+                              arguments: { job_id: jobId },
+                            },
+                          }),
+                        });
+                        if (pollRes.ok) {
+                          const pollData = await pollRes.json();
+                          if (pollData.result?.structuredContent?.url) {
+                            console.log(
+                              `[LivepeerAgent] Scene ${sceneIndex} completed: ${pollData.result.structuredContent.url}`
+                            );
+                            return pollData.result.structuredContent.url;
+                          }
+                          if (pollData.result?.structuredContent?.status === 'failed') break;
                         }
-                        if (pollData.result?.structuredContent?.status === 'failed') break;
+                      } catch {
+                        /* continue polling */
                       }
-                    } catch { /* continue polling */ }
+                    }
                   }
                 }
+              } catch (err) {
+                console.warn(`[LivepeerAgent] Scene ${sceneIndex} render failed:`, err);
               }
-            } catch (err) {
-              console.warn(`[LivepeerAgent] Scene ${idx + 1} render failed:`, err);
+              return null;
+            });
+
+            const sceneResults = await Promise.all(sceneRenderPromises);
+            for (const url of sceneResults) {
+              if (url) clipUrls.push(url);
             }
-            return null;
-          });
-
-          const sceneResults = await Promise.all(sceneRenderPromises);
-          clipUrls = sceneResults.filter((url): url is string => url !== null);
-          console.log(`[LivepeerAgent] ${clipUrls.length}/${clipCount} unique scenes rendered successfully`);
-        }
-
-        // If we got fewer unique clips than needed, pad with the first render
-        if (clipUrls.length === 0 && realMediaUrl) {
-          // Fallback: no unique scenes rendered, duplicate the original clip
-          for (let i = 0; i < clipCount; i++) {
-            clipUrls.push(realMediaUrl);
+            console.log(
+              `[LivepeerAgent] ${clipUrls.length}/${clipCount} total scenes ready for assembly`
+            );
           }
-        } else if (clipUrls.length < clipCount && clipUrls.length > 0) {
-          // Partial success: fill remaining slots with the last successful clip
-          const lastClip = clipUrls[clipUrls.length - 1];
-          while (clipUrls.length < clipCount) {
-            clipUrls.push(lastClip);
-          }
-        } else if (clipUrls.length === 0 && !realMediaUrl) {
-          throw new Error('No video clips were rendered - all scene generations failed.');
-        }
-
-        // For single-clip with audio only (no multi-scene), just use realMediaUrl
-        if (clipCount <= 1 && realMediaUrl) {
+        } else if (clipCount <= 1 && realMediaUrl) {
           clipUrls = [realMediaUrl];
         }
 

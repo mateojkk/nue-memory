@@ -261,7 +261,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       if (data.success && data.jobId) {
         const jobId = data.jobId;
         const pollIntervalMs = 3000;
-        const maxPollAttempts = 100; // 100 * 3s = 300s (5 minutes window)
+        const maxPollAttempts = 180; // 180 * 3s = 540s (9 minutes window for long-form / multi-scene takes)
         let completedResult: any = null;
 
         for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
@@ -295,7 +295,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         }
 
         if (!completedResult) {
-          throw new Error('Video generation took longer than expected. Please check your gallery in a moment.');
+          throw new Error('Video generation took longer than expected due to remote GPU queue congestion. Please check your gallery in a moment.');
         }
 
         data = { success: true, ...completedResult };
