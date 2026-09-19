@@ -382,27 +382,29 @@ export class LivepeerMediaAgent {
     const isImageToVideo = Boolean(hostedImageUrl);
 
     // Determine model dispatch strategy:
-    // 1. If image provided: Dispatch pixverse-i2v animate action
-    // 2. If explicitly requested seedance: Dispatch seedance-25-t2v
+    // 1. If image provided: Dispatch seedance-25-i2v (or pixverse-i2v if explicit)
+    // 2. If explicitly requested pixverse: Dispatch pixverse-t2v
     // 3. If explicitly requested ltx: Dispatch ltx-25-t2v-pro
-    // 4. If targetDuration >= 15 (or > 8): Long-form multi-scene sequence assembled from high-quality takes
-    // 5. Otherwise: Use pixverse-t2v for fast, single-take video
-    const isLongForm = !isImageToVideo && targetDuration > 8;
-    const clipCount = isLongForm
-      ? (scenePrompts?.length || Math.min(8, Math.max(2, Math.round(targetDuration / 8))))
-      : 1;
+    // 4. Default: seedance-25-t2v for superior visual quality and up to 15s takes
     const modelToUse = isImageToVideo
-      ? (explicitSeedance ? 'seedance-25-i2v' : 'pixverse-i2v')
-      : explicitSeedance
-      ? 'seedance-25-t2v'
+      ? (explicitPixverse ? 'pixverse-i2v' : 'seedance-25-i2v')
+      : explicitPixverse
+      ? 'pixverse-t2v'
       : explicitLtx
       ? 'ltx-25-t2v-pro'
-      : 'pixverse-t2v';
+      : 'seedance-25-t2v';
+
+    const maxSingleTake = modelToUse === 'seedance-25-t2v' ? 15 : modelToUse === 'ltx-25-t2v-pro' ? 10 : 8;
+    const isLongForm = !isImageToVideo && targetDuration > maxSingleTake;
+    const clipCount = isLongForm
+      ? (scenePrompts?.length || Math.min(8, Math.max(2, Math.round(targetDuration / maxSingleTake))))
+      : 1;
 
     // Livepeer create_media schema strictly enforces duration <= 15.
-    // For single-take generation, clamp to 8s (pixverse max) or 10-15s (seedance/ltx).
+    // For seedance: takes up to 15s (clamped between 5 and 15s).
+    // For ltx: takes up to 10s. For pixverse: takes up to 8s.
     const singleTakeDuration = modelToUse === 'seedance-25-t2v'
-      ? Math.min(15, Math.max(5, targetDuration))
+      ? (isLongForm ? 15 : Math.min(15, Math.max(5, targetDuration)))
       : modelToUse === 'ltx-25-t2v-pro'
       ? Math.min(10, Math.max(3, targetDuration))
       : Math.min(8, Math.max(3, targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3));

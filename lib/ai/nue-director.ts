@@ -13,9 +13,9 @@ const SYSTEM_PROMPT = `You are Nue, a creative director AI for video production 
 Given a user's creative request (and any recalled memory context about their preferences), produce a structured creative brief as valid JSON.
 
 Available Livepeer video models and timeline assembly:
-- pixverse-t2v: Fast, high-quality text-to-video takes (3, 5, 8s per take). Default for all takes.
+- seedance-25-t2v: High-quality text-to-video takes (5-15s per take). Default model for all video generation.
 - Multi-scene timeline assembly: Each take is rendered with a UNIQUE scene prompt, then assembled into a continuous video with synchronized soundtrack. Supports 15-60s total.
-- seedance-25-t2v: Alternative text-to-video model (when explicitly requested).
+- pixverse-t2v: Fast alternative text-to-video model (3-8s per take, when explicitly requested or for quick previews).
 - ltx-25-t2v-pro: Alternative text-to-video model (when explicitly requested).
 - pixverse-i2v: Image-to-video animation. Use when user provides an image.
 
@@ -34,7 +34,7 @@ Output ONLY valid JSON with these fields:
   "audioStyle": "description of audio mood (e.g. 'Deep ambient atmospheric', 'Upbeat electronic', 'Cheerful kids song')",
   "audioEnabled": true | false,
   "duration": number (seconds, e.g. 30, 45, or 60 if requested by user, or 5-8 for short takes),
-  "model": "pixverse-t2v" | "seedance-25-t2v" | "ltx-25-t2v-pro",
+  "model": "seedance-25-t2v" | "pixverse-t2v" | "ltx-25-t2v-pro",
   "aspectRatio": "16:9" | "9:16" | "1:1",
   "agentMessage": "a conversational response to the user"
 }
@@ -43,8 +43,8 @@ Guidelines:
 - CRITICAL: If the user says "hi", "hello", "hey", asks a general question, asks about starting a new chat, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and answer their question directly.
 - If the user describes a scene, asks to create a video, gives revision feedback, or attaches an image, set "shouldGenerate": true.
 - Video duration and multi-scene sequences:
-  * When the user requests 15-60 seconds (e.g. "make it 30 seconds", "1 minute video"): set duration to the requested number. Generate scenePrompts with enough unique scene descriptions (duration / 8, rounded up). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits or 8-second takes.
-  * For standard single-scene requests without explicit duration, set duration: 5 or 8. Do NOT include scenePrompts.
+  * When the user requests 15-60 seconds (e.g. "make it 30 seconds", "1 minute video"): set duration to the requested number. Use model: "seedance-25-t2v" by default. Generate scenePrompts with enough unique scene descriptions (for seedance 15s takes: 30s -> 2 scenes, 45s -> 3 scenes, 60s -> 4 scenes). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits.
+  * For standard single-scene requests without explicit duration, set duration: 10 or 15. Do NOT include scenePrompts.
 - Each scenePrompt should be a complete visual description for that scene. Include the visual style, characters, action, camera angle, lighting, and mood. Make each scene flow naturally into the next to create a cohesive story.
 - If the user mentions TikTok, Reels, or vertical, use 9:16 aspect ratio.
 - Apply any recalled memory preferences naturally - don't fight them unless the user explicitly overrides.
@@ -284,7 +284,7 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       audioStyle: parsed.audioStyle || 'Ambient modern electronic',
       audioEnabled: parsed.audioEnabled !== false,
       duration,
-      model: parsed.model || 'pixverse-t2v',
+      model: parsed.model || 'seedance-25-t2v',
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
       agentMessage: parsed.agentMessage || (shouldGen
         ? 'Directing your video with your preferred creative style.'
@@ -298,7 +298,7 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
     const durMatch = userMessage.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
     const parsedDur = durMatch ? parseInt(durMatch[1], 10) : 5;
     const dur = Math.max(3, Math.min(60, parsedDur));
-    const model = dur > 8 ? 'pixverse-t2v' : 'pixverse-t2v';
+    const model = 'seedance-25-t2v';
 
     return {
       shouldGenerate: shouldGen,
