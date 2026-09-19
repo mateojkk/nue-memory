@@ -16,7 +16,7 @@ export function NueNavbar({}: NueNavbarProps = {}) {
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-50 bg-[var(--bg)]/80 backdrop-blur-[13px] border-b border-[var(--border)] px-3 sm:px-6 py-2.5 sm:py-3.5 font-light transition-colors">
+    <header className="sticky top-0 z-50 bg-[var(--bg)]/80 backdrop-blur-[13px] shadow-xs px-3 sm:px-6 py-2.5 sm:py-3.5 font-light transition-colors">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Brand: Technical asterisk icon + Nue mark */}
         <div className="flex items-center gap-3 sm:gap-6">

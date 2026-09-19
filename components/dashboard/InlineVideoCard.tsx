@@ -118,7 +118,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
   const cap = version.livepeerCapability || 'pixverse-t2v';
 
   return (
-    <div className="mt-3 rounded-2xl bg-[var(--surface-2)]/80 border border-[var(--border)] overflow-hidden shadow-md max-w-2xl w-full">
+    <div className="mt-3 rounded-2xl bg-[var(--surface-2)]/80 overflow-hidden shadow-md max-w-2xl w-full">
       {/* Hidden secondary audio player for un-muxed stems */}
       {audioSrc && <audio ref={audioRef} src={audioSrc} loop />}
 
@@ -155,7 +155,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
         {!isPlaying && (
           <button
             onClick={togglePlay}
-            className="absolute inset-0 m-auto w-14 h-14 rounded-full bg-black/60 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 z-10"
+            className="absolute inset-0 m-auto w-14 h-14 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-sm shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 z-10"
             title="Play video"
           >
             <Play className="w-6 h-6 ml-1 fill-white" />
@@ -165,16 +165,16 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
         {/* Top Badges Overlay */}
         <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none z-20">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-white text-[11px] font-mono border border-white/10 font-medium">
+            <span className="px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-white text-[11px] font-mono font-medium">
               Version {version.versionNumber} &middot; {dur}s Take
             </span>
-            <span className="px-2 py-1 rounded-md bg-black/70 backdrop-blur-md text-[var(--accent)] text-[10px] font-mono border border-white/10">
+            <span className="px-2 py-1 rounded-md bg-black/70 backdrop-blur-md text-[var(--accent)] text-[10px] font-mono">
               {cap}
             </span>
           </div>
 
           {/* Aspect Ratio Switcher */}
-          <div className="pointer-events-auto flex items-center bg-black/70 backdrop-blur-md rounded-md p-0.5 border border-white/10 text-[10px] font-mono text-white/80">
+          <div className="pointer-events-auto flex items-center bg-black/70 backdrop-blur-md rounded-md p-0.5 text-[10px] font-mono text-white/80">
             {(['16:9', '9:16', '1:1'] as const).map((ratio) => (
               <button
                 key={ratio}
@@ -254,7 +254,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
 
       {/* Multi-Scene Storyboard Breakdown */}
       {showStoryboard && version.scenes && version.scenes.length > 0 && (
-        <div className="p-3 bg-[var(--surface)] border-t border-[var(--border)] animate-fadeIn space-y-2">
+        <div className="p-3 bg-[var(--surface)] animate-fadeIn space-y-2">
           <div className="flex items-center justify-between text-[11px] font-mono text-[var(--fg-muted)]">
             <span className="font-medium text-[var(--fg)]">Storyboard Take Sequencing</span>
             <span>{version.scenes.length} Composed Scenes</span>
@@ -263,7 +263,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
             {version.scenes.map((scene) => (
               <div
                 key={scene.sceneNumber}
-                className="p-2 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[10px] space-y-1"
+                className="p-2 rounded-lg bg-[var(--surface-2)] text-[10px] space-y-1"
               >
                 <div className="flex items-center justify-between font-mono text-[var(--accent)] font-medium">
                   <span>Take #{scene.sceneNumber}</span>
@@ -278,10 +278,10 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
       )}
 
       {/* Card Details Footer */}
-      <div className="p-3 bg-[var(--surface)] border-t border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+      <div className="p-3 bg-[var(--surface)] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-2 flex-wrap">
           {version.audioStyle && (
-            <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--fg)] bg-[var(--surface-2)] px-2 py-0.5 rounded border border-[var(--border)]">
+            <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--fg)] bg-[var(--surface-2)] px-2 py-0.5 rounded">
               <span>🎵</span>
               <span className="truncate max-w-[200px]">{version.audioStyle.style}</span>
             </span>
@@ -292,8 +292,8 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
               {version.appliedPreferences.map((pref) => (
                 <span
                   key={pref.id}
-                  className="px-2 py-0.5 rounded-md bg-emerald-950/20 border border-emerald-800/30 text-emerald-400 text-[10px] font-mono"
-                  title="Applied from MemWal persistent memory"
+                  className="px-2 py-0.5 rounded-md bg-emerald-950/20 text-emerald-400 text-[10px] font-mono"
+                  title="Applied from your preferences"
                 >
                   ✓ {pref.preference}
                 </span>
@@ -303,7 +303,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
         </div>
 
         <span className="text-[10px] font-mono text-[var(--fg-faint)] shrink-0">
-          Rendered via Livepeer Agent MCP
+          AI Generated Video
         </span>
       </div>
     </div>

@@ -46,19 +46,19 @@ export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-8 font-light text-left">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
           <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
             Credits &amp; Usage
           </h2>
           <p className="text-[var(--fg-muted)] text-xs sm:text-sm mt-1">
-            Monitor your Livepeer AI media generation credits and compute balance.
+            Monitor your AI media generation credits and balance.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           {email && (
-            <span className="text-xs font-mono text-[var(--fg-muted)] px-3 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)]">
+            <span className="text-xs font-mono text-[var(--fg-muted)] px-3 py-1.5 rounded-lg bg-[var(--surface-2)]">
               Account: <span className="text-[var(--fg)] font-medium">{email}</span>
             </span>
           )}
@@ -74,7 +74,7 @@ export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
       </div>
 
       {/* Main Credit Balance Card */}
-      <div className="interactive-card p-6 sm:p-8 rounded-2xl bg-[var(--surface)] border border-[var(--border)]/60 shadow-xl space-y-6 animate-fadeIn">
+      <div className="interactive-card p-6 sm:p-8 rounded-2xl bg-[var(--surface)] shadow-lg space-y-6 animate-fadeIn">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <span className="text-xs font-mono uppercase tracking-wider text-[var(--fg-muted)]">
@@ -93,7 +93,7 @@ export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
           <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--surface-2)] text-xs font-mono shadow-xs">
             <span className={livepeer.dotClass} />
             <span className="text-[var(--fg-soft)]">
-              {health.livepeer.state === 'configured' ? 'Livepeer API Connected' : 'Free Demo Tier Active'}
+              {health.livepeer.state === 'configured' ? 'Generation Engine Active' : 'Free Demo Tier Active'}
             </span>
           </div>
         </div>
@@ -113,13 +113,13 @@ export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-[var(--border)]/50">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
           <div className="p-4 rounded-xl bg-[var(--surface-2)] transition-all duration-200 hover:-translate-y-0.5 shadow-xs">
             <span className="text-xs font-mono text-[var(--fg-muted)] block">Generations Run</span>
             <span className="text-2xl font-medium text-[var(--fg)] font-mono mt-1 block">
               {totalGenerations}
             </span>
-            <span className="text-[11px] text-[var(--fg-faint)] mt-0.5 block">AI media synthesis renders</span>
+            <span className="text-[11px] text-[var(--fg-faint)] mt-0.5 block">AI media generations</span>
           </div>
 
           <div className="p-4 rounded-xl bg-[var(--surface-2)] transition-all duration-200 hover:-translate-y-0.5 shadow-xs">
@@ -141,7 +141,7 @@ export function UsageView({ versions = [], onOpenStudio }: UsageViewProps) {
       </div>
 
       {/* Credit Ledger / Info */}
-      <div className="p-6 rounded-xl bg-[var(--surface)] border border-[var(--border)] space-y-4">
+      <div className="p-6 rounded-xl bg-[var(--surface)] shadow-md space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-[var(--fg)] font-mono uppercase tracking-wider">
             Demo Credits Notice

@@ -25,6 +25,7 @@ Available post-processing:
 
 Output ONLY valid JSON with these fields:
 {
+  "shouldGenerate": true | false,
   "enrichedPrompt": "detailed visual prompt for the video model, incorporating user preferences",
   "visualTheme": "the visual style/theme (e.g. 'Cinematic Monochrome', 'Cyberpunk Neon', 'Modern Product Showcase')",
   "pacing": "fast" | "moderate" | "cinematic",
@@ -33,18 +34,21 @@ Output ONLY valid JSON with these fields:
   "duration": number (seconds, pick the right duration for the request),
   "model": "pixverse-t2v" | "seedance-25-t2v" | "ltx-25-t2v-pro" (pick the best model),
   "aspectRatio": "16:9" | "9:16" | "1:1",
-  "agentMessage": "a conversational response to the user explaining what you're creating and why"
+  "agentMessage": "a conversational response to the user"
 }
 
 Guidelines:
+- CRITICAL: If the user says "hi", "hello", "hey", asks a general question, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and ask what kind of video or scene they would like to create.
+- If the user describes a scene, asks to create a video, gives revision feedback, or attaches an image, set "shouldGenerate": true.
 - If the user asks for >8 seconds, use seedance-25-t2v
 - If the user mentions TikTok, Reels, or vertical, use 9:16 aspect ratio
 - Apply any recalled memory preferences naturally - don't fight them unless the user explicitly overrides
 - When the user gives feedback on a previous version (provided as feedbackContext), adjust the brief accordingly
-- Keep agentMessage concise and natural
+- Keep agentMessage natural, friendly, and user-focused. Do NOT lecture the user about technical backend details like Walrus, MemWal, or MCP.
 - Do NOT use em dashes anywhere. Use standard hyphens only.`;
 
 export interface DirectorResult {
+  shouldGenerate: boolean;
   enrichedPrompt: string;
   visualTheme: string;
   pacing: 'fast' | 'moderate' | 'cinematic';
@@ -123,7 +127,7 @@ export async function directCreativeBrief(
   });
 
   // Parse the JSON response from the LLM
-  const parsed = parseDirectorResponse(text);
+  const parsed = parseDirectorResponse(text, userMessage);
 
   // Flush any pending auto-save writes so they complete before the serverless
   // handler exits (withMemWal saves are fire-and-forget by default)
@@ -135,9 +139,20 @@ export async function directCreativeBrief(
 }
 
 /**
+ * Checks if the user message is a simple conversational greeting or query.
+ */
+function isGreetingMessage(msg: string): boolean {
+  const clean = msg.toLowerCase().trim().replace(/[!.,?]/g, '');
+  const greetings = ['hi', 'hello', 'hey', 'yo', 'sup', 'good morning', 'good evening', 'howdy', 'how are you', 'who are you', 'help', 'test'];
+  return greetings.includes(clean) || (clean.length <= 4 && !clean.includes('vid'));
+}
+
+/**
  * Parses the LLM's JSON response, with fallback defaults for robustness.
  */
-function parseDirectorResponse(text: string): DirectorResult {
+function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
+  const isGreeting = isGreetingMessage(userMessage);
+
   let jsonStr = text.trim();
   const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
@@ -152,7 +167,14 @@ function parseDirectorResponse(text: string): DirectorResult {
 
   try {
     const parsed = JSON.parse(jsonStr);
+    const shouldGen = isGreeting
+      ? false
+      : parsed.shouldGenerate !== undefined
+      ? Boolean(parsed.shouldGenerate)
+      : true;
+
     return {
+      shouldGenerate: shouldGen,
       enrichedPrompt: parsed.enrichedPrompt || parsed.prompt || text,
       visualTheme: parsed.visualTheme || 'Modern Product Showcase',
       pacing: ['fast', 'moderate', 'cinematic'].includes(parsed.pacing) ? parsed.pacing : 'moderate',
@@ -161,12 +183,13 @@ function parseDirectorResponse(text: string): DirectorResult {
       duration: typeof parsed.duration === 'number' ? Math.max(3, Math.min(30, parsed.duration)) : 5,
       model: parsed.model || 'pixverse-t2v',
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
-      agentMessage: parsed.agentMessage || 'Creating your media...',
+      agentMessage: parsed.agentMessage || (isGreeting
+        ? "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"
+        : 'Creating your video...'),
     };
   } catch {
-    // If JSON parsing fails, use the raw text as the enriched prompt
-    console.warn('[NueDirector] Failed to parse LLM JSON response, using raw text as prompt');
     return {
+      shouldGenerate: !isGreeting,
       enrichedPrompt: text,
       visualTheme: 'Modern Product Showcase',
       pacing: 'moderate',
@@ -175,7 +198,7 @@ function parseDirectorResponse(text: string): DirectorResult {
       duration: 5,
       model: 'pixverse-t2v',
       aspectRatio: '16:9',
-      agentMessage: 'Creating your media...',
+      agentMessage: text.trim() || "Hello! What kind of video would you like to create?",
     };
   }
 }

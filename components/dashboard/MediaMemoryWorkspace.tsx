@@ -268,7 +268,7 @@ export function MediaMemoryWorkspace({
       }`}
     >
       {/* Workspace Top Header Bar: Project Switcher & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 shrink-0">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-xl sm:text-2xl font-medium text-[var(--fg)] tracking-tight font-sans">
@@ -288,7 +288,7 @@ export function MediaMemoryWorkspace({
                         if (e.key === 'Escape') setIsEditingTitle(false);
                       }}
                       autoFocus
-                      className="px-2 py-0.5 text-xs font-mono bg-[var(--surface-2)] border border-[var(--accent)] text-[var(--fg)] rounded transition"
+                      className="px-2 py-0.5 text-xs font-mono bg-[var(--surface-2)] text-[var(--fg)] rounded transition"
                     />
                     <button
                       onClick={handleSaveRename}
@@ -309,7 +309,7 @@ export function MediaMemoryWorkspace({
                   <div className="flex items-center gap-1 group">
                     <span
                       onClick={handleStartRename}
-                      className="text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] px-2 py-0.5 rounded bg-[var(--surface-2)] border border-transparent hover:border-[var(--border)] cursor-pointer transition flex items-center gap-1.5"
+                      className="text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] px-2 py-0.5 rounded bg-[var(--surface-2)] cursor-pointer transition flex items-center gap-1.5"
                       title="Click to rename project"
                     >
                       <span>{activeProject.title}</span>
@@ -341,7 +341,7 @@ export function MediaMemoryWorkspace({
             )}
           </div>
           <p className="text-xs text-[var(--fg-muted)] font-light mt-0.5">
-            Autonomous video generation with persistent agent memory.
+            AI video director that learns your creative style.
           </p>
         </div>
 
@@ -385,7 +385,7 @@ export function MediaMemoryWorkspace({
 
       {/* Memory Applied Banner */}
       {activeVersion && activeVersion.appliedPreferences.length > 0 && (
-        <div className="my-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs font-mono text-[var(--fg)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
+        <div className="my-3 p-3 rounded-xl bg-[var(--surface)] text-xs font-mono text-[var(--fg)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="flex items-center gap-1.5 text-emerald-500 font-medium">
               <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -395,7 +395,7 @@ export function MediaMemoryWorkspace({
               {activeVersion.appliedPreferences.map((pref) => (
                 <span
                   key={pref.id}
-                  className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg)] text-[11px]"
+                  className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--fg)] text-[11px]"
                 >
                   ✓ {pref.preference}
                 </span>
@@ -443,8 +443,8 @@ export function MediaMemoryWorkspace({
 
             {/* Picture attachment chip above center input */}
             {selectedImage && (
-              <div className="p-2 rounded-2xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-3 shadow-md animate-fadeIn">
-                <div className="relative rounded-xl overflow-hidden border border-[var(--border)] w-12 h-12 bg-black/40 shrink-0">
+              <div className="p-2 rounded-2xl bg-[var(--surface)] flex items-center gap-3 shadow-md animate-fadeIn">
+                <div className="relative rounded-xl overflow-hidden w-12 h-12 bg-black/40 shrink-0">
                   <img src={selectedImage} alt="Preview" className="w-full h-full object-cover" />
                   <button
                     type="button"
@@ -471,7 +471,7 @@ export function MediaMemoryWorkspace({
             {/* ChatGPT Center Input Pill */}
             <form
               onSubmit={handleSubmit}
-              className="w-full rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)] transition-all px-4 py-3 flex items-center gap-3"
+              className="w-full rounded-full bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl transition-all px-4 py-3 flex items-center gap-3"
             >
               <button
                 type="button"
@@ -499,13 +499,13 @@ export function MediaMemoryWorkspace({
                 onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono transition shrink-0 ${
                   isThinkingEnabled
-                    ? 'bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--border)]'
+                    ? 'bg-[var(--surface-2)] text-[var(--fg)]'
                     : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
                 }`}
-                title="Persistent MemWal memory direction"
+                title="Creative memory active"
               >
                 <Brain className={`w-3.5 h-3.5 ${isThinkingEnabled ? 'text-[var(--accent)]' : ''}`} />
-                <span>Think</span>
+                <span>Memory</span>
               </button>
 
               <button
@@ -598,7 +598,7 @@ export function MediaMemoryWorkspace({
                   }`}
                 >
                   {!isUser && (
-                    <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] shrink-0 mt-0.5 shadow-xs">
+                    <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0 mt-0.5 shadow-xs">
                       <Sparkles className="w-4 h-4" />
                     </div>
                   )}
@@ -610,9 +610,9 @@ export function MediaMemoryWorkspace({
                   >
                     {/* User Bubble */}
                     {isUser ? (
-                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl rounded-tr-xs px-4 py-3 text-xs sm:text-sm text-[var(--fg)] shadow-xs leading-relaxed">
+                      <div className="bg-[var(--surface-2)] rounded-2xl rounded-tr-xs px-4 py-3 text-xs sm:text-sm text-[var(--fg)] shadow-xs leading-relaxed">
                         {msg.imageUrl && (
-                          <div className="mb-2.5 overflow-hidden rounded-xl border border-[var(--border)] max-w-[280px] bg-black/20">
+                          <div className="mb-2.5 overflow-hidden rounded-xl max-w-[280px] bg-black/20">
                             <img
                               src={msg.imageUrl}
                               alt="Visual reference"
@@ -630,7 +630,7 @@ export function MediaMemoryWorkspace({
                       </div>
                     ) : (
                       /* Agent Bubble with Inline Video */
-                      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl rounded-tl-xs p-4 text-xs sm:text-sm text-[var(--fg)] shadow-sm leading-relaxed w-full">
+                      <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs p-4 text-xs sm:text-sm text-[var(--fg)] shadow-sm leading-relaxed w-full">
                         <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
 
                         {matchingVersion && (
@@ -654,7 +654,7 @@ export function MediaMemoryWorkspace({
                   </div>
 
                   {isUser && (
-                    <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--fg-muted)] shrink-0 mt-0.5 shadow-xs">
+                    <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--fg-muted)] shrink-0 mt-0.5 shadow-xs">
                       <User className="w-4 h-4" />
                     </div>
                   )}
@@ -677,16 +677,16 @@ export function MediaMemoryWorkspace({
             {/* Directing Shimmer State */}
             {isGenerating && (
               <div className="flex gap-3 sm:gap-4 animate-fadeIn">
-                <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] shrink-0 shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0 shadow-xs">
                   <RefreshCw className="w-4 h-4 animate-spin" />
                 </div>
-                <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl rounded-tl-xs p-4 text-xs font-mono text-[var(--fg-muted)] space-y-2 max-w-lg shadow-sm">
+                <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs p-4 text-xs font-mono text-[var(--fg-muted)] space-y-2 max-w-lg shadow-sm">
                   <div className="flex items-center gap-2 text-[var(--accent)] font-medium">
                     <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-ping" />
-                    <span>Directing Livepeer neural video model...</span>
+                    <span>Creating your video...</span>
                   </div>
                   <p className="text-[11px] leading-relaxed text-[var(--fg-soft)]">
-                    Synthesizing takes, composing soundtrack with affirmative audio conditioning, and recalling learned preferences from Walrus MemWal.
+                    Composing visual takes, generating soundtrack, and tailoring to your style.
                   </p>
                   <div className="w-full h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
                     <div className="h-full bg-[var(--accent)] rounded-full animate-pulse" style={{ width: '70%' }} />
@@ -702,8 +702,8 @@ export function MediaMemoryWorkspace({
           <div className="sticky bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/95 to-transparent z-20">
             <div className="max-w-3xl mx-auto w-full space-y-2">
               {selectedImage && (
-                <div className="p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-2.5 max-w-sm animate-fadeIn shadow-md">
-                  <div className="relative rounded-lg overflow-hidden border border-[var(--border)] w-11 h-11 bg-black/40 shrink-0">
+                <div className="p-2 rounded-xl bg-[var(--surface)] flex items-center gap-2.5 max-w-sm animate-fadeIn shadow-md">
+                  <div className="relative rounded-lg overflow-hidden w-11 h-11 bg-black/40 shrink-0">
                     <img src={selectedImage} alt="Preview" className="w-full h-full object-cover" />
                     <button
                       type="button"
@@ -730,7 +730,7 @@ export function MediaMemoryWorkspace({
               {/* Bottom Input Pill */}
               <form
                 onSubmit={handleSubmit}
-                className="rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)] transition-all px-4 py-2.5 flex items-center gap-3"
+                className="rounded-full bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl transition-all px-4 py-2.5 flex items-center gap-3"
               >
                 <button
                   type="button"
@@ -759,13 +759,13 @@ export function MediaMemoryWorkspace({
                   onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
                   className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono transition shrink-0 ${
                     isThinkingEnabled
-                      ? 'bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--border)]'
+                      ? 'bg-[var(--surface-2)] text-[var(--fg)]'
                       : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
                   }`}
-                  title="MemWal memory"
+                  title="Creative memory active"
                 >
                   <Brain className={`w-3.5 h-3.5 ${isThinkingEnabled ? 'text-[var(--accent)]' : ''}`} />
-                  <span className="hidden sm:inline">Think</span>
+                  <span className="hidden sm:inline">Memory</span>
                 </button>
 
                 <button
@@ -793,7 +793,7 @@ export function MediaMemoryWorkspace({
 
               <div className="text-center">
                 <span className="text-[10px] font-mono text-[var(--fg-faint)]">
-                  Nue Motion directs Livepeer neural video models with Walrus MemWal memory.
+                  Nue Motion remembers and applies your creative taste as you collaborate.
                 </span>
               </div>
             </div>

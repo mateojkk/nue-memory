@@ -16,7 +16,7 @@ export function AuthGuardModal({ isOpen }: AuthGuardModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl p-6 sm:p-8 space-y-6 text-center">
+      <div className="relative w-full max-w-md rounded-2xl bg-[var(--surface)] shadow-2xl p-6 sm:p-8 space-y-6 text-center">
         {/* Glow effect */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24 bg-[var(--accent)]/20 pointer-events-none rounded-full blur-2xl" />
 
@@ -55,7 +55,7 @@ export function AuthGuardModal({ isOpen }: AuthGuardModalProps) {
           </button>
         </div>
 
-        <div className="pt-3 border-t border-[var(--border)]/60 text-[11px] text-[var(--fg-faint)] flex items-center justify-center gap-2">
+        <div className="pt-3 text-[11px] text-[var(--fg-faint)] flex items-center justify-center gap-2">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
           <span>Passwordless Magic Link · Powered by Magic Labs</span>
         </div>

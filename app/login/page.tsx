@@ -18,8 +18,8 @@ export default function LoginPage() {
     return (
       <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)] flex flex-col items-center justify-center p-6 relative font-light">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-[var(--accent)]/15 pointer-events-none rounded-full blur-3xl" />
-        <div className="w-full max-w-md rounded-2xl bg-[var(--surface)] border border-[var(--border)] p-8 text-center space-y-5 shadow-2xl animate-fadeIn">
-          <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+        <div className="w-full max-w-md rounded-2xl bg-[var(--surface)] p-8 text-center space-y-5 shadow-2xl animate-fadeIn">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div className="space-y-1.5">
@@ -31,7 +31,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs font-mono flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-[var(--surface-2)] text-xs font-mono flex items-center justify-between">
             <span className="text-[var(--fg-muted)]">Nue Motion Balance</span>
             <span className="text-emerald-400 font-semibold">$10.00 Grant Active</span>
           </div>
@@ -90,7 +90,7 @@ export default function LoginPage() {
 
       {/* Main Login Card */}
       <div className="w-full max-w-md mx-auto my-auto py-8">
-        <div className="rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-2xl p-7 sm:p-9 space-y-6 relative animate-fadeIn">
+        <div className="rounded-2xl bg-[var(--surface)] shadow-2xl p-7 sm:p-9 space-y-6 relative animate-fadeIn">
           {/* Badge */}
           <div className="flex items-center justify-between pb-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] text-xs font-mono font-medium">
@@ -111,7 +111,7 @@ export default function LoginPage() {
           </div>
 
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-red-950/30 border border-red-900/50 text-xs text-red-400 flex items-start gap-2 text-left">
+            <div className="p-3.5 rounded-xl bg-red-950/30 text-xs text-red-400 flex items-start gap-2 text-left">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
@@ -131,7 +131,7 @@ export default function LoginPage() {
                   onChange={(e) => setInputEmail(e.target.value)}
                   placeholder="name@company.com"
                   autoFocus
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--fg)] placeholder:text-[var(--fg-faint)] font-mono focus:outline-none focus:border-[var(--accent)] transition"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[var(--surface-2)] text-xs text-[var(--fg)] placeholder:text-[var(--fg-faint)] font-mono focus:outline-none transition shadow-xs"
                 />
               </div>
             </div>
@@ -147,7 +147,7 @@ export default function LoginPage() {
           </form>
 
           {/* Security & Benefits footer */}
-          <div className="pt-4 border-t border-[var(--border)]/60 grid grid-cols-2 gap-3 text-[11px] font-mono text-[var(--fg-faint)] text-left">
+          <div className="pt-4 grid grid-cols-2 gap-3 text-[11px] font-mono text-[var(--fg-faint)] text-left">
             <div className="flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
               <span>Magic Labs Auth</span>

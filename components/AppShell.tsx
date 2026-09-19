@@ -12,7 +12,7 @@ function AnnouncementBar() {
 
   return (
     <div
-      className="overflow-hidden bg-[var(--surface-2)] border-b border-[var(--border)]"
+      className="overflow-hidden bg-[var(--surface-2)]"
       style={{
         maxHeight: open ? 44 : 0,
         opacity: open ? 1 : 0.001,
@@ -223,15 +223,15 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         // Build agent response - use LLM director message when available
         const dur = newVersion.generationDurationSeconds || 5;
         const cap = newVersion.livepeerCapability || 'pixverse-t2v';
-        const durationNotice = ` (${dur}s clip on ${cap})`;
+        const durationNotice = ` (${dur}s clip)`;
 
         const audioNotice = newVersion.audioStyle?.audioUrl
-          ? `\n\n🎵 Synchronized with Livepeer AI soundtrack: ${newVersion.audioStyle.style}.`
+          ? `\n\n🎵 Soundtrack: ${newVersion.audioStyle.style}.`
           : '';
 
         const agentContent = data.directorMessage
           ? `${data.directorMessage}${durationNotice}${audioNotice}`
-          : `I have generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing and ${newVersion.audioStyle.style}.${audioNotice}`;
+          : `I generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing.${audioNotice}`;
 
         const agentMsg: ChatMessage = {
           id: `msg-${Date.now()}`,
@@ -248,6 +248,27 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
             const proj = { ...updated[targetIndex] };
             proj.versions = [...proj.versions, newVersion];
             proj.currentVersionIndex = proj.versions.length - 1;
+            proj.messages = [...(proj.messages || []), agentMsg];
+            updated[targetIndex] = proj;
+            persistProjectToDb(proj);
+          }
+          return updated;
+        });
+
+        setMessages((prev) => [...prev, agentMsg]);
+      } else if (data.success && data.directorMessage) {
+        // Conversational agent reply (greeting, clarification) without GPU render
+        const agentMsg: ChatMessage = {
+          id: `msg-${Date.now()}`,
+          sender: 'agent',
+          content: data.directorMessage,
+          timestamp: new Date().toISOString(),
+        };
+
+        setProjects((prev) => {
+          const updated = [...prev];
+          if (updated[targetIndex]) {
+            const proj = { ...updated[targetIndex] };
             proj.messages = [...(proj.messages || []), agentMsg];
             updated[targetIndex] = proj;
             persistProjectToDb(proj);
@@ -381,11 +402,11 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           setActiveMemories(getData.preferences);
         }
 
-        const blobSummary = data.blobIds?.length ? ` (Blob: ${data.blobIds[0]})` : '';
+        const prefSummary = pendingPreferences.map((p) => p.preference).join(', ');
         const memSavedMsg: ChatMessage = {
           id: `msg-saved-${Date.now()}`,
           sender: 'agent',
-          content: `✨ Saved ${pendingPreferences.length} preference(s) to persistent memory${blobSummary}. These will automatically persist and enrich all future agent generations.`,
+          content: `✨ Remembered: "${prefSummary}".`,
           timestamp: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, memSavedMsg]);
@@ -403,7 +424,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
       setPendingPreferences([]);
     } catch (e) {
-      console.error('Failed to save to Walrus:', e);
+      console.error('Failed to save memory:', e);
     } finally {
       setIsSavingMemory(false);
     }
@@ -419,7 +440,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     const initMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
       sender: 'agent',
-      content: `Created new project: "${projectTitle}".\nEnter a creative prompt below to generate your first media version with persistent memory recall.`,
+      content: `Started "${projectTitle}". What kind of video would you like to create?`,
       timestamp: new Date().toISOString(),
     };
     const newProj: CreativeProject = {
@@ -541,7 +562,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       {
         id: `msg-delete-${Date.now()}`,
         sender: 'agent',
-        content: 'Project deleted. Your persistent memories on Walrus remain intact.',
+        content: 'Project deleted. Your saved preferences remain intact.',
         timestamp: new Date().toISOString(),
       },
     ]);

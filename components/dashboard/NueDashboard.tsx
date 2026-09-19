@@ -170,7 +170,7 @@ export function NueDashboard({
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)] font-light flex flex-col">
       {/* Dashboard Top Header Bar */}
-      <header className="sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur-md border-b border-[var(--border)] px-3 sm:px-6 py-2.5 sm:py-3">
+      <header className="sticky top-0 z-40 bg-[var(--bg)]/95 backdrop-blur-md px-3 sm:px-6 py-2.5 sm:py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
             <button

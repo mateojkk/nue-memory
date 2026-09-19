@@ -35,10 +35,10 @@ export const MemoryConfirmation: React.FC<MemoryConfirmationProps> = ({
   };
 
   return (
-    <div className="rounded-2xl bg-[var(--surface)] border-2 border-[var(--accent)]/40 shadow-xl shadow-[var(--accent)]/5 p-4 sm:p-5 relative animate-fadeIn">
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
+    <div className="rounded-2xl bg-[var(--surface)] shadow-2xl p-4 sm:p-5 relative animate-fadeIn">
+      <div className="flex items-center justify-between pb-3 mb-3">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)]">
+          <div className="w-7 h-7 rounded-lg bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)]">
             <Sparkles className="w-4 h-4" />
           </div>
           <div>
@@ -64,9 +64,9 @@ export const MemoryConfirmation: React.FC<MemoryConfirmationProps> = ({
         {detectedPreferences.map((pref, i) => (
           <div
             key={i}
-            className="p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] flex items-start gap-2.5 text-xs text-[var(--fg)]"
+            className="p-2.5 rounded-lg bg-[var(--surface-2)] flex items-start gap-2.5 text-xs text-[var(--fg)]"
           >
-            <span className="text-[9px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[var(--surface)] border border-[var(--border)] text-[var(--accent)] shrink-0 mt-0.5">
+            <span className="text-[9px] font-mono font-medium uppercase px-2 py-0.5 rounded bg-[var(--surface)] text-[var(--accent)] shrink-0 mt-0.5">
               {pref.category}
             </span>
             <span className="font-medium flex-1 leading-snug text-[var(--fg)]">{pref.preference}</span>

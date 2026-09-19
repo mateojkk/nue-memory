@@ -41,7 +41,7 @@ export function ProjectsView({
   };
   return (
     <div className="space-y-8 font-light text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
           <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
             Agent Projects
@@ -61,7 +61,7 @@ export function ProjectsView({
       </div>
 
       {projects.length === 0 ? (
-        <div className="interactive-card p-12 sm:p-16 rounded-2xl bg-[var(--surface)] border border-[var(--border)]/60 text-center max-w-md mx-auto my-12 space-y-5 shadow-xl animate-fadeIn">
+        <div className="interactive-card p-12 sm:p-16 rounded-2xl bg-[var(--surface)] text-center max-w-md mx-auto my-12 space-y-5 shadow-xl animate-fadeIn">
           <div className="space-y-1.5">
             <h3 className="text-xl font-medium text-[var(--fg)] tracking-tight">
               No projects yet
@@ -88,10 +88,10 @@ export function ProjectsView({
             return (
               <div
                 key={proj.id}
-                className={`interactive-card p-6 rounded-2xl border transition-all duration-300 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:-translate-y-1 ${
+                className={`interactive-card p-6 rounded-2xl transition-all duration-300 flex flex-col justify-between shadow-lg hover:shadow-2xl hover:-translate-y-1 ${
                   isSelected
-                    ? 'bg-[var(--surface-2)] border-[var(--accent)]/50 shadow-md'
-                    : 'bg-[var(--surface)] border-[var(--border)]/60 hover:border-[var(--accent)]/40'
+                    ? 'bg-[var(--surface-2)] shadow-md'
+                    : 'bg-[var(--surface)]'
                 }`}
               >
                 <div className="space-y-3">
@@ -117,7 +117,7 @@ export function ProjectsView({
                           if (e.key === 'Escape') setEditingId(null);
                         }}
                         autoFocus
-                        className="px-2.5 py-1 text-sm font-sans bg-[var(--surface)] border border-[var(--accent)] text-[var(--fg)] rounded-lg flex-1 transition"
+                        className="px-2.5 py-1 text-sm font-sans bg-[var(--surface)] text-[var(--fg)] rounded-lg flex-1 transition"
                       />
                       <button
                         onClick={() => handleSaveEdit(proj.id)}
@@ -163,7 +163,7 @@ export function ProjectsView({
                   </div>
                 </div>
 
-                <div className="pt-5 mt-5 border-t border-[var(--border)]/50 flex items-center justify-between gap-2 flex-wrap">
+                <div className="pt-5 mt-5 flex items-center justify-between gap-2 flex-wrap">
                   <button
                     onClick={() => {
                       onSelectProject(idx);

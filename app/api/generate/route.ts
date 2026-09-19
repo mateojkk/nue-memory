@@ -95,6 +95,18 @@ export async function POST(request: Request) {
       imageUrl: validatedImageUrl,
     });
 
+    // If user is just conversing/greeting, reply immediately without GPU generation
+    if (!directorBrief.shouldGenerate) {
+      return NextResponse.json({
+        success: true,
+        mediaVersion: null,
+        directorMessage: directorBrief.agentMessage,
+        appliedMemories: [],
+        summaryTokens: [],
+        retrievalCount: 0,
+      });
+    }
+
     // Build appliedPreferences-compatible array from director output for backward compat
     const syntheticPreferences = [];
     if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Modern Product Showcase') {

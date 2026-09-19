@@ -34,7 +34,7 @@ export function AuthButton({ creditBalance: propCreditBalance, className = '' }:
     <div className="relative">
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-2)] border border-[var(--border)] text-xs font-mono transition-all duration-200"
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-2)] text-xs font-mono transition-all duration-200 shadow-xs"
       >
         <div className="w-5 h-5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] flex items-center justify-center font-bold text-[10px]">
           {userEmail[0].toUpperCase()}
@@ -45,12 +45,12 @@ export function AuthButton({ creditBalance: propCreditBalance, className = '' }:
       </button>
 
       {dropdownOpen && (
-        <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[var(--surface)] border border-[var(--border)] shadow-xl p-2 z-50 animate-fadeIn text-xs font-light">
-          <div className="p-2.5 border-b border-[var(--border)] mb-1">
+        <div className="absolute right-0 mt-2 w-56 rounded-xl bg-[var(--surface)] shadow-2xl p-2 z-50 animate-fadeIn text-xs font-light">
+          <div className="p-2.5 mb-1">
             <span className="text-[10px] uppercase font-mono text-[var(--fg-faint)] block">Signed in as</span>
             <span className="text-[var(--fg)] font-medium truncate block mt-0.5">{userEmail}</span>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-[var(--border)]/50 text-[11px] font-mono">
-              <span className="text-[var(--fg-muted)]">Nue Motion Balance</span>
+            <div className="flex items-center justify-between mt-2 pt-2 text-[11px] font-mono">
+              <span className="text-[var(--fg-muted)]">Balance</span>
               <span className="text-emerald-400 font-semibold">${creditBalance.toFixed(2)}</span>
             </div>
           </div>

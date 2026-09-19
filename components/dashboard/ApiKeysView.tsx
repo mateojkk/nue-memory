@@ -36,7 +36,7 @@ export function ApiKeysView() {
 
   return (
     <div className="space-y-8 font-light text-left">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[var(--border)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6">
         <div>
           <h2 className="text-2xl sm:text-3xl font-medium text-[var(--fg)] tracking-tight font-sans">
             Developer API Keys
@@ -56,8 +56,8 @@ export function ApiKeysView() {
       </div>
 
       {/* Key Table */}
-      <div className="interactive-card rounded-2xl bg-[var(--surface)] border border-[var(--border)]/60 overflow-hidden shadow-xl animate-fadeIn">
-        <div className="p-4 bg-[var(--surface-2)]/70 border-b border-[var(--border)]/50 flex items-center justify-between text-xs font-mono text-[var(--fg-muted)]">
+      <div className="interactive-card rounded-2xl bg-[var(--surface)] overflow-hidden shadow-xl animate-fadeIn">
+        <div className="p-4 bg-[var(--surface-2)]/70 flex items-center justify-between text-xs font-mono text-[var(--fg-muted)]">
           <span>ACTIVE API KEYS</span>
           <button
             onClick={() => setRevealed(!revealed)}
@@ -68,7 +68,7 @@ export function ApiKeysView() {
           </button>
         </div>
 
-        <div className="divide-y divide-[var(--border)]/40">
+        <div className="space-y-1">
           {keys.map((k) => (
             <div key={k.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs hover:bg-[var(--surface-2)]/40 transition-colors duration-200">
               <div className="space-y-1">
