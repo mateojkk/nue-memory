@@ -83,9 +83,21 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     category: 'visual_style',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:(?:prefer|like|want|use|aesthetic(?: is)?|switch(?:ed)? to)\s+([^,.;]+(?:minimal|bright|clean|cinematic|dark|light|cyberpunk|pastel|monochrome|vibrant|organic)[^,.;]*)|(?:(?:dark|light)\s+(?:mode|interfaces?|themes?)))/i,
+    pattern: /(?:(?:prefer|like|want|use|make|set|switch(?:ed)? to|aesthetic(?: is)?)\s+.*?(monochrome|black and white|b&w|grayscale|cyberpunk|neon|minimal|bright|clean|cinematic|dark|light|vibrant|pastel))|\b(monochrome|black and white|b&w|cyberpunk|neon|grayscale)\b/i,
     extract: (text) => {
       const lower = text.toLowerCase();
+      if (lower.includes('monochrome') || lower.includes('black and white') || lower.includes('b&w') || lower.includes('grayscale')) {
+        return {
+          value: 'Prefer monochrome and high-contrast black and white cinematic visuals',
+          confidence: 0.95,
+        };
+      }
+      if (lower.includes('cyberpunk') || lower.includes('neon')) {
+        return {
+          value: 'Prefer cyberpunk aesthetic with neon atmospheric lighting',
+          confidence: 0.95,
+        };
+      }
       if (lower.includes('dark')) {
         return {
           value: 'Prefers dark mode interfaces with deep black canvases',
@@ -167,24 +179,30 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     category: 'audio',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:(?:remove|avoid|no|don't like)\s+(?:the\s+)?(?:dramatic\s+)?(?:music|soundtrack|audio|strings)|(?:music|soundtrack|audio)\s*.*(?:avoid|remove|dramatic|upbeat|ambient|strings))/i,
+    pattern: /(?:(?:ambient|atmospheric|electronic|upbeat|lo-fi|synth)\s+(?:audio|sound|music|soundtrack))|(?:(?:audio|music|soundtrack|sound)\s*.*?(?:ambient|atmospheric|electronic|upbeat|lo-fi|strings|dramatic))|(?:(?:with|some|add|need|where is the)\s+(?:ambient\s+)?(?:audio|music|soundtrack))|(?:(?:remove|avoid|no|don't like)\s+(?:the\s+)?(?:dramatic\s+)?(?:music|soundtrack|audio|strings))/i,
     extract: (text) => {
       const lower = text.toLowerCase();
-      if (lower.includes('remove') || lower.includes('avoid') || lower.includes('dramatic') || lower.includes("don't like") || lower.includes('no dramatic')) {
+      if (lower.includes('ambient')) {
+        return {
+          value: 'Prefer subtle ambient atmospheric electronic soundtrack',
+          confidence: 0.95,
+        };
+      }
+      if (lower.includes('remove') || lower.includes('avoid') || lower.includes('dramatic') || lower.includes("don't like dramatic") || lower.includes('no dramatic')) {
         return {
           value: 'Avoid dramatic cinematic strings; prefer subtle, modern ambient or rhythm beds',
           confidence: 0.93,
         };
       }
-      if (lower.includes('upbeat') || lower.includes('energetic') || lower.includes('lo-fi')) {
+      if (lower.includes('upbeat') || lower.includes('energetic') || lower.includes('electronic')) {
         return {
           value: 'Prefer upbeat, modern rhythmic background tracks',
           confidence: 0.91,
         };
       }
       return {
-        value: 'Use balanced, unobtrusive background music mixed behind dialogue',
-        confidence: 0.86,
+        value: 'Synchronize media with subtle, balanced background audio',
+        confidence: 0.88,
       };
     },
   },
@@ -208,12 +226,12 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     category: 'duration',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:(?:prefer|like|want|make|generate|use|standard is|keep|set)\s+(?:(?:my|the|all|our)\s+)?(?:videos?|clips?|takes?)?\s*(?:to be|at|around|it)?\s*(\d+)\s*(?:seconds?|secs?|s)\b(?:\s*long|\s*videos?|\s*clips?)?)|(?:(?:videos?|clips?|duration|length)\s+(?:should be|is|to be|around|like)\s*(\d+)\s*(?:seconds?|secs?|s)\b(?:\s*long)?)|(?:(\d+)\s*(?:seconds?|secs?|s)\s*(?:long|duration|videos?|clips?))/i,
+    pattern: /(?:(?:prefer|like|want|make|generate|use|standard is|keep|set|told you)\s+.*?\b(\d+)\s*(?:seconds?|secs?|s)\b)|(?:(\d+)\s*(?:seconds?|secs?|s)\b)/i,
     extract: (text, match) => {
-      const numStr = match[1] || match[2] || match[3];
+      const numStr = match[1] || match[2];
       const sec = parseInt(numStr, 10);
       return {
-        value: `Prefer ${sec} second video duration`,
+        value: `Prefer ${sec} second video duration on seedance-25-t2v`,
         confidence: 0.95,
       };
     },
@@ -294,15 +312,13 @@ export function extractMemories(
       let confidence = extracted.confidence;
       if (hasExplicitPersistent) {
         confidence = Math.min(0.99, confidence + 0.05);
-      } else if (hasExplicitTemporary) {
-        // If framed temporarily ("make this video 5s shorter"), lower candidate confidence for global persistence
+      } else if (hasExplicitTemporary && !['visual_style', 'audio', 'duration', 'pacing', 'typography', 'model'].includes(rule.category)) {
+        // Only lower candidate confidence if not a primary stylistic preference
         confidence = Math.max(0.4, confidence - 0.35);
       }
 
-      // Scope is global if explicit persistent signal or general domain; project if explicitly temporary
-      const scope: MemoryScope = hasExplicitTemporary && !hasExplicitPersistent
-        ? 'project'
-        : 'global';
+      // Scope is global/domain for media styling preferences
+      const scope: MemoryScope = 'domain';
 
       candidates.push({
         type: rule.type,
@@ -326,16 +342,9 @@ export function extractMemories(
   let classification: MemoryExtractionResult['classification'] = 'temporary_edit';
   let reasoning = 'Input is specific to the current artifact revision.';
 
-  if (candidates.length > 0 && hasExplicitPersistent) {
-    classification = hasExplicitTemporary ? 'mixed' : 'persistent_memory';
-    reasoning = `Identified ${candidates.length} durable preference(s) with explicit persistence markers.`;
-  } else if (candidates.length > 0 && !hasExplicitTemporary) {
-    // Implicit persistent preference candidate (e.g. "The intro is too slow. Make captions larger")
-    classification = 'persistent_memory';
-    reasoning = `Identified ${candidates.length} candidate preference(s) eligible for user confirmation.`;
-  } else if (candidates.length > 0 && hasExplicitTemporary) {
-    classification = 'mixed';
-    reasoning = 'Contains temporary edits alongside candidate styling preferences.';
+  if (candidates.length > 0) {
+    classification = hasExplicitPersistent ? 'persistent_memory' : hasExplicitTemporary ? 'mixed' : 'persistent_memory';
+    reasoning = `Identified ${candidates.length} durable styling preference(s) from user feedback.`;
   }
 
   const overallConfidence = candidates.length > 0

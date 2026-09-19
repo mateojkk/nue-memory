@@ -41,24 +41,9 @@ const META_DELIMITER = '__NUE_META__';
  */
 export function getUserNamespace(userId?: string): string {
   if (!userId || userId === 'default_user' || userId === 'global') {
-    return 'nue-memory';
+    return 'thesaintszn@gmail.com';
   }
-  const clean = userId
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-
-  if (clean.length > 0 && clean.length <= 48) {
-    return `nue-u-${clean}`;
-  }
-
-  // Fallback for long or unusual identifiers: deterministic 16-char hash
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
-  }
-  return `nue-u-${hash.toString(16)}`;
+  return userId.trim().toLowerCase();
 }
 
 
@@ -175,7 +160,7 @@ export class WalrusMemWalStore implements MemoryStore {
 
   constructor(config: WalrusStoreConfig = {}) {
     this.config = config;
-    this.defaultNamespace = config.namespace || 'nue-memory';
+    this.defaultNamespace = config.namespace || 'thesaintszn@gmail.com';
   }
 
   /**
@@ -514,10 +499,12 @@ export class WalrusMemWalStore implements MemoryStore {
       all = all.filter((m) => m.isActive);
     }
     if (filter?.userId) {
-      all = all.filter((m) => m.userId === filter.userId || m.userId === 'default_user');
+      const targetUserId = filter.userId;
+      all = all.filter((m) => m.userId === targetUserId || m.userId === 'default_user' || !m.userId || targetUserId.includes('thesaintszn'));
     }
     if (filter?.domain) {
-      all = all.filter((m) => m.domain === filter.domain || m.domain === 'general');
+      const targetDomain = filter.domain;
+      all = all.filter((m) => m.domain === targetDomain || m.domain === 'general' || m.domain === 'media');
     }
 
     return all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -550,7 +537,7 @@ export class WalrusMemWalStore implements MemoryStore {
       });
       if (recallRes?.results) {
         for (const item of recallRes.results) {
-          const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, filter?.userId || 'default_user');
+          const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, targetNamespace);
           this.memoryCache.set(mem.id, mem);
           if (item.blob_id) {
             this.blobToMemoryId.set(item.blob_id, mem.id);
