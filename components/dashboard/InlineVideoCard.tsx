@@ -11,7 +11,7 @@ interface InlineVideoCardProps {
 
 export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [aspectMode, setAspectMode] = useState<'16:9' | '9:16' | '1:1'>('16:9');
@@ -33,11 +33,15 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
   const togglePlay = () => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
+      if (videoRef.current.muted && !isMuted) {
+        videoRef.current.muted = false;
+      }
       videoRef.current
         .play()
         .then(() => {
           setIsPlaying(true);
           if (audioRef.current && audioSrc) {
+            audioRef.current.muted = isMuted;
             audioRef.current.play().catch(() => {});
           }
         })

@@ -31,7 +31,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   );
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [showCaptions, setShowCaptions] = useState(false);
@@ -67,11 +67,15 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   const togglePlay = () => {
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
+      if (videoRef.current.muted && !isMuted) {
+        videoRef.current.muted = false;
+      }
       videoRef.current
         .play()
         .then(() => {
           setIsPlaying(true);
           if (audioRef.current && version?.audioStyle?.audioUrl) {
+            audioRef.current.muted = isMuted;
             audioRef.current.play().catch(() => {});
           }
         })
