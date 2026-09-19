@@ -194,7 +194,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     overrideProjectTitle?: string,
     imageUrl?: string
   ) => {
-    const isConversational = isConversationalMessage(promptText) && !imageUrl && versionNumber === 1 && !feedbackContext;
+    const isConversational = isConversationalMessage(promptText) && !imageUrl && !feedbackContext;
     setIsGenerating(true);
     setGenerationStage(isConversational ? 'thinking' : 'cooking');
 
@@ -223,18 +223,25 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         // Deduct compute cost ($0.05) from user profile in Supabase
         deductCredits?.(0.05);
 
-        // Build agent response - use LLM director message when available
+        // Build agent response truthfully
         const dur = newVersion.generationDurationSeconds || 5;
         const cap = newVersion.livepeerCapability || 'pixverse-t2v';
-        const durationNotice = ` (${dur}s clip)`;
-
         const audioNotice = newVersion.audioStyle?.audioUrl
           ? `\n\n🎵 Soundtrack: ${newVersion.audioStyle.style}.`
           : '';
 
-        const agentContent = data.directorMessage
-          ? `${data.directorMessage}${durationNotice}${audioNotice}`
-          : `I generated Version ${newVersion.versionNumber}${durationNotice} with ${newVersion.pacing} pacing.${audioNotice}`;
+        let agentContent = data.directorMessage;
+        if (!agentContent) {
+          agentContent = `I generated Version ${newVersion.versionNumber} (${dur}s clip) with ${newVersion.pacing} pacing.${audioNotice}`;
+        } else if (
+          !agentContent.includes(`${dur}s`) &&
+          !agentContent.includes(`${dur}-second`) &&
+          !agentContent.includes(`${dur} second`)
+        ) {
+          agentContent = `${agentContent} (${dur}s clip)${audioNotice}`;
+        } else {
+          agentContent = `${agentContent}${audioNotice}`;
+        }
 
         const agentMsg: ChatMessage = {
           id: `msg-${Date.now()}`,
@@ -351,6 +358,13 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       return updated;
     });
 
+    // Check if the message is conversational / inquiry
+    const isConversational = isConversationalMessage(text) && !imageUrl;
+    if (isConversational) {
+      await handleGenerate(text, 0, undefined, targetIndex, currentProj.title);
+      return;
+    }
+
     // If project has no versions yet, this is the first generation
     if (currentProj.versions.length === 0) {
       if (!currentProj.initialPrompt) {
@@ -366,18 +380,33 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       return;
     }
 
-    // Otherwise, this is review feedback on the current version
-    // Memory recall and preference saving are handled automatically by
-    // withMemWal inside the /api/generate route (Groq LLM + MemWal AI SDK)
+    // Otherwise, project already has versions.
+    // Determine if this is revision feedback on the active version or a brand new scene
     const nextVersionNumber = currentProj.versions.length + 1;
-    await handleGenerate(
-      currentProj.initialPrompt,
-      nextVersionNumber,
-      text,
-      targetIndex,
-      currentProj.title,
-      imageUrl
-    );
+    const isRevision =
+      /\b(make it|change|darker|lighter|faster|slower|speed up|add|remove|replace|more|less|soundtrack|audio|music|captions?|pacing|color|palette|style|tune|tweak)\b/i.test(text);
+
+    if (isRevision) {
+      const activeBrief = currentProj.versions[currentProj.currentVersionIndex]?.brief || currentProj.initialPrompt;
+      await handleGenerate(
+        activeBrief,
+        nextVersionNumber,
+        text,
+        targetIndex,
+        currentProj.title,
+        imageUrl
+      );
+    } else {
+      // Fresh creative prompt within this project
+      await handleGenerate(
+        text,
+        nextVersionNumber,
+        undefined,
+        targetIndex,
+        currentProj.title,
+        imageUrl
+      );
+    }
   };
 
   // Confirm and persist remembered preferences to Walrus via MemWal
@@ -477,6 +506,34 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     if (initialPrompt) {
       handleGenerate(initialPrompt, 1, undefined, newIndex, projectTitle);
     }
+  };
+
+  // Start New Chat thread within active project (preserves all generated media versions)
+  const handleNewChat = () => {
+    if (!activeProject) return;
+    const versionCount = activeProject.versions?.length || 0;
+    const newChatMsg: ChatMessage = {
+      id: `msg-newchat-${Date.now()}`,
+      sender: 'agent',
+      content:
+        versionCount > 0
+          ? `Started a new chat in "${activeProject.title}". Your ${versionCount} generated ${
+              versionCount === 1 ? 'version is' : 'versions are'
+            } preserved in the gallery. What would you like to create next?`
+          : `Started a new chat in "${activeProject.title}". Ready for your creative prompt.`,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages([newChatMsg]);
+    setProjects((prev) => {
+      const updated = [...prev];
+      if (updated[currentProjectIndex]) {
+        const proj = { ...updated[currentProjectIndex] };
+        proj.messages = [newChatMsg];
+        updated[currentProjectIndex] = proj;
+        persistProjectToDb(proj);
+      }
+      return updated;
+    });
   };
 
   // Select Project with persistence
@@ -668,6 +725,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           }}
           isSavingMemory={isSavingMemory}
           onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
+          onNewChat={handleNewChat}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onResetProject={handleResetProject}

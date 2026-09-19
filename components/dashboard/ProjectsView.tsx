@@ -178,8 +178,12 @@ export function ProjectsView({
                   <div className="flex items-center gap-1">
                     {onResetProject && (
                       <button
-                        onClick={() => onResetProject(proj.id)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to reset all generated versions in "${proj.title}"? This cannot be undone.`)) {
+                            onResetProject(proj.id);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition border-none"
                         title="Reset all generated versions in this project"
                       >
                         <RotateCcw className="w-3 h-3" />
@@ -188,8 +192,12 @@ export function ProjectsView({
                     )}
                     {onDeleteProject && (
                       <button
-                        onClick={() => onDeleteProject(proj.id)}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono text-red-400 hover:text-red-300 hover:bg-red-950/30 transition"
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete "${proj.title}"?`)) {
+                            onDeleteProject(proj.id);
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-mono text-red-400 hover:text-red-300 hover:bg-red-950/30 transition border-none"
                         title="Delete project"
                       >
                         <Trash2 className="w-3 h-3" />

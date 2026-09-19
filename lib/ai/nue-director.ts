@@ -38,8 +38,9 @@ Output ONLY valid JSON with these fields:
 }
 
 Guidelines:
-- CRITICAL: If the user says "hi", "hello", "hey", asks a general question, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and ask what kind of video or scene they would like to create.
+- CRITICAL: If the user says "hi", "hello", "hey", asks a general question, asks about starting a new chat, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and answer their question directly.
 - If the user describes a scene, asks to create a video, gives revision feedback, or attaches an image, set "shouldGenerate": true.
+- Be truthful about video duration: single-shot video takes are 5-8 seconds (e.g. pixverse-t2v max 8s). If the user asks for longer (e.g. 15s-30s), explain that this is an 8-second take and subsequent takes can chain scenes together. Never claim in agentMessage to have generated a 30-second video for a single take.
 - If the user asks for >8 seconds, use seedance-25-t2v
 - If the user mentions TikTok, Reels, or vertical, use 9:16 aspect ratio
 - Apply any recalled memory preferences naturally - don't fight them unless the user explicitly overrides
@@ -78,24 +79,43 @@ interface DirectorContext {
  * Checks if the user message is a simple conversational greeting or query.
  */
 export function isConversationalMessage(msg: string): boolean {
-  const clean = msg.toLowerCase().trim().replace(/['"!?.,]/g, '');
-  const videoKeywords = /\b(video|clip|movie|scene|take|render|generate|animate|footage|teaser|trailer|motion|shot|camera|visuals)\b/i;
-  if (videoKeywords.test(clean)) return false;
+  const clean = msg.toLowerCase().trim();
 
-  const conversationalPatterns = [
+  // Explicit meta questions or inquiries about the studio, chat, or features
+  const metaQuestionPatterns = [
+    /\b(cant i|can i|could i|how do i|how can i)\s+(open|start|create|have)?\s*(a\s+)?(new chat|new conversation)\b/i,
+    /\b(why did|why is|why does|how come)\b.*\b(8|5|30|seconds?|secs?|short|duration|forget|forgot)\b/i,
+    /\b(did you forget|you forgot|forgot it did|forgot what)\b/i,
+    /\b(who are you|what are you|what can you do|what is this|tell me about yourself|help)\b/i,
+    /\b(what video did you|what did you (just )?(make|do|generate))\b/i,
+  ];
+
+  if (metaQuestionPatterns.some((pattern) => pattern.test(clean))) {
+    return true;
+  }
+
+  // Pure conversational greetings and acknowledgements
+  const conversationalGreetings = [
     /^(hi|hello|hey|yo|sup|hiya|howdy|hola|greetings)\b/i,
     /^(good morning|good afternoon|good evening|good day|good night)\b/i,
     /^(how are you|how is it going|hows it going|whats up|what is up|whats new)\b/i,
-    /^(who are you|what are you|what can you do|what is this|tell me about yourself|help)\b/i,
     /^(thanks|thank you|thx|cool|awesome|great|ok|okay|nice|sounds good|got it|bye|goodbye)\b/i,
     /^(test|testing|ping|check)\b/i,
   ];
 
-  if (conversationalPatterns.some((pattern) => pattern.test(clean))) {
+  if (conversationalGreetings.some((pattern) => pattern.test(clean))) {
     return true;
   }
 
-  if (clean.length < 20 && !/\b(make|create|render|generate|build|animate|add|put|show|draw)\b/i.test(clean)) {
+  // If message contains explicit video creation command, it is NOT conversational
+  const creationCommands = /\b(create|make|generate|render|animate|film|direct|produce)\s+(a|an|the|me)?\s*(video|clip|scene|take|animation|footage)\b/i;
+  if (creationCommands.test(clean)) {
+    return false;
+  }
+
+  // Short messages (<25 chars) without creation verbs
+  const stripped = clean.replace(/['"!?.,]/g, '');
+  if (stripped.length < 25 && !/\b(make|create|render|generate|build|animate|add|put|show|draw|video|clip|scene)\b/i.test(stripped)) {
     return true;
   }
 
@@ -131,7 +151,13 @@ export async function directCreativeBrief(
   if (isConversational) {
     const { text } = await generateText({
       model: groq(modelName),
-      system: `You are Nue, an expert creative director for AI video production. The user is chatting with you. Respond conversationally in 1-2 friendly, natural sentences. Do NOT output JSON. Do NOT generate a video. Invite them warmly to share what kind of video, scene, or creative concept they would like to produce today. Do NOT use em dashes anywhere.`,
+      system: `You are Nue, an expert creative director for AI video production.
+The user is chatting with you, asking a question, or inquiring about studio features.
+Respond warmly, conversationally, and directly in 1-3 sentences:
+- If they ask about opening a new chat: confirm they can click the "New Chat" button in the header at any time to start a clean chat thread while keeping all previously generated video versions safely preserved.
+- If they ask about video duration (e.g. 8s vs 30s): explain honestly that Livepeer single-shot models (like Pixverse) currently generate up to 8-second takes. Longer sequences can be produced by directing subsequent takes to chain scenes together.
+- If they ask what happened or why something was done: reassure them, explain clearly, and invite them to direct the next take or new scene.
+Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use standard hyphens only.`,
       prompt: userMessage,
     });
 
@@ -145,7 +171,7 @@ export async function directCreativeBrief(
       duration: 5,
       model: 'pixverse-t2v',
       aspectRatio: '16:9',
-      agentMessage: text.trim() || "Hey there! I'm Nue, your creative director. What kind of video or creative scene would you like to create today?",
+      agentMessage: text.trim() || "Hey there! I'm Nue, your creative director. What kind of video or scene would you like to create today?",
     };
   }
 

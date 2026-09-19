@@ -157,13 +157,27 @@ export async function POST(request: Request) {
       imageUrl: validatedImageUrl,
     });
 
+    // Duration truthfulness check:
+    // Ensure the message truthfully reports the actual rendered take duration
+    const actualDuration = mediaVersion.generationDurationSeconds || 5;
+    const requestedDuration = directorBrief.duration;
+    let truthfulDirectorMessage = directorBrief.agentMessage;
+
+    if (requestedDuration > actualDuration) {
+      const modelCap = mediaVersion.livepeerCapability || 'Livepeer';
+      truthfulDirectorMessage = truthfulDirectorMessage
+        .replace(/\b\d+[- ]seconds?\b/gi, `${actualDuration}-second`)
+        .replace(/\b\d+s\b/gi, `${actualDuration}s`);
+      truthfulDirectorMessage += ` Note: Rendered an ${actualDuration}s take (single-shot model limit for ${modelCap}). You can direct subsequent takes to build a longer multi-scene sequence.`;
+    }
+
     return NextResponse.json({
       success: true,
       mediaVersion,
       enrichedBrief: directorBrief.enrichedPrompt,
       appliedMemories: syntheticPreferences,
-      directorMessage: directorBrief.agentMessage,
-      summaryTokens: [directorBrief.visualTheme, directorBrief.pacing, `${directorBrief.duration}s`],
+      directorMessage: truthfulDirectorMessage,
+      summaryTokens: [directorBrief.visualTheme, directorBrief.pacing, `${actualDuration}s`],
       retrievalCount: syntheticPreferences.length,
     });
   } catch (error) {
