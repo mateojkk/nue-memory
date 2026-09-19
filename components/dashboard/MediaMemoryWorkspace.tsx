@@ -25,6 +25,13 @@ import {
   Trash2,
   Check,
   MessageSquarePlus,
+  MessageSquare,
+  History,
+  Search,
+  Film,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface MediaMemoryWorkspaceProps {
@@ -34,6 +41,7 @@ interface MediaMemoryWorkspaceProps {
   onSelectVersion: (index: number) => void;
   isGenerating: boolean;
   generationStage?: 'thinking' | 'cooking' | null;
+  generationElapsedSeconds?: number;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -60,6 +68,7 @@ export function MediaMemoryWorkspace({
   onSelectVersion,
   isGenerating,
   generationStage = 'thinking',
+  generationElapsedSeconds = 0,
   messages,
   onSendMessage,
   onRegenerate,
@@ -86,6 +95,8 @@ export function MediaMemoryWorkspace({
   const [editedTitle, setEditedTitle] = useState('');
   const [isThinkingEnabled, setIsThinkingEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
+  const [historySearch, setHistorySearch] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -258,6 +269,56 @@ export function MediaMemoryWorkspace({
     }
   };
 
+  // Progress stages for video generation
+  const getCookingProgress = (seconds: number) => {
+    if (seconds < 6) {
+      return {
+        step: 1,
+        total: 4,
+        percent: Math.min(25, Math.max(10, Math.round((seconds / 6) * 25))),
+        title: 'Directing creative brief & scenes',
+        detail: 'Setting visual style, pacing, and camera directives',
+      };
+    }
+    if (seconds < 22) {
+      return {
+        step: 2,
+        total: 4,
+        percent: 25 + Math.min(35, Math.round(((seconds - 6) / 16) * 35)),
+        title: 'Rendering neural video takes via Livepeer',
+        detail: 'Generating video takes with high temporal consistency',
+      };
+    }
+    if (seconds < 36) {
+      return {
+        step: 3,
+        total: 4,
+        percent: 60 + Math.min(25, Math.round(((seconds - 22) / 14) * 25)),
+        title: 'Composing & synchronizing AI soundtrack',
+        detail: 'Synthesizing ambient audio track to match scene mood',
+      };
+    }
+    return {
+      step: 4,
+      total: 4,
+      percent: Math.min(95, 85 + Math.round(((seconds - 36) / 15) * 10)),
+      title: 'Assembling multi-scene timeline',
+      detail: 'Stitching takes and encoding seamless continuous MP4',
+    };
+  };
+
+  const cookingProgress = getCookingProgress(generationElapsedSeconds);
+
+  const filteredProjects = projects.filter((p) => {
+    if (!historySearch.trim()) return true;
+    const q = historySearch.toLowerCase();
+    return (
+      p.title.toLowerCase().includes(q) ||
+      (p.initialPrompt && p.initialPrompt.toLowerCase().includes(q)) ||
+      (p.messages && p.messages.some((m) => m.content.toLowerCase().includes(q)))
+    );
+  });
+
   // Filter out any default placeholder welcome messages from display so real user messages stand out
   const realMessages = messages.filter(
     (m) =>
@@ -358,41 +419,32 @@ export function MediaMemoryWorkspace({
           </p>
         </div>
 
-        {/* Project Switcher Pills */}
+        {/* Top Header Actions */}
         <div className="flex items-center gap-2 max-w-full">
-          {projects.length > 0 && (
-            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-2)]/70 max-w-full overflow-x-auto no-scrollbar">
-              {projects.map((proj, idx) => {
-                const isSelected = currentProjectIndex === idx;
-                return (
-                  <button
-                    key={proj.id}
-                    onClick={() => onSelectProject?.(idx)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all duration-200 whitespace-nowrap flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-95 ${
-                      isSelected
-                        ? 'bg-[var(--surface)] text-[var(--fg)] font-medium shadow-xs scale-[1.01]'
-                        : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface)]/50'
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full transition-transform duration-200 ${
-                        isSelected ? 'bg-[var(--accent)] scale-125' : 'bg-[var(--fg-faint)]'
-                      }`}
-                    />
-                    <span>{proj.title}</span>
-                  </button>
-                );
-              })}
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono transition shadow-xs ${
+              showHistory
+                ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium ring-1 ring-[var(--accent)]/30'
+                : 'bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]'
+            }`}
+            title="Toggle Chat History sidebar"
+          >
+            <History className="w-3.5 h-3.5 text-[var(--accent)]" />
+            <span className="hidden sm:inline">{showHistory ? 'Hide Chats' : 'Chat History'}</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/40 text-[var(--fg-muted)]">
+              {projects.length}
+            </span>
+          </button>
 
-              <button
-                onClick={() => onNewProject()}
-                className="p-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--accent-deep)] text-[var(--accent)] hover:text-[#4a2c0e] hover:scale-105 active:scale-95 transition-all duration-200 shadow-xs flex items-center"
-                title="Create New Project"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+          <button
+            onClick={() => (onNewChat ? onNewChat() : onNewProject())}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] font-medium hover:scale-105 active:scale-95 transition shadow-xs"
+            title="Start a new chat session"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Chat</span>
+          </button>
         </div>
       </div>
 
@@ -445,8 +497,111 @@ export function MediaMemoryWorkspace({
         }}
       />
 
-      {/* CASE 1: EMPTY STATE - EXACT CHATGPT SCREEN */}
-      {!hasRealMessages ? (
+      <div className="flex-1 flex gap-5 w-full min-h-0 relative items-start">
+        {/* Left: Chat History Sidebar */}
+        {showHistory && (
+          <aside className="w-64 sm:w-72 shrink-0 flex flex-col gap-3 p-3.5 rounded-2xl bg-[var(--surface)]/90 backdrop-blur-sm shadow-md h-[calc(100vh-14rem)] sticky top-24 overflow-hidden animate-fadeIn">
+            {/* Sidebar Header */}
+            <div className="flex items-center justify-between gap-2 pb-1 border-b border-[var(--surface-2)]/60">
+              <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--fg)] font-medium">
+                <MessageSquare className="w-3.5 h-3.5 text-[var(--accent)]" />
+                <span>Chat Sessions</span>
+              </div>
+              <button
+                onClick={() => (onNewChat ? onNewChat() : onNewProject())}
+                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] font-medium transition shadow-xs"
+                title="Start a new chat session"
+              >
+                <Plus className="w-3 h-3" />
+                <span>New</span>
+              </button>
+            </div>
+
+            {/* Filter Input */}
+            <div className="relative shrink-0">
+              <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]" />
+              <input
+                type="text"
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+                placeholder="Filter sessions..."
+                className="w-full pl-8 pr-2 py-1 rounded-lg text-[11px] font-mono bg-[var(--surface-2)] text-[var(--fg)] placeholder:text-[var(--fg-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              />
+            </div>
+
+            {/* Scrollable list of chat sessions */}
+            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 no-scrollbar">
+              {filteredProjects.length === 0 ? (
+                <div className="py-8 text-center text-xs text-[var(--fg-muted)] font-light">
+                  No chat sessions found
+                </div>
+              ) : (
+                filteredProjects.map((proj) => {
+                  const actualIdx = projects.findIndex((p) => p.id === proj.id);
+                  const isSelected = currentProjectIndex === actualIdx;
+                  const videoCount = proj.versions?.length || 0;
+                  const lastMsg =
+                    proj.messages && proj.messages.length > 0
+                      ? proj.messages[proj.messages.length - 1].content
+                      : proj.initialPrompt || 'New chat session';
+
+                  return (
+                    <div
+                      key={proj.id}
+                      onClick={() => onSelectProject?.(actualIdx)}
+                      className={`group/session w-full text-left p-2.5 rounded-xl text-xs font-mono transition-all duration-200 cursor-pointer flex flex-col gap-1 relative ${
+                        isSelected
+                          ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-xs ring-1 ring-[var(--accent)]/40'
+                          : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]/50'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className="truncate text-xs font-medium text-[var(--fg)]">
+                          {proj.title}
+                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {videoCount > 0 && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] flex items-center gap-0.5">
+                              <Film className="w-2.5 h-2.5" />
+                              <span>{videoCount}</span>
+                            </span>
+                          )}
+                          {onDeleteProject && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (
+                                  window.confirm(
+                                    `Delete "${proj.title}"? All chat messages and generated videos in this session will be removed.`
+                                  )
+                                ) {
+                                  onDeleteProject(proj.id);
+                                }
+                              }}
+                              className="opacity-0 group-hover/session:opacity-100 p-0.5 rounded text-[var(--fg-muted)] hover:text-red-400 hover:bg-[var(--surface-3)] transition-opacity"
+                              title="Delete chat session"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-[var(--fg-muted)] font-light truncate leading-normal">
+                        {lastMsg}
+                      </p>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </aside>
+        )}
+
+        {/* Right: Main Chat Stage */}
+        <div className="flex-1 flex flex-col min-w-0 w-full">
+          {/* CASE 1: EMPTY STATE - EXACT CHATGPT SCREEN */}
+          {!hasRealMessages ? (
         <div className="flex-1 flex flex-col items-center justify-center py-12 sm:py-20 px-4 animate-fadeIn">
           <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
             {/* Headline */}
@@ -711,26 +866,54 @@ export function MediaMemoryWorkspace({
               </div>
             )}
 
-            {/* Directing Shimmer State */}
+            {/* Directing Shimmer State with Real-time Progress */}
             {isGenerating && (
-              <div className="flex gap-3 sm:gap-4 items-center animate-fadeIn">
-                <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0 shadow-xs">
+              <div className="flex gap-3 sm:gap-4 items-start animate-fadeIn">
+                <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0 shadow-xs mt-0.5">
                   {generationStage === 'cooking' ? (
                     <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
                   ) : (
                     <Brain className="w-4 h-4 text-[var(--accent)] animate-pulse" />
                   )}
                 </div>
-                <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs px-4 py-2 text-xs font-mono text-[var(--fg-muted)] flex items-center gap-2 shadow-xs">
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      generationStage === 'cooking' ? 'bg-amber-500' : 'bg-[var(--accent)]'
-                    } animate-ping`}
-                  />
-                  <span className="font-semibold lowercase text-[var(--accent)]">
-                    {generationStage === 'cooking' ? 'cooking...' : 'thinking...'}
-                  </span>
-                </div>
+
+                {generationStage === 'cooking' ? (
+                  <div className="w-full max-w-md bg-[var(--surface)] p-4 rounded-2xl rounded-tl-xs shadow-md space-y-2.5 text-left border-none">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <div className="flex items-center gap-2 text-amber-500 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                        <span>Cooking your video... ({cookingProgress.step}/{cookingProgress.total})</span>
+                      </div>
+                      <span className="text-[var(--fg-muted)] font-mono text-[11px]">
+                        {generationElapsedSeconds}s elapsed
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-500 via-[var(--accent)] to-emerald-500 transition-all duration-500 rounded-full"
+                        style={{ width: `${cookingProgress.percent}%` }}
+                      />
+                    </div>
+
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-medium text-[var(--fg)]">
+                        {cookingProgress.title}
+                      </div>
+                      <div className="text-[11px] text-[var(--fg-muted)] font-light">
+                        {cookingProgress.detail}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs px-4 py-2 text-xs font-mono text-[var(--fg-muted)] flex items-center gap-2 shadow-xs">
+                    <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-ping" />
+                    <span className="font-semibold lowercase text-[var(--accent)]">
+                      thinking...
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
@@ -853,6 +1036,8 @@ export function MediaMemoryWorkspace({
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

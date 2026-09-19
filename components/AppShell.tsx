@@ -98,7 +98,23 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   // Loading States
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStage, setGenerationStage] = useState<'thinking' | 'cooking' | null>(null);
+  const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0);
   const [isSavingMemory, setIsSavingMemory] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isGenerating) {
+      setGenerationElapsedSeconds(0);
+      interval = setInterval(() => {
+        setGenerationElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setGenerationElapsedSeconds(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isGenerating]);
 
   const activeProject = projects[currentProjectIndex] || null;
   const activeVersion =
@@ -216,7 +232,26 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         }),
       });
 
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error('[AppShell] Non-JSON response from /api/generate:', responseText);
+        if (
+          res.status === 504 ||
+          responseText.includes('504') ||
+          responseText.includes('Gateway Time-out') ||
+          responseText.includes('timed out')
+        ) {
+          throw new Error('Video generation timed out. Please try again with a shorter take or fewer scenes.');
+        }
+        throw new Error(
+          res.status >= 400
+            ? `Server error (${res.status}). Please try again.`
+            : 'Received unexpected response format from server.'
+        );
+      }
       if (data.success && data.mediaVersion) {
         const newVersion: MediaVersion = data.mediaVersion;
 
@@ -508,30 +543,62 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   };
 
-  // Start New Chat thread within active project (preserves all generated media versions)
+  // Start New Chat session (creates a separate chat thread in history)
   const handleNewChat = () => {
-    if (!activeProject) return;
-    const versionCount = activeProject.versions?.length || 0;
+    const chatNumber = projects.length + 1;
+    const sessionTitle = `Chat ${chatNumber}`;
     const newChatMsg: ChatMessage = {
       id: `msg-newchat-${Date.now()}`,
       sender: 'agent',
-      content:
-        versionCount > 0
-          ? `Started a new chat in "${activeProject.title}". Your ${versionCount} generated ${
-              versionCount === 1 ? 'version is' : 'versions are'
-            } preserved in the gallery. What would you like to create next?`
-          : `Started a new chat in "${activeProject.title}". Ready for your creative prompt.`,
+      content: `Started a new chat session. What would you like to create?`,
       timestamp: new Date().toISOString(),
     };
+    const newProj: CreativeProject = {
+      id: `proj-${Date.now()}`,
+      title: sessionTitle,
+      initialPrompt: '',
+      createdAt: new Date().toISOString(),
+      currentVersionIndex: 0,
+      versions: [],
+      messages: [newChatMsg],
+    };
+
+    const newIndex = projects.length;
+    setProjects((prev) => [...prev, newProj]);
+    setCurrentProjectIndex(newIndex);
     setMessages([newChatMsg]);
-    setProjects((prev) => {
-      const updated = [...prev];
-      if (updated[currentProjectIndex]) {
-        const proj = { ...updated[currentProjectIndex] };
-        proj.messages = [newChatMsg];
-        updated[currentProjectIndex] = proj;
-        persistProjectToDb(proj);
+    setPendingPreferences([]);
+    persistProjectToDb(newProj);
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nue_active_project_id', newProj.id);
+        const url = new URL(window.location.href);
+        url.searchParams.set('project', newProj.id);
+        window.history.replaceState(null, '', url.toString());
+      } catch {
+        // Ignore
       }
+    }
+  };
+
+  // Delete a specific generated version from a project / gallery
+  const handleDeleteVersion = (projectId: string, versionIndex: number) => {
+    setProjects((prev) => {
+      const updated = prev.map((p) => {
+        if (p.id === projectId) {
+          const newVersions = (p.versions || []).filter((_, idx) => idx !== versionIndex);
+          const newIdx = Math.max(0, Math.min(p.currentVersionIndex, newVersions.length - 1));
+          const updatedProj: CreativeProject = {
+            ...p,
+            versions: newVersions,
+            currentVersionIndex: newIdx,
+          };
+          persistProjectToDb(updatedProj);
+          return updatedProj;
+        }
+        return p;
+      });
       return updated;
     });
   };
@@ -714,6 +781,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           }}
           isGenerating={isGenerating}
           generationStage={generationStage}
+          generationElapsedSeconds={generationElapsedSeconds}
           messages={messages}
           onSendMessage={handleSendMessage}
           onRegenerate={() => {
@@ -745,6 +813,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onResetProject={handleResetProject}
+          onDeleteVersion={handleDeleteVersion}
           activeMemories={activeMemories}
           onForgetMemory={handleForgetMemory}
           projects={projects}

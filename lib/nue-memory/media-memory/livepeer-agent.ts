@@ -470,9 +470,9 @@ export class LivepeerMediaAgent {
           // Asynchronous long-form job (e.g. seedance-25-t2v). Poll until complete or max poll threshold reached.
           const jobId = content.job_id;
           console.log(`[LivepeerAgent] Async job ${jobId} initiated for ${modelToUse} (${effectiveDuration}s). Polling...`);
-          const maxAttempts = 45; // 45 * 6s = 270s poll window (seedance p50 ~220s)
+          const maxAttempts = 12; // 12 * 4s = 48s poll window to prevent gateway timeout
           for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            await new Promise((resolve) => setTimeout(resolve, 6000));
+            await new Promise((resolve) => setTimeout(resolve, 4000));
             try {
               const pollRes = await fetch(this.endpoint, {
                 method: 'POST',
@@ -665,8 +665,8 @@ export class LivepeerMediaAgent {
                 if (content?.job_id && (content.status === 'pending' || content.status === 'running')) {
                   const jobId = content.job_id;
                   console.log(`[LivepeerAgent] Scene ${idx + 1} async job ${jobId} - polling...`);
-                  for (let attempt = 0; attempt < 45; attempt++) {
-                    await new Promise((resolve) => setTimeout(resolve, 6000));
+                  for (let attempt = 0; attempt < 10; attempt++) {
+                    await new Promise((resolve) => setTimeout(resolve, 4000));
                     try {
                       const pollRes = await fetch(this.endpoint, {
                         method: 'POST',

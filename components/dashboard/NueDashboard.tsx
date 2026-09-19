@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { MediaMemoryWorkspace } from './MediaMemoryWorkspace';
 import { ProjectsView } from './ProjectsView';
 import { ApiKeysView } from './ApiKeysView';
+import { GalleryView } from './GalleryView';
 import { UsageView } from './OverviewView';
 import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
 import { NueLogo } from '../NueLogo';
@@ -13,6 +14,7 @@ import { AuthButton } from '../auth/AuthButton';
 import {
   ArrowLeft,
   Video,
+  Film,
   Layers,
   Key,
   CreditCard,
@@ -20,12 +22,13 @@ import {
 
 export type DashboardTab =
   | 'media-memory'
+  | 'gallery'
   | 'projects'
   | 'usage'
   | 'api-keys'
   | 'memories';
 
-const VALID_TABS: DashboardTab[] = ['media-memory', 'projects', 'usage', 'api-keys'];
+const VALID_TABS: DashboardTab[] = ['media-memory', 'gallery', 'projects', 'usage', 'api-keys'];
 
 function getResolvedTab(initialTab?: DashboardTab): DashboardTab {
   if (typeof window !== 'undefined') {
@@ -57,6 +60,7 @@ interface NueDashboardProps {
   onSelectVersion: (index: number) => void;
   isGenerating: boolean;
   generationStage?: 'thinking' | 'cooking' | null;
+  generationElapsedSeconds?: number;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -70,6 +74,7 @@ interface NueDashboardProps {
   onRenameProject?: (projectId: string, newTitle: string) => void;
   onDeleteProject?: (projectId: string) => void;
   onResetProject?: (projectId: string) => void;
+  onDeleteVersion?: (projectId: string, versionIndex: number) => void;
   activeMemories: MediaPreference[];
   onForgetMemory: (id: string) => void;
   projects: CreativeProject[];
@@ -87,6 +92,7 @@ export function NueDashboard({
   onSelectVersion,
   isGenerating,
   generationStage = 'thinking',
+  generationElapsedSeconds = 0,
   messages,
   onSendMessage,
   onRegenerate,
@@ -100,6 +106,7 @@ export function NueDashboard({
   onRenameProject,
   onDeleteProject,
   onResetProject,
+  onDeleteVersion,
   activeMemories,
   onForgetMemory,
   projects,
@@ -163,8 +170,11 @@ export function NueDashboard({
     return () => window.removeEventListener('popstate', handlePopState);
   }, [initialTab]);
 
+  const totalVideos = projects.reduce((acc, p) => acc + (p.versions?.length || 0), 0);
+
   const navItems = [
     { id: 'media-memory' as DashboardTab, label: 'Motion', icon: Video, highlight: true },
+    { id: 'gallery' as DashboardTab, label: 'Gallery', icon: Film, badge: totalVideos },
     { id: 'projects' as DashboardTab, label: 'Projects', icon: Layers, badge: projects.length },
     { id: 'usage' as DashboardTab, label: 'Credits', icon: CreditCard },
     { id: 'api-keys' as DashboardTab, label: 'API Keys', icon: Key },
@@ -233,6 +243,7 @@ export function NueDashboard({
             onSelectVersion={onSelectVersion}
             isGenerating={isGenerating}
             generationStage={generationStage}
+            generationElapsedSeconds={generationElapsedSeconds}
             messages={messages}
             onSendMessage={onSendMessage}
             onRegenerate={onRegenerate}
@@ -250,6 +261,16 @@ export function NueDashboard({
             projects={projects}
             currentProjectIndex={currentProjectIndex}
             onSelectProject={onSelectProject}
+          />
+        )}
+
+        {activeTab === 'gallery' && (
+          <GalleryView
+            projects={projects}
+            onOpenWorkspace={() => handleTabChange('media-memory')}
+            onSelectProject={onSelectProject}
+            onSelectVersion={onSelectVersion}
+            onDeleteVersion={onDeleteVersion || (() => {})}
           />
         )}
 
