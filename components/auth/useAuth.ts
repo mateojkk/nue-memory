@@ -22,9 +22,8 @@ export function useAuth() {
       if (savedEmail) {
         return { email: savedEmail };
       }
-      return { email: 'thesaintszn@gmail.com' };
     }
-    return { email: 'thesaintszn@gmail.com' };
+    return null;
   });
 
   const [creditBalance, setCreditBalance] = useState<number>(10.0);
@@ -43,20 +42,8 @@ export function useAuth() {
           return;
         }
       }
-      // If Magic is not logged in or in local mode, ensure demoUser is active
-      if (!demoUser) {
-        const fallback = { email: 'thesaintszn@gmail.com' };
-        setDemoUser(fallback);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('nue_demo_user', JSON.stringify(fallback));
-          localStorage.setItem('nue_user_email', fallback.email);
-        }
-      }
     } catch (e) {
       console.warn('Magic auth check failed:', e);
-      if (!demoUser) {
-        setDemoUser({ email: 'thesaintszn@gmail.com' });
-      }
     } finally {
       setLoading(false);
     }

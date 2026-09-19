@@ -7,7 +7,7 @@ import { authenticateRequest } from '@/lib/auth/server';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const emailParam = searchParams.get('email') || 'thesaintszn@gmail.com';
+    const emailParam = searchParams.get('email') || undefined;
 
     // Authenticate caller identity
     const auth = await authenticateRequest(request, emailParam);

@@ -41,9 +41,10 @@ const META_DELIMITER = '__NUE_META__';
  */
 export function getUserNamespace(userId?: string): string {
   if (!userId || userId === 'default_user' || userId === 'global') {
-    return 'thesaintszn@gmail.com';
+    return 'nue-memory';
   }
-  return userId.trim().toLowerCase();
+  const clean = userId.trim().toLowerCase();
+  return clean.startsWith('nue-') ? clean : `nue-${clean}`;
 }
 
 
@@ -160,7 +161,7 @@ export class WalrusMemWalStore implements MemoryStore {
 
   constructor(config: WalrusStoreConfig = {}) {
     this.config = config;
-    this.defaultNamespace = config.namespace || 'thesaintszn@gmail.com';
+    this.defaultNamespace = config.namespace || 'nue-memory';
   }
 
   /**
@@ -499,8 +500,15 @@ export class WalrusMemWalStore implements MemoryStore {
       all = all.filter((m) => m.isActive);
     }
     if (filter?.userId) {
-      const targetUserId = filter.userId;
-      all = all.filter((m) => m.userId === targetUserId || m.userId === 'default_user' || !m.userId || targetUserId.includes('thesaintszn'));
+      const targetUserId = filter.userId.trim().toLowerCase();
+      const targetNs = getUserNamespace(targetUserId);
+      all = all.filter(
+        (m) =>
+          m.userId?.toLowerCase() === targetUserId ||
+          m.userId?.toLowerCase() === targetNs ||
+          m.userId === 'default_user' ||
+          !m.userId
+      );
     }
     if (filter?.domain) {
       const targetDomain = filter.domain;
@@ -533,7 +541,6 @@ export class WalrusMemWalStore implements MemoryStore {
         query: 'preference video visual style pacing duration captions audio model layout',
         namespace: targetNamespace,
         limit: 50,
-        sort: 'recent',
       });
       if (recallRes?.results) {
         for (const item of recallRes.results) {
