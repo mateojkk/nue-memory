@@ -76,16 +76,26 @@ export async function directCreativeBrief(
 ): Promise<DirectorResult> {
   // Dynamic import because @mysten-incubation/memwal is ESM-only
   const { withMemWal } = await import('@mysten-incubation/memwal/ai');
+  const { WalrusConfigError } = await import('../nue-memory/storage/walrus-store');
+
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY environment variable is not set.');
+  }
+
+  if (!process.env.MEMWAL_PRIVATE_KEY || !process.env.MEMWAL_ACCOUNT_ID) {
+    throw new WalrusConfigError();
+  }
 
   const groq = createGroq({
     apiKey: process.env.GROQ_API_KEY,
   });
 
   const namespace = `nue-${context.email}`;
+  const modelName = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
 
-  const wrappedModel = withMemWal(groq('llama-3.3-70b-versatile'), {
-    key: process.env.MEMWAL_PRIVATE_KEY!,
-    accountId: process.env.MEMWAL_ACCOUNT_ID!,
+  const wrappedModel = withMemWal(groq(modelName), {
+    key: process.env.MEMWAL_PRIVATE_KEY,
+    accountId: process.env.MEMWAL_ACCOUNT_ID,
     serverUrl: process.env.MEMWAL_SERVER_URL,
     namespace,
     maxMemories: 8,
@@ -128,11 +138,16 @@ export async function directCreativeBrief(
  * Parses the LLM's JSON response, with fallback defaults for robustness.
  */
 function parseDirectorResponse(text: string): DirectorResult {
-  // Extract JSON from the response (LLM might wrap it in markdown code blocks)
   let jsonStr = text.trim();
   const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
     jsonStr = jsonMatch[1].trim();
+  } else {
+    const firstBrace = jsonStr.indexOf('{');
+    const lastBrace = jsonStr.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
+    }
   }
 
   try {

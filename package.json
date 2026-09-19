@@ -17,7 +17,7 @@
     "@noble/ed25519": "^2.3.0",
     "@noble/hashes": "^2.0.0",
     "@supabase/supabase-js": "^2.116.0",
-    "ai": "^4.1.54",
+    "ai": "^7.0.107",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
