@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Film,
   Download,
@@ -158,127 +158,214 @@ export function GalleryView({
       ) : (
         /* Video Grid */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => {
-            const { project, version, versionIndex } = item;
-            const durationSec = version.generationDurationSeconds || 5;
-            const isPlaying = playingUrl === version.mediaUrl;
-            const capability = version.livepeerCapability || 'Livepeer';
-
-            return (
-              <div
-                key={`${project.id}-v${version.versionNumber}-${versionIndex}`}
-                className="group flex flex-col rounded-2xl bg-[var(--surface)] hover:bg-[var(--surface-2)] transition-all duration-300 overflow-hidden shadow-md hover:shadow-xl"
-              >
-                {/* Video Player / Thumbnail */}
-                <div className="relative aspect-video w-full bg-black/40 overflow-hidden">
-                  <video
-                    src={version.mediaUrl}
-                    poster={version.thumbnailUrl}
-                    controls
-                    loop
-                    playsInline
-                    className="w-full h-full object-cover"
-                    onPlay={() => setPlayingUrl(version.mediaUrl)}
-                    onPause={() => {
-                      if (playingUrl === version.mediaUrl) setPlayingUrl(null);
-                    }}
-                  />
-
-                  {/* Top Badges */}
-                  <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none gap-2">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/70 backdrop-blur-md text-white font-medium flex items-center gap-1 shadow-sm">
-                      <Clock className="w-2.5 h-2.5 text-[var(--accent)]" />
-                      <span>{durationSec}s</span>
-                    </span>
-
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/70 backdrop-blur-md text-[var(--fg-muted)] truncate max-w-[140px] shadow-sm">
-                      {project.title} · v{version.versionNumber}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Details Body */}
-                <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-                  <div className="space-y-2">
-                    <p className="text-xs text-[var(--fg)] line-clamp-2 leading-relaxed font-sans">
-                      {version.brief}
-                    </p>
-
-                    <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono text-[var(--fg-muted)]">
-                      {version.visualTheme && (
-                        <span className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--fg-muted)]">
-                          {version.visualTheme}
-                        </span>
-                      )}
-
-                      {version.audioStyle?.enabled && version.audioStyle?.style && (
-                        <span className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent)] flex items-center gap-1">
-                          <Music className="w-2.5 h-2.5" />
-                          <span>Soundtrack</span>
-                        </span>
-                      )}
-
-                      {version.aspectRatio && (
-                        <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">
-                          {version.aspectRatio}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Card Action Footer */}
-                  <div className="pt-2 border-t border-[var(--surface-2)]/60 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-mono text-[var(--fg-faint)] flex items-center gap-1">
-                      <Calendar className="w-2.5 h-2.5" />
-                      <span>
-                        {version.createdAt
-                          ? new Date(version.createdAt).toLocaleDateString()
-                          : 'Recent'}
-                      </span>
-                    </span>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() =>
-                          handleDownload(version.mediaUrl, project.title, version.versionNumber)
-                        }
-                        className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] transition"
-                        title="Download MP4 video"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => handleGoToChat(project.id, versionIndex)}
-                        className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--accent)] hover:text-[var(--fg)] transition flex items-center gap-1 text-[11px] font-mono"
-                        title="Open this project in chat"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Delete version ${version.versionNumber} of "${project.title}"? This video will be removed from your gallery.`
-                            )
-                          ) {
-                            onDeleteVersion(project.id, versionIndex);
-                          }
-                        }}
-                        className="p-1.5 rounded-md hover:bg-red-950/20 text-[var(--fg-muted)] hover:text-red-400 transition"
-                        title="Delete video from gallery"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {filteredItems.map((item) => (
+            <GalleryItemCard
+              key={`${item.project.id}-v${item.version.versionNumber}-${item.versionIndex}`}
+              item={item}
+              activePlayingUrl={playingUrl}
+              setActivePlayingUrl={setPlayingUrl}
+              onDownload={handleDownload}
+              onGoToChat={handleGoToChat}
+              onDelete={onDeleteVersion}
+            />
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+interface GalleryItemCardProps {
+  item: GalleryItem;
+  activePlayingUrl: string | null;
+  setActivePlayingUrl: (url: string | null) => void;
+  onDownload: (mediaUrl: string, title: string, versionNumber: number) => void;
+  onGoToChat: (projectId: string, versionIndex: number) => void;
+  onDelete: (projectId: string, versionIndex: number) => void;
+}
+
+function GalleryItemCard({
+  item,
+  activePlayingUrl,
+  setActivePlayingUrl,
+  onDownload,
+  onGoToChat,
+  onDelete,
+}: GalleryItemCardProps) {
+  const { project, version, versionIndex } = item;
+  const durationSec = version.generationDurationSeconds || 5;
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioSrc = version.audioStyle?.audioUrl;
+
+  const isCurrentPlaying = activePlayingUrl === version.mediaUrl;
+
+  const handlePlay = () => {
+    setActivePlayingUrl(version.mediaUrl);
+    if (videoRef.current && videoRef.current.muted) {
+      videoRef.current.muted = false;
+    }
+    if (audioRef.current && audioSrc) {
+      audioRef.current.currentTime = videoRef.current?.currentTime || 0;
+      audioRef.current.muted = videoRef.current?.muted ?? false;
+      audioRef.current.volume = videoRef.current?.volume ?? 1;
+      audioRef.current.play().catch(() => {});
+    }
+  };
+
+  const handlePause = () => {
+    if (activePlayingUrl === version.mediaUrl) {
+      setActivePlayingUrl(null);
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+  };
+
+  const handleSeeked = () => {
+    if (audioRef.current && videoRef.current) {
+      audioRef.current.currentTime = videoRef.current.currentTime;
+    }
+  };
+
+  const handleVolumeChange = () => {
+    if (audioRef.current && videoRef.current) {
+      audioRef.current.muted = videoRef.current.muted;
+      audioRef.current.volume = videoRef.current.volume;
+    }
+  };
+
+  // Pause if another card starts playing
+  useEffect(() => {
+    if (!isCurrentPlaying && videoRef.current && !videoRef.current.paused) {
+      videoRef.current.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    }
+  }, [isCurrentPlaying]);
+
+  return (
+    <div className="group flex flex-col rounded-2xl bg-[var(--surface)] hover:bg-[var(--surface-2)] transition-all duration-300 overflow-hidden shadow-md hover:shadow-xl">
+      {/* Hidden secondary audio player for soundtrack */}
+      {audioSrc && (
+        <audio
+          ref={audioRef}
+          src={audioSrc}
+          loop
+          preload="auto"
+          playsInline
+        />
+      )}
+
+      {/* Video Player / Thumbnail */}
+      <div className="relative aspect-video w-full bg-black/40 overflow-hidden">
+        <video
+          ref={videoRef}
+          src={version.mediaUrl}
+          poster={version.thumbnailUrl}
+          controls
+          loop
+          playsInline
+          className="w-full h-full object-cover"
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onSeeked={handleSeeked}
+          onVolumeChange={handleVolumeChange}
+          onEnded={handlePause}
+        />
+
+        {/* Top Badges */}
+        <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between pointer-events-none gap-2">
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/70 backdrop-blur-md text-white font-medium flex items-center gap-1 shadow-sm">
+            <Clock className="w-2.5 h-2.5 text-[var(--accent)]" />
+            <span>{durationSec}s</span>
+          </span>
+
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/70 backdrop-blur-md text-[var(--fg-muted)] truncate max-w-[140px] shadow-sm">
+            {project.title} · v{version.versionNumber}
+          </span>
+        </div>
+      </div>
+
+      {/* Details Body */}
+      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+        <div className="space-y-2">
+          <p className="text-xs text-[var(--fg)] line-clamp-2 leading-relaxed font-sans">
+            {version.brief}
+          </p>
+
+          <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono text-[var(--fg-muted)]">
+            {version.visualTheme && (
+              <span className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--fg-muted)]">
+                {version.visualTheme}
+              </span>
+            )}
+
+            {version.audioStyle?.enabled && version.audioStyle?.style && (
+              <span className="px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent)] flex items-center gap-1">
+                <Music className="w-2.5 h-2.5" />
+                <span>Soundtrack</span>
+              </span>
+            )}
+
+            {version.aspectRatio && (
+              <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">
+                {version.aspectRatio}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Card Action Footer */}
+        <div className="pt-2 flex items-center justify-between gap-2">
+          <span className="text-[10px] font-mono text-[var(--fg-faint)] flex items-center gap-1">
+            <Calendar className="w-2.5 h-2.5" />
+            <span>
+              {version.createdAt
+                ? new Date(version.createdAt).toLocaleDateString()
+                : 'Recent'}
+            </span>
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() =>
+                onDownload(version.mediaUrl, project.title, version.versionNumber)
+              }
+              className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] transition"
+              title="Download MP4 video"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => onGoToChat(project.id, versionIndex)}
+              className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--accent)] hover:text-[var(--fg)] transition flex items-center gap-1 text-[11px] font-mono"
+              title="Open this project in chat"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `Delete version ${version.versionNumber} of "${project.title}"? This video will be removed from your gallery.`
+                  )
+                ) {
+                  onDelete(project.id, versionIndex);
+                }
+              }}
+              className="p-1.5 rounded-md hover:bg-red-950/20 text-[var(--fg-muted)] hover:text-red-400 transition"
+              title="Delete video from gallery"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
