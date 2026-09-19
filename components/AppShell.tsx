@@ -99,6 +99,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStage, setGenerationStage] = useState<'thinking' | 'cooking' | null>(null);
   const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0);
+  const [serverProgress, setServerProgress] = useState<number | undefined>(undefined);
+  const [serverStageDescription, setServerStageDescription] = useState<string | undefined>(undefined);
   const [isSavingMemory, setIsSavingMemory] = useState(false);
 
   useEffect(() => {
@@ -110,6 +112,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       }, 1000);
     } else {
       setGenerationElapsedSeconds(0);
+      setServerProgress(undefined);
+      setServerStageDescription(undefined);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -252,6 +256,51 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
             : 'Received unexpected response format from server.'
         );
       }
+
+      // Asynchronous Job Polling Architecture
+      if (data.success && data.jobId) {
+        const jobId = data.jobId;
+        const pollIntervalMs = 3000;
+        const maxPollAttempts = 100; // 100 * 3s = 300s (5 minutes window)
+        let completedResult: any = null;
+
+        for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+          try {
+            const pollRes = await fetch(`/api/generate?jobId=${encodeURIComponent(jobId)}`);
+            if (pollRes.ok) {
+              const pollData = await pollRes.json();
+              if (pollData.success && pollData.job) {
+                const job = pollData.job;
+                if (job.status === 'completed') {
+                  completedResult = job.result;
+                  break;
+                }
+                if (job.status === 'failed') {
+                  throw new Error(job.error || 'Video generation failed.');
+                }
+                if (job.stageDescription) {
+                  setServerStageDescription(job.stageDescription);
+                }
+                if (job.progress !== undefined) {
+                  setServerProgress(job.progress);
+                }
+              }
+            }
+          } catch (pollErr: any) {
+            if (pollErr.message && !pollErr.message.includes('fetch')) {
+              throw pollErr;
+            }
+          }
+        }
+
+        if (!completedResult) {
+          throw new Error('Video generation took longer than expected. Please check your gallery in a moment.');
+        }
+
+        data = { success: true, ...completedResult };
+      }
+
       if (data.success && data.mediaVersion) {
         const newVersion: MediaVersion = data.mediaVersion;
 
@@ -782,6 +831,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           isGenerating={isGenerating}
           generationStage={generationStage}
           generationElapsedSeconds={generationElapsedSeconds}
+          serverProgress={serverProgress}
+          serverStageDescription={serverStageDescription}
           messages={messages}
           onSendMessage={handleSendMessage}
           onRegenerate={() => {

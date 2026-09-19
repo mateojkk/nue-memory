@@ -245,7 +245,7 @@ export class LivepeerMediaAgent {
    * Generates a new media version based on the enriched brief and applied preferences
    */
   public async generateMedia(request: GenerateMediaRequest): Promise<MediaVersion> {
-    const { brief, enrichedBrief, appliedPreferences, versionNumber, projectTitle, feedbackContext, creativeDirectives, imageUrl, scenePrompts } = request;
+    const { brief, enrichedBrief, appliedPreferences, versionNumber, projectTitle, feedbackContext, creativeDirectives, imageUrl, scenePrompts, onProgress } = request;
 
     await this.initializeMcp();
 
@@ -470,9 +470,10 @@ export class LivepeerMediaAgent {
           // Asynchronous long-form job (e.g. seedance-25-t2v). Poll until complete or max poll threshold reached.
           const jobId = content.job_id;
           console.log(`[LivepeerAgent] Async job ${jobId} initiated for ${modelToUse} (${effectiveDuration}s). Polling...`);
-          const maxAttempts = 12; // 12 * 4s = 48s poll window to prevent gateway timeout
+          const maxAttempts = 35; // 35 * 5s = 175s (~3 minutes) for natural high-fidelity Seedance completion
           for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            await new Promise((resolve) => setTimeout(resolve, 4000));
+            onProgress?.(Math.min(75, 30 + Math.round(attempt * 1.3)), `Rendering video take on ${modelToUse} (${(attempt + 1) * 5}s)...`);
+            await new Promise((resolve) => setTimeout(resolve, 5000));
             try {
               const pollRes = await fetch(this.endpoint, {
                 method: 'POST',
@@ -665,8 +666,8 @@ export class LivepeerMediaAgent {
                 if (content?.job_id && (content.status === 'pending' || content.status === 'running')) {
                   const jobId = content.job_id;
                   console.log(`[LivepeerAgent] Scene ${idx + 1} async job ${jobId} - polling...`);
-                  for (let attempt = 0; attempt < 10; attempt++) {
-                    await new Promise((resolve) => setTimeout(resolve, 4000));
+                  for (let attempt = 0; attempt < 30; attempt++) {
+                    await new Promise((resolve) => setTimeout(resolve, 5000));
                     try {
                       const pollRes = await fetch(this.endpoint, {
                         method: 'POST',

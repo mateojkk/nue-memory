@@ -115,6 +115,7 @@ export interface GenerateMediaRequest {
   creativeDirectives?: RetrievalResult['creativeDirectives'];
   imageUrl?: string;
   scenePrompts?: string[];
+  onProgress?: (progress: number, stage: string) => void;
 }
 
 export interface RetrievalResult {

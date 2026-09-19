@@ -61,6 +61,8 @@ interface NueDashboardProps {
   isGenerating: boolean;
   generationStage?: 'thinking' | 'cooking' | null;
   generationElapsedSeconds?: number;
+  serverProgress?: number;
+  serverStageDescription?: string;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -93,6 +95,8 @@ export function NueDashboard({
   isGenerating,
   generationStage = 'thinking',
   generationElapsedSeconds = 0,
+  serverProgress,
+  serverStageDescription,
   messages,
   onSendMessage,
   onRegenerate,
@@ -244,6 +248,8 @@ export function NueDashboard({
             isGenerating={isGenerating}
             generationStage={generationStage}
             generationElapsedSeconds={generationElapsedSeconds}
+            serverProgress={serverProgress}
+            serverStageDescription={serverStageDescription}
             messages={messages}
             onSendMessage={onSendMessage}
             onRegenerate={onRegenerate}

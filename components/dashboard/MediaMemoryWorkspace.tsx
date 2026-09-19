@@ -42,6 +42,8 @@ interface MediaMemoryWorkspaceProps {
   isGenerating: boolean;
   generationStage?: 'thinking' | 'cooking' | null;
   generationElapsedSeconds?: number;
+  serverProgress?: number;
+  serverStageDescription?: string;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -69,6 +71,8 @@ export function MediaMemoryWorkspace({
   isGenerating,
   generationStage = 'thinking',
   generationElapsedSeconds = 0,
+  serverProgress,
+  serverStageDescription,
   messages,
   onSendMessage,
   onRegenerate,
@@ -307,7 +311,14 @@ export function MediaMemoryWorkspace({
     };
   };
 
-  const cookingProgress = getCookingProgress(generationElapsedSeconds);
+  const baseProgress = getCookingProgress(generationElapsedSeconds);
+  const cookingProgress = {
+    step: serverProgress !== undefined ? (serverProgress < 25 ? 1 : serverProgress < 60 ? 2 : serverProgress < 85 ? 3 : 4) : baseProgress.step,
+    total: 4,
+    percent: serverProgress !== undefined ? serverProgress : baseProgress.percent,
+    title: serverStageDescription ? serverStageDescription : baseProgress.title,
+    detail: serverStageDescription ? 'Live updates from Livepeer neural pipeline' : baseProgress.detail,
+  };
 
   const filteredProjects = projects.filter((p) => {
     if (!historySearch.trim()) return true;
