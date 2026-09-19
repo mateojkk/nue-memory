@@ -7,6 +7,7 @@ import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/l
 import {
   Plus,
   Brain,
+  Flame,
   Mic,
   MicOff,
   AudioLines,
@@ -31,6 +32,7 @@ interface MediaMemoryWorkspaceProps {
   allVersions: MediaVersion[];
   onSelectVersion: (index: number) => void;
   isGenerating: boolean;
+  generationStage?: 'thinking' | 'cooking' | null;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -54,6 +56,7 @@ export function MediaMemoryWorkspace({
   allVersions,
   onSelectVersion,
   isGenerating,
+  generationStage = 'thinking',
   messages,
   onSendMessage,
   onRegenerate,
@@ -678,18 +681,35 @@ export function MediaMemoryWorkspace({
             {isGenerating && (
               <div className="flex gap-3 sm:gap-4 animate-fadeIn">
                 <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0 shadow-xs">
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  {generationStage === 'cooking' ? (
+                    <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
+                  ) : (
+                    <Brain className="w-4 h-4 text-[var(--accent)] animate-pulse" />
+                  )}
                 </div>
                 <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs p-4 text-xs font-mono text-[var(--fg-muted)] space-y-2 max-w-lg shadow-sm">
                   <div className="flex items-center gap-2 text-[var(--accent)] font-medium">
-                    <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-ping" />
-                    <span>Creating your video...</span>
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        generationStage === 'cooking' ? 'bg-amber-500' : 'bg-[var(--accent)]'
+                      } animate-ping`}
+                    />
+                    <span className="font-semibold lowercase">
+                      {generationStage === 'cooking' ? 'cooking...' : 'thinking...'}
+                    </span>
                   </div>
                   <p className="text-[11px] leading-relaxed text-[var(--fg-soft)]">
-                    Composing visual takes, generating soundtrack, and tailoring to your style.
+                    {generationStage === 'cooking'
+                      ? 'Composing visual takes, generating soundtrack, and tailoring to your style.'
+                      : 'Formulating response and recalling your creative style preferences.'}
                   </p>
                   <div className="w-full h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                    <div className="h-full bg-[var(--accent)] rounded-full animate-pulse" style={{ width: '70%' }} />
+                    <div
+                      className={`h-full ${
+                        generationStage === 'cooking' ? 'bg-amber-500' : 'bg-[var(--accent)]'
+                      } rounded-full transition-all duration-500 animate-pulse`}
+                      style={{ width: generationStage === 'cooking' ? '80%' : '35%' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -748,7 +768,13 @@ export function MediaMemoryWorkspace({
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  placeholder="Ask anything or direct revision..."
+                  placeholder={
+                    isGenerating
+                      ? generationStage === 'cooking'
+                        ? 'cooking...'
+                        : 'thinking...'
+                      : 'Ask anything or direct revision...'
+                  }
                   rows={1}
                   disabled={isGenerating}
                   className="flex-1 bg-transparent py-1 text-xs sm:text-sm text-[var(--fg)] placeholder-[var(--fg-muted)] focus:outline-none resize-none max-h-[180px] leading-relaxed"
@@ -785,9 +811,17 @@ export function MediaMemoryWorkspace({
                   type="submit"
                   disabled={(!inputText.trim() && !selectedImage) || isGenerating}
                   className="w-8 h-8 rounded-full bg-[var(--fg)] text-[var(--bg)] disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-90 transition-all shrink-0 active:scale-95 flex items-center justify-center"
-                  title="Send"
+                  title={isGenerating ? (generationStage === 'cooking' ? 'cooking...' : 'thinking...') : 'Send'}
                 >
-                  <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                  {isGenerating ? (
+                    generationStage === 'cooking' ? (
+                      <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
+                    ) : (
+                      <Brain className="w-4 h-4 text-[var(--accent)] animate-pulse" />
+                    )
+                  ) : (
+                    <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                  )}
                 </button>
               </form>
 

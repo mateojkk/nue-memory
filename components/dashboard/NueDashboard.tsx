@@ -58,6 +58,7 @@ interface NueDashboardProps {
   allVersions: MediaVersion[];
   onSelectVersion: (index: number) => void;
   isGenerating: boolean;
+  generationStage?: 'thinking' | 'cooking' | null;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -85,6 +86,7 @@ export function NueDashboard({
   allVersions,
   onSelectVersion,
   isGenerating,
+  generationStage = 'thinking',
   messages,
   onSendMessage,
   onRegenerate,
@@ -238,6 +240,7 @@ export function NueDashboard({
             allVersions={allVersions}
             onSelectVersion={onSelectVersion}
             isGenerating={isGenerating}
+            generationStage={generationStage}
             messages={messages}
             onSendMessage={onSendMessage}
             onRegenerate={onRegenerate}

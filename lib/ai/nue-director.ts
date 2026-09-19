@@ -183,9 +183,9 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       duration: typeof parsed.duration === 'number' ? Math.max(3, Math.min(30, parsed.duration)) : 5,
       model: parsed.model || 'pixverse-t2v',
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
-      agentMessage: parsed.agentMessage || (isGreeting
-        ? "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"
-        : 'Creating your video...'),
+      agentMessage: parsed.agentMessage || (shouldGen
+        ? 'Directing your video with your preferred creative style.'
+        : "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"),
     };
   } catch {
     return {
@@ -198,7 +198,9 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       duration: 5,
       model: 'pixverse-t2v',
       aspectRatio: '16:9',
-      agentMessage: text.trim() || "Hello! What kind of video would you like to create?",
+      agentMessage: isGreeting
+        ? "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"
+        : (text.trim() || 'Directing your video with your preferred creative style.'),
     };
   }
 }

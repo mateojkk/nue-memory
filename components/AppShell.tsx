@@ -97,6 +97,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
   // Loading States
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStage, setGenerationStage] = useState<'thinking' | 'cooking' | null>(null);
   const [isSavingMemory, setIsSavingMemory] = useState(false);
 
   const activeProject = projects[currentProjectIndex] || null;
@@ -194,6 +195,19 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     imageUrl?: string
   ) => {
     setIsGenerating(true);
+    setGenerationStage('thinking');
+
+    // If it's generating a video (indicated by imageUrl, revision take, or video keywords),
+    // smoothly transition from 'thinking' to 'cooking' as Livepeer begins GPU generation
+    const isExplicitVideo = Boolean(
+      imageUrl ||
+      versionNumber > 1 ||
+      /\b(video|clip|movie|scene|take|render|generate|animate|film|cinematic|footage|teaser|trailer|motion)\b/i.test(promptText)
+    );
+
+    const cookingTimer = setTimeout(() => {
+      setGenerationStage('cooking');
+    }, isExplicitVideo ? 1200 : 2000);
 
     const targetIndex = overrideProjectIndex !== undefined ? overrideProjectIndex : currentProjectIndex;
     const targetTitle = overrideProjectTitle || projects[targetIndex]?.title || activeProject?.title || 'Media Project';
@@ -298,7 +312,9 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
+      clearTimeout(cookingTimer);
       setIsGenerating(false);
+      setGenerationStage(null);
     }
   };
 
@@ -637,6 +653,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
             });
           }}
           isGenerating={isGenerating}
+          generationStage={generationStage}
           messages={messages}
           onSendMessage={handleSendMessage}
           onRegenerate={() => {
