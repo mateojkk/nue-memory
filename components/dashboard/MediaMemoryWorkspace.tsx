@@ -32,6 +32,9 @@ import {
   Clock,
   ChevronLeft,
   ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelLeft,
 } from 'lucide-react';
 
 interface MediaMemoryWorkspaceProps {
@@ -99,7 +102,29 @@ export function MediaMemoryWorkspace({
   const [editedTitle, setEditedTitle] = useState('');
   const [isThinkingEnabled, setIsThinkingEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
-  const [showHistory, setShowHistory] = useState(true);
+  const [showHistory, setShowHistory] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('nue_sidebar_collapsed');
+        if (saved !== null) return saved !== 'true';
+      } catch {
+        // Fallback
+      }
+    }
+    return true;
+  });
+
+  const handleSetShowHistory = (show: boolean) => {
+    setShowHistory(show);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('nue_sidebar_collapsed', String(!show));
+      } catch {
+        // Fallback
+      }
+    }
+  };
+
   const [historySearch, setHistorySearch] = useState('');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -351,6 +376,18 @@ export function MediaMemoryWorkspace({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 shrink-0">
         <div>
           <div className="flex items-center gap-2 mb-1">
+            <button
+              onClick={() => handleSetShowHistory(!showHistory)}
+              className="p-1.5 -ml-1 rounded-lg text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
+              title={showHistory ? 'Collapse sidebar' : 'Expand sidebar'}
+              aria-label={showHistory ? 'Collapse sidebar' : 'Expand sidebar'}
+            >
+              {showHistory ? (
+                <PanelLeftClose className="w-4 h-4" />
+              ) : (
+                <PanelLeftOpen className="w-4 h-4" />
+              )}
+            </button>
             <h2 className="text-xl sm:text-2xl font-medium text-[var(--fg)] tracking-tight font-sans">
               Nue Motion
             </h2>
@@ -433,22 +470,6 @@ export function MediaMemoryWorkspace({
         {/* Top Header Actions */}
         <div className="flex items-center gap-2 max-w-full">
           <button
-            onClick={() => setShowHistory(!showHistory)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono transition shadow-xs ${
-              showHistory
-                ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium ring-1 ring-[var(--accent)]/30'
-                : 'bg-[var(--surface)] text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]'
-            }`}
-            title="Toggle Chat History sidebar"
-          >
-            <History className="w-3.5 h-3.5 text-[var(--accent)]" />
-            <span className="hidden sm:inline">{showHistory ? 'Hide Chats' : 'Chat History'}</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/40 text-[var(--fg-muted)]">
-              {projects.length}
-            </span>
-          </button>
-
-          <button
             onClick={() => (onNewChat ? onNewChat() : onNewProject())}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] font-medium hover:scale-105 active:scale-95 transition shadow-xs"
             title="Start a new chat session"
@@ -509,18 +530,24 @@ export function MediaMemoryWorkspace({
       />
 
       <div className="flex-1 flex gap-5 w-full min-h-0 relative items-start">
-        {/* Left: Chat History Sidebar */}
-        {showHistory && (
-          <aside className="w-64 sm:w-72 shrink-0 flex flex-col gap-3 p-3.5 rounded-2xl bg-[var(--surface)]/90 backdrop-blur-sm shadow-md h-[calc(100vh-14rem)] sticky top-24 overflow-hidden animate-fadeIn">
+        {/* Left: Chat History Sidebar - Seamless, borderless collapsible panel */}
+        <aside
+          className={`shrink-0 transition-all duration-300 ease-in-out flex flex-col gap-3 overflow-hidden sticky top-24 h-[calc(100vh-14rem)] ${
+            showHistory
+              ? 'w-64 sm:w-72 opacity-100 mr-2 sm:mr-4'
+              : 'w-0 opacity-0 mr-0 pointer-events-none'
+          }`}
+        >
+          <div className="w-64 sm:w-72 flex flex-col gap-3 h-full pr-1">
             {/* Sidebar Header */}
-            <div className="flex items-center justify-between gap-2 pb-1 border-b border-[var(--surface-2)]/60">
+            <div className="flex items-center justify-between gap-2 pb-1">
               <div className="flex items-center gap-1.5 text-xs font-mono text-[var(--fg)] font-medium">
                 <MessageSquare className="w-3.5 h-3.5 text-[var(--accent)]" />
                 <span>Chat Sessions</span>
               </div>
               <button
                 onClick={() => (onNewChat ? onNewChat() : onNewProject())}
-                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] font-medium transition shadow-xs"
+                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] font-medium transition"
                 title="Start a new chat session"
               >
                 <Plus className="w-3 h-3" />
@@ -536,12 +563,12 @@ export function MediaMemoryWorkspace({
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
                 placeholder="Filter sessions..."
-                className="w-full pl-8 pr-2 py-1 rounded-lg text-[11px] font-mono bg-[var(--surface-2)] text-[var(--fg)] placeholder:text-[var(--fg-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                className="w-full pl-8 pr-2 py-1.5 rounded-lg text-[11px] font-mono bg-[var(--surface)] text-[var(--fg)] placeholder:text-[var(--fg-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
               />
             </div>
 
             {/* Scrollable list of chat sessions */}
-            <div className="flex-1 overflow-y-auto space-y-1.5 pr-1 no-scrollbar">
+            <div className="flex-1 overflow-y-auto space-y-1 pr-0.5 no-scrollbar">
               {filteredProjects.length === 0 ? (
                 <div className="py-8 text-center text-xs text-[var(--fg-muted)] font-light">
                   No chat sessions found
@@ -562,7 +589,7 @@ export function MediaMemoryWorkspace({
                       onClick={() => onSelectProject?.(actualIdx)}
                       className={`group/session w-full text-left p-2.5 rounded-xl text-xs font-mono transition-all duration-200 cursor-pointer flex flex-col gap-1 relative ${
                         isSelected
-                          ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-xs ring-1 ring-[var(--accent)]/40'
+                          ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-xs'
                           : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]/50'
                       }`}
                     >
@@ -606,8 +633,9 @@ export function MediaMemoryWorkspace({
                 })
               )}
             </div>
-          </aside>
-        )}
+          </div>
+        </aside>
+
 
         {/* Right: Main Chat Stage */}
         <div className="flex-1 flex flex-col min-w-0 w-full">
