@@ -679,7 +679,7 @@ export function MediaMemoryWorkspace({
 
             {/* Directing Shimmer State */}
             {isGenerating && (
-              <div className="flex gap-3 sm:gap-4 animate-fadeIn">
+              <div className="flex gap-3 sm:gap-4 items-center animate-fadeIn">
                 <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0 shadow-xs">
                   {generationStage === 'cooking' ? (
                     <Flame className="w-4 h-4 text-amber-500 animate-pulse" />
@@ -687,30 +687,15 @@ export function MediaMemoryWorkspace({
                     <Brain className="w-4 h-4 text-[var(--accent)] animate-pulse" />
                   )}
                 </div>
-                <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs p-4 text-xs font-mono text-[var(--fg-muted)] space-y-2 max-w-lg shadow-sm">
-                  <div className="flex items-center gap-2 text-[var(--accent)] font-medium">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        generationStage === 'cooking' ? 'bg-amber-500' : 'bg-[var(--accent)]'
-                      } animate-ping`}
-                    />
-                    <span className="font-semibold lowercase">
-                      {generationStage === 'cooking' ? 'cooking...' : 'thinking...'}
-                    </span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed text-[var(--fg-soft)]">
-                    {generationStage === 'cooking'
-                      ? 'Composing visual takes, generating soundtrack, and tailoring to your style.'
-                      : 'Formulating response and recalling your creative style preferences.'}
-                  </p>
-                  <div className="w-full h-1 bg-[var(--surface-2)] rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${
-                        generationStage === 'cooking' ? 'bg-amber-500' : 'bg-[var(--accent)]'
-                      } rounded-full transition-all duration-500 animate-pulse`}
-                      style={{ width: generationStage === 'cooking' ? '80%' : '35%' }}
-                    />
-                  </div>
+                <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs px-4 py-2 text-xs font-mono text-[var(--fg-muted)] flex items-center gap-2 shadow-xs">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      generationStage === 'cooking' ? 'bg-amber-500' : 'bg-[var(--accent)]'
+                    } animate-ping`}
+                  />
+                  <span className="font-semibold lowercase text-[var(--accent)]">
+                    {generationStage === 'cooking' ? 'cooking...' : 'thinking...'}
+                  </span>
                 </div>
               </div>
             )}

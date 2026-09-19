@@ -74,6 +74,34 @@ interface DirectorContext {
  * 1. Recalls relevant memories from Walrus before the LLM call
  * 2. Extracts and saves new user preferences after the LLM responds
  */
+/**
+ * Checks if the user message is a simple conversational greeting or query.
+ */
+export function isConversationalMessage(msg: string): boolean {
+  const clean = msg.toLowerCase().trim().replace(/['"!?.,]/g, '');
+  const videoKeywords = /\b(video|clip|movie|scene|take|render|generate|animate|footage|teaser|trailer|motion|shot|camera|visuals)\b/i;
+  if (videoKeywords.test(clean)) return false;
+
+  const conversationalPatterns = [
+    /^(hi|hello|hey|yo|sup|hiya|howdy|hola|greetings)\b/i,
+    /^(good morning|good afternoon|good evening|good day|good night)\b/i,
+    /^(how are you|how is it going|hows it going|whats up|what is up|whats new)\b/i,
+    /^(who are you|what are you|what can you do|what is this|tell me about yourself|help)\b/i,
+    /^(thanks|thank you|thx|cool|awesome|great|ok|okay|nice|sounds good|got it|bye|goodbye)\b/i,
+    /^(test|testing|ping|check)\b/i,
+  ];
+
+  if (conversationalPatterns.some((pattern) => pattern.test(clean))) {
+    return true;
+  }
+
+  if (clean.length < 20 && !/\b(make|create|render|generate|build|animate|add|put|show|draw)\b/i.test(clean)) {
+    return true;
+  }
+
+  return false;
+}
+
 export async function directCreativeBrief(
   userMessage: string,
   context: DirectorContext
@@ -97,13 +125,44 @@ export async function directCreativeBrief(
   const namespace = `nue-${context.email}`;
   const modelName = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
 
+  const isConversational = isConversationalMessage(userMessage) && !context.imageUrl && !context.feedbackContext;
+
+  // If message is conversational, reply immediately without GPU generation or memory writes
+  if (isConversational) {
+    const { text } = await generateText({
+      model: groq(modelName),
+      system: `You are Nue, an expert creative director for AI video production. The user is chatting with you. Respond conversationally in 1-2 friendly, natural sentences. Do NOT output JSON. Do NOT generate a video. Invite them warmly to share what kind of video, scene, or creative concept they would like to produce today. Do NOT use em dashes anywhere.`,
+      prompt: userMessage,
+    });
+
+    return {
+      shouldGenerate: false,
+      enrichedPrompt: userMessage,
+      visualTheme: 'Modern Product Showcase',
+      pacing: 'moderate',
+      audioStyle: 'Ambient modern electronic',
+      audioEnabled: false,
+      duration: 5,
+      model: 'pixverse-t2v',
+      aspectRatio: '16:9',
+      agentMessage: text.trim() || "Hey there! I'm Nue, your creative director. What kind of video or creative scene would you like to create today?",
+    };
+  }
+
+  // Only autoSave to Walrus MemWal if user provided creative feedback or revision
+  // Do NOT store casual conversation or greetings in memory
+  const shouldAutoSave = Boolean(
+    context.feedbackContext ||
+    /\b(prefer|always|never|my style|i like|i love|pacing|soundtrack|captions?|font|typography|palette|color|cinematic)\b/i.test(userMessage)
+  );
+
   const wrappedModel = withMemWal(groq(modelName), {
     key: process.env.MEMWAL_PRIVATE_KEY,
     accountId: process.env.MEMWAL_ACCOUNT_ID,
     serverUrl: process.env.MEMWAL_SERVER_URL,
     namespace,
     maxMemories: 8,
-    autoSave: true,
+    autoSave: shouldAutoSave,
     minRelevance: 0.3,
     debug: process.env.NODE_ENV === 'development',
   });
@@ -139,19 +198,10 @@ export async function directCreativeBrief(
 }
 
 /**
- * Checks if the user message is a simple conversational greeting or query.
- */
-function isGreetingMessage(msg: string): boolean {
-  const clean = msg.toLowerCase().trim().replace(/[!.,?]/g, '');
-  const greetings = ['hi', 'hello', 'hey', 'yo', 'sup', 'good morning', 'good evening', 'howdy', 'how are you', 'who are you', 'help', 'test'];
-  return greetings.includes(clean) || (clean.length <= 4 && !clean.includes('vid'));
-}
-
-/**
  * Parses the LLM's JSON response, with fallback defaults for robustness.
  */
 function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
-  const isGreeting = isGreetingMessage(userMessage);
+  const isConversational = isConversationalMessage(userMessage);
 
   let jsonStr = text.trim();
   const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -167,7 +217,7 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
 
   try {
     const parsed = JSON.parse(jsonStr);
-    const shouldGen = isGreeting
+    const shouldGen = isConversational
       ? false
       : parsed.shouldGenerate !== undefined
       ? Boolean(parsed.shouldGenerate)
@@ -188,19 +238,18 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
         : "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"),
     };
   } catch {
+    // If response was not valid JSON, treat as conversational reply - do NOT generate video
     return {
-      shouldGenerate: !isGreeting,
-      enrichedPrompt: text,
+      shouldGenerate: false,
+      enrichedPrompt: userMessage,
       visualTheme: 'Modern Product Showcase',
       pacing: 'moderate',
       audioStyle: 'Ambient modern electronic',
-      audioEnabled: true,
+      audioEnabled: false,
       duration: 5,
       model: 'pixverse-t2v',
       aspectRatio: '16:9',
-      agentMessage: isGreeting
-        ? "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"
-        : (text.trim() || 'Directing your video with your preferred creative style.'),
+      agentMessage: text.trim() || "Hello! What kind of video would you like to create today?",
     };
   }
 }

@@ -48,10 +48,10 @@ import { MemoryObjectsSection } from '@/components/landing/MemoryObjectsSection'
 import { EvolutionSection } from '@/components/landing/EvolutionSection';
 import { MediaMemoryShowcase } from '@/components/landing/MediaMemoryShowcase';
 import { LandingFooter } from '@/components/landing/LandingFooter';
-import { NueDashboard } from '@/components/dashboard/NueDashboard';
-import type { DashboardTab } from '@/components/dashboard/NueDashboard';
+import { NueDashboard, type DashboardTab } from '@/components/dashboard/NueDashboard';
 import { useAuth } from '@/components/auth/useAuth';
 import { AuthGuardModal } from '@/components/auth/AuthGuardModal';
+import { isConversationalMessage } from '@/lib/ai/nue-director';
 import {
   CreativeProject,
   MediaVersion,
@@ -194,20 +194,9 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     overrideProjectTitle?: string,
     imageUrl?: string
   ) => {
+    const isConversational = isConversationalMessage(promptText) && !imageUrl && versionNumber === 1 && !feedbackContext;
     setIsGenerating(true);
-    setGenerationStage('thinking');
-
-    // If it's generating a video (indicated by imageUrl, revision take, or video keywords),
-    // smoothly transition from 'thinking' to 'cooking' as Livepeer begins GPU generation
-    const isExplicitVideo = Boolean(
-      imageUrl ||
-      versionNumber > 1 ||
-      /\b(video|clip|movie|scene|take|render|generate|animate|film|cinematic|footage|teaser|trailer|motion)\b/i.test(promptText)
-    );
-
-    const cookingTimer = setTimeout(() => {
-      setGenerationStage('cooking');
-    }, isExplicitVideo ? 1200 : 2000);
+    setGenerationStage(isConversational ? 'thinking' : 'cooking');
 
     const targetIndex = overrideProjectIndex !== undefined ? overrideProjectIndex : currentProjectIndex;
     const targetTitle = overrideProjectTitle || projects[targetIndex]?.title || activeProject?.title || 'Media Project';
@@ -312,7 +301,6 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
-      clearTimeout(cookingTimer);
       setIsGenerating(false);
       setGenerationStage(null);
     }

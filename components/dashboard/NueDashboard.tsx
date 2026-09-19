@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MemoriesView } from './MemoriesView';
 import { MediaMemoryWorkspace } from './MediaMemoryWorkspace';
 import { ProjectsView } from './ProjectsView';
 import { ApiKeysView } from './ApiKeysView';
@@ -13,7 +12,6 @@ import { ThemeToggle } from '../ThemeToggle';
 import { AuthButton } from '../auth/AuthButton';
 import {
   ArrowLeft,
-  Database,
   Video,
   Layers,
   Key,
@@ -21,13 +19,13 @@ import {
 } from 'lucide-react';
 
 export type DashboardTab =
-  | 'memories'
   | 'media-memory'
   | 'projects'
   | 'usage'
-  | 'api-keys';
+  | 'api-keys'
+  | 'memories';
 
-const VALID_TABS: DashboardTab[] = ['media-memory', 'memories', 'projects', 'usage', 'api-keys'];
+const VALID_TABS: DashboardTab[] = ['media-memory', 'projects', 'usage', 'api-keys'];
 
 function getResolvedTab(initialTab?: DashboardTab): DashboardTab {
   if (typeof window !== 'undefined') {
@@ -163,7 +161,6 @@ export function NueDashboard({
 
   const navItems = [
     { id: 'media-memory' as DashboardTab, label: 'Motion', icon: Video, highlight: true },
-    { id: 'memories' as DashboardTab, label: 'Memories', icon: Database, badge: activeMemories.filter((m) => m.isActive).length },
     { id: 'projects' as DashboardTab, label: 'Projects', icon: Layers, badge: projects.length },
     { id: 'usage' as DashboardTab, label: 'Credits', icon: CreditCard },
     { id: 'api-keys' as DashboardTab, label: 'API Keys', icon: Key },
@@ -223,15 +220,6 @@ export function NueDashboard({
 
       {/* Main Workspace View Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 animate-fadeIn" key={activeTab}>
-        {activeTab === 'memories' && (
-          <MemoriesView
-            memories={activeMemories}
-            onForget={onForgetMemory}
-            onOpenStudio={() => handleTabChange('media-memory')}
-            userNamespace={userNamespace}
-            userEmail={userEmail}
-          />
-        )}
 
         {activeTab === 'media-memory' && (
           <MediaMemoryWorkspace
