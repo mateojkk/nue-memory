@@ -157,6 +157,7 @@ export async function POST(request: Request) {
         model: directorBrief.model,
       },
       imageUrl: validatedImageUrl,
+      scenePrompts: directorBrief.scenePrompts,
     });
 
     // Duration truthfulness check:

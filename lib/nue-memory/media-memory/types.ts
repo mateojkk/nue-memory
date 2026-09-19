@@ -114,6 +114,7 @@ export interface GenerateMediaRequest {
   feedbackContext?: string;
   creativeDirectives?: RetrievalResult['creativeDirectives'];
   imageUrl?: string;
+  scenePrompts?: string[];
 }
 
 export interface RetrievalResult {
