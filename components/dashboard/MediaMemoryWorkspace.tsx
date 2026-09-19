@@ -104,6 +104,7 @@ export function MediaMemoryWorkspace({
   const [isListening, setIsListening] = useState(false);
   const [showHistory, setShowHistory] = useState(() => {
     if (typeof window !== 'undefined') {
+      if (window.innerWidth < 1024) return false;
       try {
         const saved = localStorage.getItem('nue_sidebar_collapsed');
         if (saved !== null) return saved !== 'true';
@@ -124,6 +125,26 @@ export function MediaMemoryWorkspace({
       }
     }
   };
+
+  // Automatically collapse on viewport resize or mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setShowHistory(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showHistory) {
+        handleSetShowHistory(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showHistory]);
 
   const [historySearch, setHistorySearch] = useState('');
 
@@ -280,6 +301,9 @@ export function MediaMemoryWorkspace({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if ((!inputText.trim() && !selectedImage) || isGenerating) return;
+    if (typeof window !== 'undefined' && window.innerWidth < 1024 && showHistory) {
+      handleSetShowHistory(false);
+    }
     const promptToSend =
       inputText.trim() || 'Animate and direct this image with cinematic camera motion and depth.';
     onSendMessage(promptToSend, selectedImage || undefined);
@@ -530,12 +554,21 @@ export function MediaMemoryWorkspace({
       />
 
       <div className="flex-1 flex gap-5 w-full min-h-0 relative items-start">
-        {/* Left: Chat History Sidebar - Seamless, borderless collapsible panel */}
+        {/* Backdrop for mobile / tablet auto-collapse when clicking outside */}
+        {showHistory && (
+          <div
+            onClick={() => handleSetShowHistory(false)}
+            className="fixed inset-0 bg-black/40 backdrop-blur-xs z-30 lg:hidden transition-opacity duration-300"
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Left: Chat History Sidebar - Responsive & Automatically Collapsible */}
         <aside
-          className={`shrink-0 transition-all duration-300 ease-in-out flex flex-col gap-3 overflow-hidden sticky top-24 h-[calc(100vh-14rem)] ${
+          className={`shrink-0 transition-all duration-300 ease-in-out flex flex-col gap-3 overflow-hidden ${
             showHistory
-              ? 'w-64 sm:w-72 opacity-100 mr-2 sm:mr-4'
-              : 'w-0 opacity-0 mr-0 pointer-events-none'
+              ? 'fixed lg:sticky top-20 lg:top-24 left-4 lg:left-0 z-40 bg-[var(--surface)] lg:bg-transparent p-3.5 lg:p-0 rounded-2xl lg:rounded-none shadow-2xl lg:shadow-none w-72 opacity-100 mr-0 lg:mr-4 h-[calc(100vh-10rem)] lg:h-[calc(100vh-14rem)]'
+              : 'w-0 opacity-0 mr-0 pointer-events-none sticky top-24 h-[calc(100vh-14rem)]'
           }`}
         >
           <div className="w-64 sm:w-72 flex flex-col gap-3 h-full pr-1">
@@ -545,14 +578,30 @@ export function MediaMemoryWorkspace({
                 <MessageSquare className="w-3.5 h-3.5 text-[var(--accent)]" />
                 <span>Chat Sessions</span>
               </div>
-              <button
-                onClick={() => (onNewChat ? onNewChat() : onNewProject())}
-                className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] font-medium transition"
-                title="Start a new chat session"
-              >
-                <Plus className="w-3 h-3" />
-                <span>New</span>
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => {
+                    if (onNewChat) onNewChat();
+                    else onNewProject();
+                    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                      handleSetShowHistory(false);
+                    }
+                  }}
+                  className="flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] font-medium transition"
+                  title="Start a new chat session"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New</span>
+                </button>
+                <button
+                  onClick={() => handleSetShowHistory(false)}
+                  className="p-1 rounded-md text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] lg:hidden transition"
+                  title="Close sidebar"
+                  aria-label="Close sidebar"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             {/* Filter Input */}
@@ -586,7 +635,12 @@ export function MediaMemoryWorkspace({
                   return (
                     <div
                       key={proj.id}
-                      onClick={() => onSelectProject?.(actualIdx)}
+                      onClick={() => {
+                        onSelectProject?.(actualIdx);
+                        if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                          handleSetShowHistory(false);
+                        }
+                      }}
                       className={`group/session w-full text-left p-2.5 rounded-xl text-xs font-mono transition-all duration-200 cursor-pointer flex flex-col gap-1 relative ${
                         isSelected
                           ? 'bg-[var(--surface-2)] text-[var(--fg)] font-medium shadow-xs'
