@@ -16,15 +16,13 @@ import {
   Globe,
   Sparkles,
   User,
-  ImagePlus,
   X,
   RefreshCw,
   Edit2,
   CheckCheck,
   RotateCcw,
   Trash2,
-  Cpu,
-  Database,
+  Check,
 } from 'lucide-react';
 
 interface MediaMemoryWorkspaceProps {
@@ -265,102 +263,152 @@ export function MediaMemoryWorkspace({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`flex flex-col h-full w-full relative bg-[var(--bg)] transition-all select-none ${
+      className={`flex flex-col min-h-[calc(100vh-12rem)] w-full relative transition-all ${
         isDragging ? 'ring-2 ring-[var(--accent)] bg-[var(--surface-2)]/30' : ''
       }`}
     >
-      {/* Top Project Bar (shown when active project exists or renaming) */}
-      {activeProject && hasRealMessages && (
-        <div className="px-4 sm:px-6 py-2.5 border-b border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--bg)]/90 backdrop-blur-sm z-10">
-          <div className="flex items-center gap-2">
-            {isEditingTitle ? (
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveRename();
-                    if (e.key === 'Escape') setIsEditingTitle(false);
-                  }}
-                  autoFocus
-                  className="px-2 py-0.5 text-xs font-mono bg-[var(--surface-2)] border border-[var(--accent)] text-[var(--fg)] rounded focus:outline-none"
-                />
-                <button
-                  onClick={handleSaveRename}
-                  className="p-1 rounded bg-[var(--accent-deep)] text-[#4a2c0e] hover:bg-[var(--accent)] transition"
-                  title="Save Title"
-                >
-                  <CheckCheck className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setIsEditingTitle(false)}
-                  className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--fg-muted)] transition"
-                  title="Cancel"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 group">
-                <h2
-                  onClick={handleStartRename}
-                  className="text-sm font-medium text-[var(--fg)] tracking-tight cursor-pointer hover:text-[var(--accent)] transition flex items-center gap-1.5"
-                  title="Click to rename"
-                >
-                  <span>{activeProject.title}</span>
-                  <Edit2 className="w-3 h-3 opacity-30 group-hover:opacity-100 transition" />
-                </h2>
+      {/* Workspace Top Header Bar: Project Switcher & Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[var(--border)] shrink-0">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h2 className="text-xl sm:text-2xl font-medium text-[var(--fg)] tracking-tight font-sans">
+              Nue Motion
+            </h2>
+            {activeProject && (
+              <>
+                <span className="text-[var(--fg-faint)] text-xs">&middot;</span>
+                {isEditingTitle ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveRename();
+                        if (e.key === 'Escape') setIsEditingTitle(false);
+                      }}
+                      autoFocus
+                      className="px-2 py-0.5 text-xs font-mono bg-[var(--surface-2)] border border-[var(--accent)] text-[var(--fg)] rounded transition"
+                    />
+                    <button
+                      onClick={handleSaveRename}
+                      className="p-1 rounded bg-[var(--accent-deep)] text-[#4a2c0e] hover:bg-[var(--accent)] transition"
+                      title="Save Title"
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setIsEditingTitle(false)}
+                      className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--fg-muted)] transition"
+                      title="Cancel"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 group">
+                    <span
+                      onClick={handleStartRename}
+                      className="text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] px-2 py-0.5 rounded bg-[var(--surface-2)] border border-transparent hover:border-[var(--border)] cursor-pointer transition flex items-center gap-1.5"
+                      title="Click to rename project"
+                    >
+                      <span>{activeProject.title}</span>
+                      <Edit2 className="w-2.5 h-2.5 opacity-40 group-hover:opacity-100 transition" />
+                    </span>
 
-                {activeProject.versions?.length > 0 && (
-                  <span className="text-[10px] font-mono text-[var(--fg-muted)] px-2 py-0.5 rounded-full bg-[var(--surface-2)] border border-[var(--border)] ml-1">
-                    {activeProject.versions.length} take{activeProject.versions.length === 1 ? '' : 's'}
-                  </span>
+                    {onResetProject && (
+                      <button
+                        onClick={() => onResetProject(activeProject.id)}
+                        className="p-1 rounded text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
+                        title="Reset all versions in this project"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                      </button>
+                    )}
+
+                    {onDeleteProject && (
+                      <button
+                        onClick={() => onDeleteProject(activeProject.id)}
+                        className="p-1 rounded text-[var(--fg-muted)] hover:text-red-400 hover:bg-red-950/20 transition"
+                        title="Delete this project"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
           </div>
+          <p className="text-xs text-[var(--fg-muted)] font-light mt-0.5">
+            Autonomous video generation with persistent agent memory.
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2">
-            {activeMemories.length > 0 && (
-              <div
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[11px] font-mono text-[var(--fg)]"
-                title="Preferences automatically applied from persistent memory"
+        {/* Project Switcher Pills */}
+        <div className="flex items-center gap-2 max-w-full">
+          {projects.length > 0 && (
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[var(--surface-2)]/70 max-w-full overflow-x-auto no-scrollbar">
+              {projects.map((proj, idx) => {
+                const isSelected = currentProjectIndex === idx;
+                return (
+                  <button
+                    key={proj.id}
+                    onClick={() => onSelectProject?.(idx)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all duration-200 whitespace-nowrap flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-95 ${
+                      isSelected
+                        ? 'bg-[var(--surface)] text-[var(--fg)] font-medium shadow-xs scale-[1.01]'
+                        : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface)]/50'
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full transition-transform duration-200 ${
+                        isSelected ? 'bg-[var(--accent)] scale-125' : 'bg-[var(--fg-faint)]'
+                      }`}
+                    />
+                    <span>{proj.title}</span>
+                  </button>
+                );
+              })}
+
+              <button
+                onClick={() => onNewProject()}
+                className="p-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--accent-deep)] text-[var(--accent)] hover:text-[#4a2c0e] hover:scale-105 active:scale-95 transition-all duration-200 shadow-xs flex items-center"
+                title="Create New Project"
               >
-                <Database className="w-3 h-3 text-emerald-500" />
-                <span>{activeMemories.filter((m) => m.isActive).length} Memories</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-[10px] font-mono text-[var(--fg-muted)]">
-              <Cpu className="w-3 h-3 text-[var(--accent)]" />
-              <span>seedance &middot; pixverse</span>
+                <Plus className="w-3.5 h-3.5" />
+              </button>
             </div>
+          )}
+        </div>
+      </div>
 
-            {onResetProject && (
-              <button
-                onClick={() => onResetProject(activeProject.id)}
-                className="p-1.5 rounded-lg text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
-                title="Reset takes"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {onDeleteProject && (
-              <button
-                onClick={() => onDeleteProject(activeProject.id)}
-                className="p-1.5 rounded-lg text-[var(--fg-muted)] hover:text-red-400 hover:bg-red-950/20 transition"
-                title="Delete project"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
+      {/* Memory Applied Banner */}
+      {activeVersion && activeVersion.appliedPreferences.length > 0 && (
+        <div className="my-3 p-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] text-xs font-mono text-[var(--fg)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <div className="flex items-center gap-1.5 text-emerald-500 font-medium">
+              <Check className="w-3.5 h-3.5 text-emerald-500" />
+              <span>{activeVersion.appliedPreferences.length} learned preferences applied</span>
+            </div>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {activeVersion.appliedPreferences.map((pref) => (
+                <span
+                  key={pref.id}
+                  className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[var(--fg)] text-[11px]"
+                >
+                  ✓ {pref.preference}
+                </span>
+              ))}
+            </div>
           </div>
+          <span className="text-[10px] text-[var(--fg-muted)] shrink-0">
+            Applied from persistent memory
+          </span>
         </div>
       )}
 
-      {/* Hidden file input for uploading pictures */}
+      {/* Hidden file inputs for uploading pictures */}
       <input
         ref={fileInputRef}
         type="file"
@@ -384,11 +432,11 @@ export function MediaMemoryWorkspace({
         }}
       />
 
-      {/* CASE 1: EMPTY STATE - EXACT CHATGPT HOME SCREEN */}
+      {/* CASE 1: EMPTY STATE - EXACT CHATGPT SCREEN */}
       {!hasRealMessages ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 -mt-10 animate-fadeIn">
+        <div className="flex-1 flex flex-col items-center justify-center py-12 sm:py-20 px-4 animate-fadeIn">
           <div className="w-full max-w-2xl space-y-6 sm:space-y-8">
-            {/* ChatGPT Headline */}
+            {/* Headline */}
             <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-[var(--fg)] text-center">
               What&apos;s on the agenda today?
             </h1>
@@ -425,7 +473,6 @@ export function MediaMemoryWorkspace({
               onSubmit={handleSubmit}
               className="w-full rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)] transition-all px-4 py-3 flex items-center gap-3"
             >
-              {/* Plus Button */}
               <button
                 type="button"
                 onClick={() => centerFileInputRef.current?.click()}
@@ -435,7 +482,6 @@ export function MediaMemoryWorkspace({
                 <Plus className="w-5 h-5 stroke-[2]" />
               </button>
 
-              {/* Input Field */}
               <input
                 ref={centerInputRef}
                 type="text"
@@ -448,7 +494,6 @@ export function MediaMemoryWorkspace({
                 autoFocus
               />
 
-              {/* Think (MemWal Memory) Toggle Pill */}
               <button
                 type="button"
                 onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
@@ -463,7 +508,6 @@ export function MediaMemoryWorkspace({
                 <span>Think</span>
               </button>
 
-              {/* Mic Voice Button */}
               <button
                 type="button"
                 onClick={toggleSpeechRecognition}
@@ -477,7 +521,6 @@ export function MediaMemoryWorkspace({
                 {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
 
-              {/* Round Action Button (Green soundwaves icon when empty, Up arrow when typed) */}
               <button
                 type="submit"
                 disabled={(!inputText.trim() && !selectedImage) || isGenerating}
@@ -496,7 +539,7 @@ export function MediaMemoryWorkspace({
               </button>
             </form>
 
-            {/* Suggestions list directly underneath the pill (exactly like ChatGPT) */}
+            {/* Suggestions List (exact ChatGPT layout) */}
             <div className="space-y-1 pt-1 max-w-lg mx-auto sm:mx-0">
               <button
                 type="button"
@@ -538,8 +581,8 @@ export function MediaMemoryWorkspace({
         </div>
       ) : (
         /* CASE 2: ACTIVE CONVERSATION - CHATGPT STREAM WITH INLINE VIDEOS */
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6">
-          <div className="max-w-3xl lg:max-w-4xl mx-auto w-full space-y-6 pb-28">
+        <div className="flex-1 flex flex-col pt-4 space-y-6">
+          <div className="flex-1 space-y-6 pb-28">
             {realMessages.map((msg, index) => {
               const isUser = msg.sender === 'user';
               const matchingVersion =
@@ -631,7 +674,7 @@ export function MediaMemoryWorkspace({
               </div>
             )}
 
-            {/* Generating Shimmer */}
+            {/* Directing Shimmer State */}
             {isGenerating && (
               <div className="flex gap-3 sm:gap-4 animate-fadeIn">
                 <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--accent)] shrink-0 shadow-xs">
@@ -654,107 +697,105 @@ export function MediaMemoryWorkspace({
 
             <div ref={messagesEndRef} />
           </div>
-        </div>
-      )}
 
-      {/* Floating Bottom Input Bar in Conversation Mode */}
-      {hasRealMessages && (
-        <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/95 to-transparent z-20">
-          <div className="max-w-3xl lg:max-w-4xl mx-auto w-full space-y-2">
-            {selectedImage && (
-              <div className="p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-2.5 max-w-sm animate-fadeIn shadow-md">
-                <div className="relative rounded-lg overflow-hidden border border-[var(--border)] w-11 h-11 bg-black/40 shrink-0">
-                  <img src={selectedImage} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedImage(null);
-                      setImageFileName(null);
-                    }}
-                    className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition"
-                  >
-                    <X className="w-2.5 h-2.5" />
-                  </button>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-[var(--fg)] truncate">
-                    {imageFileName || 'Image attached'}
+          {/* Floating Bottom Input Bar */}
+          <div className="sticky bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/95 to-transparent z-20">
+            <div className="max-w-3xl mx-auto w-full space-y-2">
+              {selectedImage && (
+                <div className="p-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex items-center gap-2.5 max-w-sm animate-fadeIn shadow-md">
+                  <div className="relative rounded-lg overflow-hidden border border-[var(--border)] w-11 h-11 bg-black/40 shrink-0">
+                    <img src={selectedImage} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedImage(null);
+                        setImageFileName(null);
+                      }}
+                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-black/80 text-white hover:bg-red-600 transition"
+                    >
+                      <X className="w-2.5 h-2.5" />
+                    </button>
                   </div>
-                  <div className="text-[10px] text-[var(--fg-muted)] font-mono">
-                    Ready for image-to-video animation
+                  <div className="min-w-0 flex-1">
+                    <div className="text-xs font-medium text-[var(--fg)] truncate">
+                      {imageFileName || 'Image attached'}
+                    </div>
+                    <div className="text-[10px] text-[var(--fg-muted)] font-mono">
+                      Ready for image-to-video animation
+                    </div>
                   </div>
                 </div>
+              )}
+
+              {/* Bottom Input Pill */}
+              <form
+                onSubmit={handleSubmit}
+                className="rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)] transition-all px-4 py-2.5 flex items-center gap-3"
+              >
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isGenerating}
+                  className="w-8 h-8 rounded-full hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] flex items-center justify-center transition shrink-0"
+                  title="Attach image"
+                >
+                  <Plus className="w-5 h-5 stroke-[2]" />
+                </button>
+
+                <textarea
+                  ref={textareaRef}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
+                  placeholder="Ask anything or direct revision..."
+                  rows={1}
+                  disabled={isGenerating}
+                  className="flex-1 bg-transparent py-1 text-xs sm:text-sm text-[var(--fg)] placeholder-[var(--fg-muted)] focus:outline-none resize-none max-h-[180px] leading-relaxed"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono transition shrink-0 ${
+                    isThinkingEnabled
+                      ? 'bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--border)]'
+                      : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
+                  }`}
+                  title="MemWal memory"
+                >
+                  <Brain className={`w-3.5 h-3.5 ${isThinkingEnabled ? 'text-[var(--accent)]' : ''}`} />
+                  <span className="hidden sm:inline">Think</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={toggleSpeechRecognition}
+                  className={`p-1.5 rounded-full transition shrink-0 ${
+                    isListening
+                      ? 'text-red-500 bg-red-500/10 animate-pulse'
+                      : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
+                  }`}
+                  title={isListening ? 'Listening...' : 'Voice prompt'}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={(!inputText.trim() && !selectedImage) || isGenerating}
+                  className="w-8 h-8 rounded-full bg-[var(--fg)] text-[var(--bg)] disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-90 transition-all shrink-0 active:scale-95 flex items-center justify-center"
+                  title="Send"
+                >
+                  <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                </button>
+              </form>
+
+              <div className="text-center">
+                <span className="text-[10px] font-mono text-[var(--fg-faint)]">
+                  Nue Motion directs Livepeer neural video models with Walrus MemWal memory.
+                </span>
               </div>
-            )}
-
-            {/* Bottom Pill */}
-            <form
-              onSubmit={handleSubmit}
-              className="rounded-full bg-[var(--surface)] border border-[var(--border)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)] transition-all px-4 py-2.5 flex items-center gap-3"
-            >
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isGenerating}
-                className="w-8 h-8 rounded-full hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] flex items-center justify-center transition shrink-0"
-                title="Attach image"
-              >
-                <Plus className="w-5 h-5 stroke-[2]" />
-              </button>
-
-              <textarea
-                ref={textareaRef}
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                placeholder="Ask anything or direct revision..."
-                rows={1}
-                disabled={isGenerating}
-                className="flex-1 bg-transparent py-1 text-xs sm:text-sm text-[var(--fg)] placeholder-[var(--fg-muted)] focus:outline-none resize-none max-h-[180px] leading-relaxed"
-              />
-
-              <button
-                type="button"
-                onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono transition shrink-0 ${
-                  isThinkingEnabled
-                    ? 'bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--border)]'
-                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
-                }`}
-                title="MemWal memory"
-              >
-                <Brain className={`w-3.5 h-3.5 ${isThinkingEnabled ? 'text-[var(--accent)]' : ''}`} />
-                <span className="hidden sm:inline">Think</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleSpeechRecognition}
-                className={`p-1.5 rounded-full transition shrink-0 ${
-                  isListening
-                    ? 'text-red-500 bg-red-500/10 animate-pulse'
-                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
-                }`}
-                title={isListening ? 'Listening...' : 'Voice prompt'}
-              >
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </button>
-
-              <button
-                type="submit"
-                disabled={(!inputText.trim() && !selectedImage) || isGenerating}
-                className="w-8 h-8 rounded-full bg-[var(--fg)] text-[var(--bg)] disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-90 transition-all shrink-0 active:scale-95 flex items-center justify-center"
-                title="Send"
-              >
-                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
-              </button>
-            </form>
-
-            <div className="text-center">
-              <span className="text-[10px] font-mono text-[var(--fg-faint)]">
-                Nue Motion directs Livepeer neural video models with Walrus MemWal memory.
-              </span>
             </div>
           </div>
         </div>
