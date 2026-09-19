@@ -231,7 +231,7 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
       const numStr = match[1] || match[2];
       const sec = parseInt(numStr, 10);
       return {
-        value: `Prefer ${sec} second video duration on seedance-25-t2v`,
+        value: `Prefer ${sec} second video duration`,
         confidence: 0.95,
       };
     },

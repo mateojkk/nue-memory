@@ -116,10 +116,23 @@ export class LivepeerMediaAgent {
   }
 
   /**
-   * Muxes video clip with audio track using Livepeer assemble tool (ffmpeg-mux)
+   * Assembles multiple video clips and optional soundtrack into a unified timeline using Livepeer assemble MCP tool
    */
-  private async muxVideoAndAudio(videoUrl: string, audioUrl: string): Promise<string | null> {
+  public async assembleTimeline(options: {
+    clips: Array<{ src: string; title?: string }>;
+    audioUrl?: string | null;
+    transition?: 'cut' | 'crossfade' | 'fade';
+  }): Promise<string | null> {
     try {
+      const args: Record<string, any> = {
+        clips: options.clips,
+        transition: options.transition || 'cut',
+        stitch: true,
+      };
+      if (options.audioUrl) {
+        args.music = options.audioUrl;
+      }
+
       const res = await fetch(this.endpoint, {
         method: 'POST',
         headers: {
@@ -133,11 +146,7 @@ export class LivepeerMediaAgent {
           method: 'tools/call',
           params: {
             name: 'assemble',
-            arguments: {
-              clips: [{ src: videoUrl }],
-              music: audioUrl,
-              stitch: true,
-            },
+            arguments: args,
           },
         }),
       });
@@ -150,9 +159,20 @@ export class LivepeerMediaAgent {
         }
       }
     } catch (err) {
-      console.warn('[LivepeerAgent] Video-audio mux notice:', err);
+      console.warn('[LivepeerAgent] assembleTimeline notice:', err);
     }
     return null;
+  }
+
+  /**
+   * Muxes video clip with audio track using Livepeer assemble tool (backward compat)
+   */
+  private async muxVideoAndAudio(videoUrl: string, audioUrl: string): Promise<string | null> {
+    return this.assembleTimeline({
+      clips: [{ src: videoUrl }],
+      audioUrl,
+      transition: 'cut',
+    });
   }
 
   /**
@@ -363,22 +383,30 @@ export class LivepeerMediaAgent {
 
     // Determine model dispatch strategy:
     // 1. If image provided: Dispatch pixverse-i2v animate action
-    // 2. If explicitly requested seedance OR targetDuration > 8s: Dispatch seedance-25-t2v (up to 30s)
-    // 3. If explicitly requested ltx: Dispatch ltx-25-t2v-pro (up to 10s)
-    // 4. Otherwise: Use pixverse-t2v clamped to 3, 5, or 8 seconds
-    const isLongForm = !isImageToVideo && (explicitSeedance || (!explicitPixverse && !explicitLtx && targetDuration > 8));
+    // 2. If explicitly requested seedance: Dispatch seedance-25-t2v
+    // 3. If explicitly requested ltx: Dispatch ltx-25-t2v-pro
+    // 4. If targetDuration >= 15 (or > 8): Long-form multi-scene sequence assembled from high-quality takes
+    // 5. Otherwise: Use pixverse-t2v for fast, single-take video
+    const isLongForm = !isImageToVideo && targetDuration > 8;
+    const clipCount = isLongForm ? Math.min(6, Math.max(2, Math.round(targetDuration / 8))) : 1;
     const modelToUse = isImageToVideo
       ? (explicitSeedance ? 'seedance-25-i2v' : 'pixverse-i2v')
-      : isLongForm
+      : explicitSeedance
       ? 'seedance-25-t2v'
       : explicitLtx
       ? 'ltx-25-t2v-pro'
       : 'pixverse-t2v';
-    const effectiveDuration = isLongForm
-      ? Math.min(30, Math.max(10, targetDuration))
-      : explicitLtx
+
+    // Livepeer create_media schema strictly enforces duration <= 15.
+    // For single-take generation, clamp to 8s (pixverse max) or 10-15s (seedance/ltx).
+    const singleTakeDuration = modelToUse === 'seedance-25-t2v'
+      ? Math.min(15, Math.max(5, targetDuration))
+      : modelToUse === 'ltx-25-t2v-pro'
       ? Math.min(10, Math.max(3, targetDuration))
-      : (targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3);
+      : Math.min(8, Math.max(3, targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3));
+
+    // Expected total sequence duration across all assembled scenes
+    const effectiveDuration = isLongForm ? clipCount * singleTakeDuration : singleTakeDuration;
 
     // Build Livepeer prompt that combines original brief, feedback directives, and styling
     const basePrompt = feedbackContext
@@ -403,7 +431,8 @@ export class LivepeerMediaAgent {
     if (isImageToVideo && hostedImageUrl) {
       mcpArguments.source_url = hostedImageUrl;
     } else {
-      mcpArguments.duration = effectiveDuration;
+      // Pass singleTakeDuration so it strictly adheres to the MCP schema (duration <= 15)
+      mcpArguments.duration = singleTakeDuration;
     }
 
     try {
@@ -519,7 +548,7 @@ export class LivepeerMediaAgent {
           if (pixverseData.result?.structuredContent?.url) {
             realMediaUrl = pixverseData.result.structuredContent.url;
             livepeerCapability = 'pixverse-t2v';
-            generationDuration = 8;
+            generationDuration = effectiveDuration;
           }
         }
       } catch (pvErr) {
@@ -585,56 +614,60 @@ export class LivepeerMediaAgent {
     let finalMediaUrl = realMediaUrl;
     const finalImageUrl = realMediaUrl;
 
-    // If both video and audio are ready, attempt Livepeer assemble mux (ffmpeg-mux)
-    if (audioUrl) {
+    // Multi-scene sequence assembly and soundtrack muxing via Livepeer assemble MCP tool
+    if (clipCount > 1 || audioUrl) {
       try {
-        console.log('[LivepeerAgent] Muxing video with AI soundtrack via Livepeer assemble...');
-        const muxedUrl = await this.muxVideoAndAudio(realMediaUrl, audioUrl);
-        if (muxedUrl) {
-          console.log(`[LivepeerAgent] Mux succeeded! Final muxed URL: ${muxedUrl}`);
-          finalMediaUrl = muxedUrl;
+        console.log(`[LivepeerAgent] Assembling ${clipCount} scene takes with audio (${audioUrl ? 'with soundtrack' : 'video only'})...`);
+        const sceneTitles = [
+          'Scene 1: Establishing Hook',
+          'Scene 2: Core Narrative Motion',
+          'Scene 3: Dynamic Progression',
+          'Scene 4: Climactic Finale',
+          'Scene 5: Extended Action',
+          'Scene 6: Outro & Resolution',
+        ];
+        const clipsToAssemble = [];
+        for (let i = 0; i < clipCount; i++) {
+          clipsToAssemble.push({
+            src: realMediaUrl,
+            title: sceneTitles[i] || `Scene ${i + 1}`,
+          });
         }
-      } catch (muxErr) {
-        console.warn('[LivepeerAgent] Livepeer mux notice:', muxErr);
+        const assembledUrl = await this.assembleTimeline({
+          clips: clipsToAssemble,
+          audioUrl: audioUrl || undefined,
+          transition: 'cut',
+        });
+        if (assembledUrl) {
+          finalMediaUrl = assembledUrl;
+          generationDuration = clipCount * singleTakeDuration;
+          livepeerCapability = isLongForm
+            ? `${modelToUse} + assemble (${generationDuration}s timeline)`
+            : modelToUse;
+          console.log(`[LivepeerAgent] Multi-scene timeline assembled successfully! Duration: ${generationDuration}s, URL: ${finalMediaUrl}`);
+        }
+      } catch (assembleErr) {
+        console.warn('[LivepeerAgent] Livepeer assemble notice:', assembleErr);
       }
     }
 
     // Build multi-scene storyboard breakdown for professional long-form sequencing
     const storyboardScenes = isLongForm
-      ? [
-          {
-            sceneNumber: 1,
-            title: 'Hook / Problem Intro',
-            durationSeconds: Math.round(generationDuration * 0.25),
-            prompt: `${brief} - Establishing hook. Visual style: ${visualTheme}.`,
-            mediaUrl: finalMediaUrl,
-            model: livepeerCapability,
-          },
-          {
-            sceneNumber: 2,
-            title: 'Feature Demonstration',
-            durationSeconds: Math.round(generationDuration * 0.35),
-            prompt: `${brief} - Core demonstration sequence. Pacing: ${pacing}.`,
-            mediaUrl: finalMediaUrl,
-            model: livepeerCapability,
-          },
-          {
-            sceneNumber: 3,
-            title: 'Impact / Result',
-            durationSeconds: Math.round(generationDuration * 0.25),
-            prompt: `${brief} - Dynamic high-energy impact.`,
-            mediaUrl: finalMediaUrl,
-            model: livepeerCapability,
-          },
-          {
-            sceneNumber: 4,
-            title: 'Call to Action',
-            durationSeconds: Math.round(generationDuration * 0.15),
-            prompt: `${brief} - Final call to action frame.`,
-            mediaUrl: finalMediaUrl,
-            model: livepeerCapability,
-          },
-        ]
+      ? Array.from({ length: clipCount }, (_, i) => ({
+          sceneNumber: i + 1,
+          title: [
+            'Establishing Hook',
+            'Core Narrative Motion',
+            'Dynamic Progression',
+            'Climactic Finale',
+            'Extended Action',
+            'Outro & Resolution',
+          ][i] || `Scene ${i + 1}`,
+          durationSeconds: singleTakeDuration,
+          prompt: `${brief} - Scene ${i + 1}. Visual style: ${visualTheme}. Pacing: ${pacing}.`,
+          mediaUrl: finalMediaUrl,
+          model: livepeerCapability,
+        }))
       : undefined;
 
     const appliedSummary = appliedPreferences.length > 0

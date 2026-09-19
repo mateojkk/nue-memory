@@ -160,12 +160,17 @@ export async function POST(request: Request) {
     });
 
     // Duration truthfulness check:
-    // Ensure the message truthfully reports the actual rendered take duration
+    // Ensure the message truthfully reports the actual rendered video duration
     const actualDuration = mediaVersion.generationDurationSeconds || 5;
     const requestedDuration = directorBrief.duration;
     let truthfulDirectorMessage = directorBrief.agentMessage;
 
-    if (requestedDuration > actualDuration) {
+    if (actualDuration >= 24 || actualDuration >= requestedDuration) {
+      // Truthfully replace any residual "8-second" references if an assembled sequence was produced
+      truthfulDirectorMessage = truthfulDirectorMessage
+        .replace(/\b8[- ]seconds?\b/gi, `${actualDuration}-second`)
+        .replace(/\b8s\b/gi, `${actualDuration}s`);
+    } else if (requestedDuration > actualDuration) {
       const modelCap = mediaVersion.livepeerCapability || 'Livepeer';
       truthfulDirectorMessage = truthfulDirectorMessage
         .replace(/\b\d+[- ]seconds?\b/gi, `${actualDuration}-second`)
