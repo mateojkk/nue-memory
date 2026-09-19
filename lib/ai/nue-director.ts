@@ -143,7 +143,7 @@ export async function directCreativeBrief(
   });
 
   const namespace = `nue-${context.email}`;
-  const modelName = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+  const modelName = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
 
   const isConversational = isConversationalMessage(userMessage) && !context.imageUrl && !context.feedbackContext;
 
@@ -205,11 +205,23 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
     fullMessage += `\n\nProject: "${context.projectTitle}"`;
   }
 
-  const { text } = await generateText({
-    model: wrappedModel,
-    system: SYSTEM_PROMPT,
-    prompt: fullMessage,
-  });
+  let text = '';
+  try {
+    const res = await generateText({
+      model: wrappedModel,
+      system: SYSTEM_PROMPT,
+      prompt: fullMessage,
+    });
+    text = res.text;
+  } catch (genErr) {
+    console.warn('[nue-director] generateText with wrappedModel failed, falling back to direct Groq:', genErr);
+    const fallbackRes = await generateText({
+      model: groq(modelName),
+      system: SYSTEM_PROMPT,
+      prompt: fullMessage,
+    });
+    text = fallbackRes.text;
+  }
 
   // Parse the JSON response from the LLM
   const parsed = parseDirectorResponse(text, userMessage);
@@ -251,7 +263,7 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
 
     return {
       shouldGenerate: shouldGen,
-      enrichedPrompt: parsed.enrichedPrompt || parsed.prompt || text,
+      enrichedPrompt: parsed.enrichedPrompt || parsed.prompt || userMessage || text,
       visualTheme: parsed.visualTheme || 'Modern Product Showcase',
       pacing: ['fast', 'moderate', 'cinematic'].includes(parsed.pacing) ? parsed.pacing : 'moderate',
       audioStyle: parsed.audioStyle || 'Ambient modern electronic',
@@ -263,19 +275,29 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
         ? 'Directing your video with your preferred creative style.'
         : "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"),
     };
-  } catch {
-    // If response was not valid JSON, treat as conversational reply - do NOT generate video
+  } catch (err) {
+    console.warn('[nue-director] Could not parse JSON from director output:', err, text);
+    // If user message is clearly not conversational, we MUST generate the video!
+    const shouldGen = !isConversational;
+
+    const durMatch = userMessage.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
+    const parsedDur = durMatch ? parseInt(durMatch[1], 10) : 5;
+    const dur = Math.max(3, Math.min(30, parsedDur));
+    const model = dur > 8 ? 'seedance-25-t2v' : 'pixverse-t2v';
+
     return {
-      shouldGenerate: false,
+      shouldGenerate: shouldGen,
       enrichedPrompt: userMessage,
-      visualTheme: 'Modern Product Showcase',
+      visualTheme: 'Creative Direction',
       pacing: 'moderate',
       audioStyle: 'Ambient modern electronic',
-      audioEnabled: false,
-      duration: 5,
-      model: 'pixverse-t2v',
+      audioEnabled: true,
+      duration: dur,
+      model,
       aspectRatio: '16:9',
-      agentMessage: text.trim() || "Hello! What kind of video would you like to create today?",
+      agentMessage: shouldGen
+        ? 'Directing your video with your preferred creative style.'
+        : "Hello! I'm Nue, your creative director. What kind of video would you like to create today?",
     };
   }
 }

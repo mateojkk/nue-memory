@@ -43,6 +43,7 @@ interface MediaMemoryWorkspaceProps {
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
   onNewChat?: () => void;
+  onDeleteMessage?: (messageId: string) => void;
   onRenameProject?: (projectId: string, newTitle: string) => void;
   onDeleteProject?: (projectId: string) => void;
   onResetProject?: (projectId: string) => void;
@@ -68,6 +69,7 @@ export function MediaMemoryWorkspace({
   isSavingMemory,
   onNewProject,
   onNewChat,
+  onDeleteMessage,
   onRenameProject,
   onDeleteProject,
   onResetProject,
@@ -621,7 +623,7 @@ export function MediaMemoryWorkspace({
                   >
                     {/* User Bubble */}
                     {isUser ? (
-                      <div className="bg-[var(--surface-2)] rounded-2xl rounded-tr-xs px-4 py-3 text-xs sm:text-sm text-[var(--fg)] shadow-xs leading-relaxed">
+                      <div className="group/msg relative bg-[var(--surface-2)] rounded-2xl rounded-tr-xs px-4 py-3 text-xs sm:text-sm text-[var(--fg)] shadow-xs leading-relaxed">
                         {msg.imageUrl && (
                           <div className="mb-2.5 overflow-hidden rounded-xl max-w-[280px] bg-black/20">
                             <img
@@ -632,16 +634,28 @@ export function MediaMemoryWorkspace({
                           </div>
                         )}
                         <div className="whitespace-pre-wrap">{msg.content}</div>
-                        <div className="mt-1 text-[10px] font-mono text-[var(--fg-muted)] text-right">
-                          {new Date(msg.timestamp).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                        <div className="mt-1.5 text-[10px] font-mono text-[var(--fg-muted)] flex items-center justify-end gap-2">
+                          {onDeleteMessage && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteMessage(msg.id)}
+                              className="opacity-0 group-hover/msg:opacity-100 p-0.5 rounded text-[var(--fg-muted)] hover:text-red-400 hover:bg-[var(--surface-3)] transition-opacity border-none"
+                              title="Delete message"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                          <span>
+                            {new Date(msg.timestamp).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
                         </div>
                       </div>
                     ) : (
                       /* Agent Bubble with Inline Video */
-                      <div className="bg-[var(--surface)] rounded-2xl rounded-tl-xs p-4 text-xs sm:text-sm text-[var(--fg)] shadow-sm leading-relaxed w-full">
+                      <div className="group/msg relative bg-[var(--surface)] rounded-2xl rounded-tl-xs p-4 text-xs sm:text-sm text-[var(--fg)] shadow-sm leading-relaxed w-full">
                         <div className="whitespace-pre-wrap leading-relaxed">{msg.content}</div>
 
                         {matchingVersion && (
@@ -652,7 +666,19 @@ export function MediaMemoryWorkspace({
                         )}
 
                         <div className="mt-2 text-[10px] font-mono text-[var(--fg-muted)] flex items-center justify-between">
-                          <span>Creative Agent</span>
+                          <div className="flex items-center gap-2">
+                            <span>Creative Agent</span>
+                            {onDeleteMessage && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteMessage(msg.id)}
+                                className="opacity-0 group-hover/msg:opacity-100 p-0.5 rounded text-[var(--fg-muted)] hover:text-red-400 hover:bg-[var(--surface-2)] transition-opacity border-none"
+                                title="Delete message"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                           <span>
                             {new Date(msg.timestamp).toLocaleTimeString([], {
                               hour: '2-digit',

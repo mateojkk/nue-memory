@@ -66,6 +66,7 @@ interface NueDashboardProps {
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
   onNewChat?: () => void;
+  onDeleteMessage?: (messageId: string) => void;
   onRenameProject?: (projectId: string, newTitle: string) => void;
   onDeleteProject?: (projectId: string) => void;
   onResetProject?: (projectId: string) => void;
@@ -95,6 +96,7 @@ export function NueDashboard({
   isSavingMemory,
   onNewProject,
   onNewChat,
+  onDeleteMessage,
   onRenameProject,
   onDeleteProject,
   onResetProject,
@@ -240,6 +242,7 @@ export function NueDashboard({
             isSavingMemory={isSavingMemory}
             onNewProject={onNewProject}
             onNewChat={onNewChat}
+            onDeleteMessage={onDeleteMessage}
             onRenameProject={onRenameProject}
             onDeleteProject={onDeleteProject}
             onResetProject={onResetProject}

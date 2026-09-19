@@ -536,6 +536,21 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     });
   };
 
+  // Delete an individual chat message
+  const handleDeleteMessage = (messageId: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    setProjects((prev) => {
+      const updated = [...prev];
+      if (updated[currentProjectIndex]) {
+        const proj = { ...updated[currentProjectIndex] };
+        proj.messages = (proj.messages || []).filter((m) => m.id !== messageId);
+        updated[currentProjectIndex] = proj;
+        persistProjectToDb(proj);
+      }
+      return updated;
+    });
+  };
+
   // Select Project with persistence
   const handleSelectProject = (index: number) => {
     setCurrentProjectIndex(index);
@@ -726,6 +741,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           isSavingMemory={isSavingMemory}
           onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
           onNewChat={handleNewChat}
+          onDeleteMessage={handleDeleteMessage}
           onRenameProject={handleRenameProject}
           onDeleteProject={handleDeleteProject}
           onResetProject={handleResetProject}

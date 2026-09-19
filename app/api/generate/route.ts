@@ -6,6 +6,8 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText, validateImageSource } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
 
+export const maxDuration = 300; // Allow up to 5 minutes for long-form video generation
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -36,7 +38,7 @@ export async function POST(request: Request) {
 
     let sanitizedBrief = 'Animate and bring this image to life with cinematic motion and depth.';
     if (brief) {
-      const briefCheck = sanitizeText(brief, 1500, 'Brief');
+      const briefCheck = sanitizeText(brief, 4000, 'Brief');
       if (!briefCheck.valid) {
         return NextResponse.json({ success: false, error: briefCheck.error }, { status: 400 });
       }
@@ -48,7 +50,7 @@ export async function POST(request: Request) {
 
     let sanitizedFeedback: string | undefined;
     if (feedbackContext) {
-      const feedbackCheck = sanitizeText(feedbackContext, 1000, 'Feedback context');
+      const feedbackCheck = sanitizeText(feedbackContext, 4000, 'Feedback context');
       if (feedbackCheck.valid) {
         sanitizedFeedback = feedbackCheck.sanitized;
       }
