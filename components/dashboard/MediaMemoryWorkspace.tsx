@@ -729,15 +729,15 @@ export function MediaMemoryWorkspace({
               </div>
             )}
 
-            {/* ChatGPT Center Input Pill */}
+            {/* Center Input Box */}
             <form
               onSubmit={handleSubmit}
-              className="w-full rounded-full bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl transition-all px-4 py-3 flex items-center gap-3"
+              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)]/40 transition-all px-4 py-3 flex items-center gap-3"
             >
               <button
                 type="button"
                 onClick={() => centerFileInputRef.current?.click()}
-                className="w-8 h-8 rounded-full hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] flex items-center justify-center transition shrink-0"
+                className="w-8 h-8 rounded-xl hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] flex items-center justify-center transition shrink-0"
                 title="Attach picture"
               >
                 <Plus className="w-5 h-5 stroke-[2]" />
@@ -758,15 +758,14 @@ export function MediaMemoryWorkspace({
               <button
                 type="button"
                 onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono transition shrink-0 ${
+                className={`w-8 h-8 rounded-xl flex items-center justify-center transition shrink-0 ${
                   isThinkingEnabled
-                    ? 'bg-[var(--surface-2)] text-[var(--fg)]'
-                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
+                    ? 'bg-[var(--surface-2)] text-[var(--accent)]'
+                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]'
                 }`}
                 title="Creative memory active"
               >
-                <Brain className={`w-3.5 h-3.5 ${isThinkingEnabled ? 'text-[var(--accent)]' : ''}`} />
-                <span>Memory</span>
+                <Brain className="w-4 h-4" />
               </button>
 
               <button
@@ -1042,16 +1041,16 @@ export function MediaMemoryWorkspace({
                 </div>
               )}
 
-              {/* Bottom Input Pill */}
+              {/* Bottom Input Box */}
               <form
                 onSubmit={handleSubmit}
-                className="rounded-full bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl transition-all px-4 py-2.5 flex items-center gap-3"
+                className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)]/40 transition-all px-4 py-2.5 flex items-center gap-3"
               >
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={isGenerating}
-                  className="w-8 h-8 rounded-full hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] flex items-center justify-center transition shrink-0"
+                  className="w-8 h-8 rounded-xl hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] flex items-center justify-center transition shrink-0"
                   title="Attach image"
                 >
                   <Plus className="w-5 h-5 stroke-[2]" />
@@ -1078,15 +1077,14 @@ export function MediaMemoryWorkspace({
                 <button
                   type="button"
                   onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono transition shrink-0 ${
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition shrink-0 ${
                     isThinkingEnabled
-                      ? 'bg-[var(--surface-2)] text-[var(--fg)]'
-                      : 'text-[var(--fg-muted)] hover:text-[var(--fg)]'
+                      ? 'bg-[var(--surface-2)] text-[var(--accent)]'
+                      : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]'
                   }`}
                   title="Creative memory active"
                 >
-                  <Brain className={`w-3.5 h-3.5 ${isThinkingEnabled ? 'text-[var(--accent)]' : ''}`} />
-                  <span className="hidden sm:inline">Memory</span>
+                  <Brain className="w-4 h-4" />
                 </button>
 
                 <button
