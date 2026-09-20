@@ -774,6 +774,9 @@ export class LivepeerMediaAgent {
             ? `${modelToUse} + assemble (${generationDuration}s timeline, ${clipUrls.length} unique scenes)`
             : modelToUse;
           console.log(`[LivepeerAgent] Multi-scene timeline assembled successfully! Duration: ${generationDuration}s, URL: ${finalMediaUrl}`);
+          // Audio is now muxed into the assembled MP4 - clear the separate audioUrl
+          // to prevent UI components from playing a duplicate <audio> element on top
+          audioUrl = null;
         }
       } catch (assembleErr) {
         console.warn('[LivepeerAgent] Livepeer assemble notice:', assembleErr);
