@@ -27,34 +27,34 @@ Available post-processing:
 Output ONLY valid JSON with these fields:
 {
   "shouldGenerate": true | false,
-  "enrichedPrompt": "detailed visual prompt for the overall video concept, incorporating user preferences",
-  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (REQUIRED when duration > 8. Each entry is a detailed visual prompt for one take. Generate enough scenes to fill the requested duration. Each scene should be visually distinct and advance the narrative.),
-  "visualTheme": "the visual style/theme (e.g. 'Cinematic Monochrome', 'Cyberpunk Neon', 'Modern Product Showcase', 'Bright 3D Kids Animation')",
+  "enrichedPrompt": "detailed visual prompt for the overall video concept, strictly preserving all user-specified aesthetics, character details, actions, and settings",
+  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (REQUIRED when duration > 8. Generate enough scenes to fill the requested duration: 30s -> 2 scenes, 45s -> 3 scenes, 60s / 1 min -> 4 scenes. Each entry is a detailed visual prompt for one 15s take. Each scene MUST maintain visual continuity of characters and style while progressing the story),
+  "visualTheme": "the visual style/theme honoring user's aesthetic (e.g. 'Cinematic Pastel Watercolor', 'Warm Golden Hour Animation', 'Dark Moody Film Noir')",
   "pacing": "fast" | "moderate" | "cinematic",
-  "audioStyle": "description of audio mood (e.g. 'Deep ambient atmospheric', 'Upbeat electronic', 'Cheerful kids song')",
+  "audioStyle": "description of audio mood and musical style",
   "audioEnabled": true | false,
-  "lyricsPrompt": "[Verse]\nSung lyric line 1\nSung lyric line 2..." (REQUIRED whenever user requests singing, lyrics, song, vocal melody, or nursery rhyme. Structure the sung words with [Verse] / [Chorus] tags. Do NOT leave empty if user provided lyrics or asked for singing.),
-  "hasVocals": true | false (true if user asked for singing vocals, lyrics, song, or nursery rhyme; false for instrumental beat),
-  "duration": number (seconds, e.g. 30, 45, or 60 if requested by user, or 5-8 for standard quick takes),
-  "model": "pixverse-t2v" | "seedance-25-t2v" | "ltx-25-t2v-pro",
+  "lyricsPrompt": "[Verse 1]\nLine 1\nLine 2\n\n[Chorus]\nLine 3\nLine 4..." (REQUIRED if user provided lyrics or asked for singing/song. You MUST preserve the user's EXACT lyrics verbatim without changing or hallucinating words),
+  "hasVocals": true | false (true if user asked for singing vocals, lyrics, song, or nursery rhyme),
+  "duration": number (seconds: 60 for 1 minute, 45, 30, 15, or 5-8 for quick single takes),
+  "model": "seedance-25-t2v" | "pixverse-t2v",
   "aspectRatio": "16:9" | "9:16" | "1:1",
-  "agentMessage": "a conversational response to the user"
+  "agentMessage": "a conversational response confirming the full video generation and duration"
 }
 
 Guidelines:
-- CRITICAL: If the user says "hi", "hello", "hey", asks a general question, asks about starting a new chat, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and answer their question directly.
-- If the user describes a scene, asks to create a video, gives revision feedback, or attaches an image, set "shouldGenerate": true.
-- Model Selection & Take Duration:
-  * For standard quick video takes (3-8s only): use duration: 5 or 8, and model: "pixverse-t2v" (renders fast in ~45s).
-  * CRITICAL FOR LONG VIDEOS (>8s, 15s, 30s, 45s, 60s / 1 min): You MUST set model: "seedance-25-t2v". NEVER output "pixverse-t2v" when duration is >8s or when user requests 15s, 30s, 45s, 60s, or 1 minute. Set duration to the requested number. Generate scenePrompts with enough unique scene descriptions (for seedance 15s takes: 30s -> 2 scenes, 45s -> 3 scenes, 60s -> 4 scenes). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits.
-- Singing Vocals & Lyrics:
-  * If the user mentions singing, songs, lyrics, rhymes, or vocal voices, set hasVocals: true and provide lyricsPrompt formatted with [Verse] and [Chorus].
-  * If the user prompt quotes lyrics or provides lines (e.g. "quack quack quack", "hop hop hop"), include those exact lines inside lyricsPrompt.
-- Each scenePrompt should be a complete visual description for that scene. Include the visual style, characters, action, camera angle, lighting, and mood. Make each scene flow naturally into the next to create a cohesive story.
-- If the user mentions TikTok, Reels, or vertical, use 9:16 aspect ratio.
-- Apply any recalled memory preferences naturally - don't fight them unless the user explicitly overrides.
-- When the user gives feedback on a previous version (provided as feedbackContext), adjust the brief accordingly.
-- Keep agentMessage natural, friendly, and user-focused. Do NOT lecture the user about technical backend details like Walrus, MemWal, or MCP.
+- CRITICAL DURATION RULES:
+  * When user asks for 1 minute, 60s, or 1min: set duration: 60, model: "seedance-25-t2v", and provide 4 scenePrompts.
+  * When user asks for 45 seconds: set duration: 45, model: "seedance-25-t2v", and provide 3 scenePrompts.
+  * When user asks for 30 seconds: set duration: 30, model: "seedance-25-t2v", and provide 2 scenePrompts.
+  * When user asks for quick takes or default: set duration: 5 or 8, model: "pixverse-t2v".
+- CRITICAL LYRICS RULES:
+  * If the user provides lyrics anywhere in their message or conversation history, you MUST use their EXACT lyrics in lyricsPrompt. DO NOT make up new lyrics, DO NOT rewrite them, DO NOT leave out lines. Format with [Verse] / [Chorus] tags.
+  * Ensure the lyrics structure covers the song duration so singing continues across the clip.
+- CONVERSATION CONTINUITY & AESTHETIC FIDELITY:
+  * In a multi-turn chat, you MUST retain the established visual style, characters, world, and theme from earlier messages. Never discard the visual aesthetics explained in previous prompts.
+  * Do NOT replace the user's visual style with generic defaults.
+- Only set shouldGenerate: false for purely conversational greetings ("hi", "hello") with no creative request.
+- Keep agentMessage natural, friendly, and user-focused. Confirm the requested duration (e.g. "Directing your 60-second multi-scene video...").
 - Do NOT use em dashes anywhere. Use standard hyphens only.`;
 
 export interface DirectorResult {
@@ -73,11 +73,17 @@ export interface DirectorResult {
   agentMessage: string;
 }
 
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 interface DirectorContext {
   email: string;
   feedbackContext?: string;
   projectTitle?: string;
   imageUrl?: string;
+  chatHistory?: ChatHistoryMessage[];
 }
 
 /**
@@ -134,6 +140,66 @@ export function isConversationalMessage(msg: string): boolean {
   return false;
 }
 
+/**
+ * Extracts verbatim user-provided lyrics from text or prompt.
+ * Strictly preserves the user's wording without modification.
+ */
+export function extractUserLyrics(text: string): string | null {
+  if (!text) return null;
+
+  // 1. Explicit lyrics block: "lyrics:", "song:", "lyrics -", etc.
+  const blockMatch = text.match(/(?:lyrics?|song|sing(?:ing)?|verse)\s*(?:are|is|words)?\s*[:\-]\s*([\s\S]+?)(?=(?:\n\s*\n[A-Z][a-zA-Z\s]+:|$))/i);
+  if (blockMatch && blockMatch[1].trim().length > 10) {
+    return formatLyrics(blockMatch[1].trim());
+  }
+
+  // 2. Quoted lyrics: "line 1 \n line 2..."
+  const quoteMatches = Array.from(text.matchAll(/"([^"]{15,})"/g)).map(m => m[1].trim());
+  if (quoteMatches.length > 0) {
+    return formatLyrics(quoteMatches.join('\n'));
+  }
+
+  // 3. Multi-line stanza in prompt
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const lyricLines = lines.filter(l =>
+    !/^(make|create|generate|direct|render|video|prompt|scene|duration|minute|seconds?|style|camera|please)/i.test(l) &&
+    l.length > 6 && l.length < 120
+  );
+  if (lyricLines.length >= 2 && /\b(sing|song|lyrics?|rhyme|melody|cadence)\b/i.test(text)) {
+    return formatLyrics(lyricLines.join('\n'));
+  }
+
+  return null;
+}
+
+function extractLyricsFromHistory(history?: ChatHistoryMessage[]): string | null {
+  if (!history) return null;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].role === 'user') {
+      const extracted = extractUserLyrics(history[i].content);
+      if (extracted) return extracted;
+    }
+  }
+  return null;
+}
+
+function formatLyrics(raw: string): string {
+  if (/\[(Verse|Chorus|Bridge|Outro)/i.test(raw)) {
+    return raw;
+  }
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  if (lines.length <= 4) {
+    return `[Verse]\n${lines.join('\n')}`;
+  }
+  const v1 = lines.slice(0, 4);
+  const ch = lines.slice(4, 8);
+  const v2 = lines.slice(8);
+  let out = `[Verse 1]\n${v1.join('\n')}`;
+  if (ch.length > 0) out += `\n\n[Chorus]\n${ch.join('\n')}`;
+  if (v2.length > 0) out += `\n\n[Verse 2]\n${v2.join('\n')}`;
+  return out;
+}
+
 export async function directCreativeBrief(
   userMessage: string,
   context: DirectorContext
@@ -167,7 +233,7 @@ export async function directCreativeBrief(
 The user is chatting with you, asking a question, or inquiring about studio features.
 Respond warmly, conversationally, and directly in 1-3 sentences:
 - If they ask about opening a new chat: confirm they can click the "New Chat" button in the header at any time to start a clean chat thread while keeping all previously generated video versions safely preserved.
-- If they ask about video duration (e.g. 8s vs 30s): explain that Nue Motion sequences and stitches scenes into continuous 30-second video timelines with synchronized soundtracks using Livepeer assemble.
+- If they ask about video duration (e.g. 8s vs 30s vs 60s): explain that Nue Motion sequences and stitches scenes into continuous 30-60 second video timelines with synchronized soundtracks using Livepeer assemble.
 - If they ask what happened or why something was done: reassure them, explain clearly, and invite them to direct the next take or new scene.
 Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use standard hyphens only.`,
       prompt: userMessage,
@@ -187,8 +253,63 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
     };
   }
 
+  // 1. Fetch active creative memories for this user
+  let activeUserMemories: Array<{ category: string; preference: string }> = [];
+  if (context.email) {
+    try {
+      const { supabase } = await import('../supabase/client');
+      if (supabase) {
+        const { data: memData } = await supabase
+          .from('memories')
+          .select('category, preference')
+          .eq('user_id', context.email)
+          .eq('is_active', true)
+          .neq('category', 'theme')
+          .order('updated_at', { ascending: false })
+          .limit(8);
+        if (memData && memData.length > 0) {
+          activeUserMemories = memData;
+        }
+      }
+    } catch (e) {
+      console.warn('[nue-director] Supabase memory fetch notice:', e);
+    }
+  }
+
+  // 2. Build fullMessage with conversation history and active memories
+  let fullMessage = '';
+
+  if (activeUserMemories.length > 0) {
+    fullMessage += `=== ACTIVE USER CREATIVE MEMORIES (ESTABLISHED TASTE & PREFERENCES) ===\n`;
+    for (const mem of activeUserMemories) {
+      fullMessage += `- [${mem.category.toUpperCase()}]: ${mem.preference}\n`;
+    }
+    fullMessage += `MANDATORY: Honor and incorporate the user's active creative memories above into the visual style, pacing, and audio mood unless the user explicitly overrides them.\n\n`;
+  }
+
+  if (context.chatHistory && context.chatHistory.length > 0) {
+    fullMessage += `=== CONVERSATION THREAD SO FAR ===\n`;
+    for (const msg of context.chatHistory) {
+      fullMessage += `${msg.role === 'user' ? 'User' : 'Creative Director'}: ${msg.content}\n`;
+    }
+    fullMessage += `=== END OF CONVERSATION THREAD ===\n\n`;
+  }
+
+  fullMessage += `LATEST USER REQUEST: "${userMessage}"\n`;
+
+  if (context.feedbackContext && context.feedbackContext !== userMessage) {
+    fullMessage += `REVISION FEEDBACK: "${context.feedbackContext}"\n`;
+  }
+
+  if (context.imageUrl) {
+    fullMessage += `\nImage provided for animation. Use an i2v model (pixverse-i2v or seedance-25-i2v).\n`;
+  }
+
+  if (context.projectTitle) {
+    fullMessage += `\nProject Title: "${context.projectTitle}"\n`;
+  }
+
   // Only autoSave to Walrus MemWal if user provided creative feedback or revision
-  // Do NOT store casual conversation or greetings in memory
   const shouldAutoSave = Boolean(
     context.feedbackContext ||
     /\b(prefer|always|never|my style|i like|i love|pacing|soundtrack|captions?|font|typography|palette|color|cinematic)\b/i.test(userMessage)
@@ -204,18 +325,6 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
     minRelevance: 0.3,
     debug: process.env.NODE_ENV === 'development',
   });
-
-  // Build the user message with context
-  let fullMessage = userMessage;
-  if (context.feedbackContext) {
-    fullMessage = `Previous prompt: "${userMessage}"\n\nUser feedback on the last version: "${context.feedbackContext}"\n\nRevise the creative brief based on this feedback.`;
-  }
-  if (context.imageUrl) {
-    fullMessage += `\n\nThe user has provided an image for image-to-video animation. Use an i2v model (pixverse-i2v or seedance-25-i2v).`;
-  }
-  if (context.projectTitle) {
-    fullMessage += `\n\nProject: "${context.projectTitle}"`;
-  }
 
   let text = '';
   try {
@@ -236,10 +345,9 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
   }
 
   // Parse the JSON response from the LLM
-  const parsed = parseDirectorResponse(text, userMessage);
+  const parsed = parseDirectorResponse(text, userMessage, context);
 
-  // Flush any pending auto-save writes so they complete before the serverless
-  // handler exits (withMemWal saves are fire-and-forget by default)
+  // Flush any pending auto-save writes so they complete before the serverless handler exits
   if (typeof (wrappedModel as any).flush === 'function') {
     await (wrappedModel as any).flush();
   }
@@ -250,7 +358,7 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
 /**
  * Parses the LLM's JSON response, with fallback defaults for robustness.
  */
-function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
+function parseDirectorResponse(text: string, userMessage = '', context?: DirectorContext): DirectorResult {
   const isConversational = isConversationalMessage(userMessage);
 
   let jsonStr = text.trim();
@@ -273,79 +381,90 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       ? Boolean(parsed.shouldGenerate)
       : true;
 
-    const duration = typeof parsed.duration === 'number' ? Math.max(3, Math.min(60, parsed.duration)) : 5;
+    // Detect exact duration intent from message or history
+    let duration = typeof parsed.duration === 'number' ? Math.max(3, Math.min(60, parsed.duration)) : 5;
+    const isOneMin = /\b(?:1\s*min(?:ute)?|60\s*s(?:econds?)?)\b/i.test(userMessage) ||
+      Boolean(context?.chatHistory && context.chatHistory.some(m => /\b(?:1\s*min(?:ute)?|60\s*s(?:econds?)?)\b/i.test(m.content)));
+    if (isOneMin) {
+      duration = 60;
+    } else if (/\b(?:45\s*s(?:econds?)?)\b/i.test(userMessage)) {
+      duration = 45;
+    } else if (/\b(?:30\s*s(?:econds?)?)\b/i.test(userMessage)) {
+      duration = 30;
+    } else if (/\b(?:15\s*s(?:econds?)?)\b/i.test(userMessage)) {
+      duration = 15;
+    }
 
-    // Extract scene prompts for multi-scene generation (duration > 8)
+    // Target scene count for multi-scene pipeline
+    const targetSceneCount = duration >= 46 ? 4 : duration >= 31 ? 3 : duration > 15 ? 2 : 1;
     let scenePrompts: string[] | undefined;
-    if (Array.isArray(parsed.scenePrompts) && parsed.scenePrompts.length > 0) {
-      scenePrompts = parsed.scenePrompts.filter((s: any) => typeof s === 'string' && s.trim().length > 0);
-      if (scenePrompts!.length === 0) scenePrompts = undefined;
-    }
-
-    // Extract singing vocals and lyrics
-    const hasLyricsIntent = /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
-    const hasVocals = parsed.hasVocals !== undefined ? Boolean(parsed.hasVocals) : hasLyricsIntent;
-    let lyricsPrompt = typeof parsed.lyricsPrompt === 'string' && parsed.lyricsPrompt.trim()
-      ? parsed.lyricsPrompt.trim()
-      : undefined;
-
-    if (!lyricsPrompt && hasLyricsIntent) {
-      // Fallback: extract lyrics if quoted in userMessage or create from prompt context
-      const quotes = Array.from(userMessage.matchAll(/"([^"]+)"/g)).map((m) => m[1]);
-      if (quotes.length > 0) {
-        lyricsPrompt = `[Verse]\n${quotes.join('\n')}`;
-      } else {
-        const phrases = userMessage
-          .split(/[,.\n]+/)
-          .map((s) => s.trim())
-          .filter((s) => s.length > 5 && s.length < 80 && !/^(a |the |in a |with a |lasting |create |make )/i.test(s));
-        if (phrases.length > 0) {
-          lyricsPrompt = `[Verse]\n${phrases.slice(0, 4).join('\n')}`;
-        }
+    if (targetSceneCount > 1) {
+      const parsedScenes = Array.isArray(parsed.scenePrompts)
+        ? parsed.scenePrompts.filter((s: any) => typeof s === 'string' && s.trim().length > 0)
+        : [];
+      const basePrompt = parsed.enrichedPrompt || parsed.prompt || userMessage;
+      const stageTitles = [
+        'Scene 1 Opening Take: Establishing setting, atmosphere, and initial character motion',
+        'Scene 2 Narrative Progression: Dynamic motion, interaction, and expressive camera work',
+        'Scene 3 Climax Take: Peak visual motion, rich environmental depth, and high energy',
+        'Scene 4 Narrative Finale: Harmonious closing resolution and memorable final frame',
+      ];
+      while (parsedScenes.length < targetSceneCount) {
+        const idx = parsedScenes.length;
+        parsedScenes.push(`${basePrompt} (${stageTitles[idx] || `Scene ${idx + 1}`})`);
       }
+      scenePrompts = parsedScenes.slice(0, targetSceneCount);
     }
+
+    // Extract singing vocals and lyrics with strict user lyrics priority
+    const userLyrics = extractUserLyrics(userMessage) || extractLyricsFromHistory(context?.chatHistory);
+    const hasLyricsIntent = Boolean(userLyrics) || /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
+    const hasVocals = parsed.hasVocals !== undefined ? Boolean(parsed.hasVocals) : hasLyricsIntent;
+    const lyricsPrompt = userLyrics || (typeof parsed.lyricsPrompt === 'string' && parsed.lyricsPrompt.trim() ? parsed.lyricsPrompt.trim() : undefined);
+
+    const model = duration > 8 ? 'seedance-25-t2v' : (parsed.model && parsed.model !== 'seedance-25-t2v' ? parsed.model : 'pixverse-t2v');
 
     return {
       shouldGenerate: shouldGen,
       enrichedPrompt: parsed.enrichedPrompt || parsed.prompt || userMessage || text,
       scenePrompts,
-      visualTheme: parsed.visualTheme || 'Modern Product Showcase',
+      visualTheme: parsed.visualTheme || 'Creative Direction',
       pacing: ['fast', 'moderate', 'cinematic'].includes(parsed.pacing) ? parsed.pacing : 'moderate',
       audioStyle: parsed.audioStyle || 'Ambient modern electronic',
       audioEnabled: parsed.audioEnabled !== false,
       lyricsPrompt,
       hasVocals,
       duration,
-      model: (() => {
-        const isLongDuration = duration > 8 || /\b(seedance|bytedance|cinematic|high fidelity|ultra quality|extended|slow motion|1\s*min|60\s*s|30\s*s|45\s*s|15\s*s)\b/i.test(userMessage);
-        if (isLongDuration) return 'seedance-25-t2v';
-        if (parsed.model && parsed.model !== 'seedance-25-t2v') return parsed.model;
-        return 'pixverse-t2v';
-      })(),
+      model,
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
       agentMessage: parsed.agentMessage || (shouldGen
-        ? 'Directing your video with your preferred creative style.'
+        ? `Directing your ${duration}s video with your preferred creative style.`
         : "Hello! I'm Nue, your creative director. What kind of video would you like to create today?"),
     };
   } catch (err) {
     console.warn('[nue-director] Could not parse JSON from director output:', err, text);
-    // If user message is clearly not conversational, we MUST generate the video!
     const shouldGen = !isConversational;
 
+    const isOneMin = /\b(?:1\s*min(?:ute)?|60\s*s(?:econds?)?)\b/i.test(userMessage);
     const durMatch = userMessage.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
-    const parsedDur = durMatch ? parseInt(durMatch[1], 10) : 5;
+    const parsedDur = isOneMin ? 60 : durMatch ? parseInt(durMatch[1], 10) : 5;
     const dur = Math.max(3, Math.min(60, parsedDur));
-    const isExplicitSeedance = /\b(seedance|bytedance|cinematic|high fidelity|ultra quality|extended|slow motion)\b/i.test(userMessage);
-    const model = (dur > 8 || isExplicitSeedance) ? 'seedance-25-t2v' : 'pixverse-t2v';
+    const model = dur > 8 ? 'seedance-25-t2v' : 'pixverse-t2v';
 
-    const scenePrompts = dur > 8 ? [
-      `${userMessage} (Scene 1: Opening take)`,
-      `${userMessage} (Scene 2: Narrative finale)`,
-    ] : undefined;
+    const targetSceneCount = dur >= 46 ? 4 : dur >= 31 ? 3 : dur > 15 ? 2 : 1;
+    let scenePrompts: string[] | undefined;
+    if (targetSceneCount > 1) {
+      const stageTitles = [
+        'Scene 1 Opening Take: Establishing setting and characters',
+        'Scene 2 Narrative Progression: Dynamic interaction',
+        'Scene 3 Climax: Peak visual motion and energy',
+        'Scene 4 Finale: Closing resolution',
+      ];
+      scenePrompts = stageTitles.slice(0, targetSceneCount).map((title) => `${userMessage} (${title})`);
+    }
 
-    const hasLyricsIntent = /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
-    const quotes = Array.from(userMessage.matchAll(/"([^"]+)"/g)).map((m) => m[1]);
-    const fallbackLyrics = quotes.length > 0 ? `[Verse]\n${quotes.join('\n')}` : undefined;
+    const userLyrics = extractUserLyrics(userMessage) || extractLyricsFromHistory(context?.chatHistory);
+    const hasLyricsIntent = Boolean(userLyrics) || /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
 
     return {
       shouldGenerate: shouldGen,
@@ -355,13 +474,13 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       pacing: 'moderate',
       audioStyle: hasLyricsIntent ? 'Cheerful melodic song' : 'Ambient modern electronic',
       audioEnabled: true,
-      lyricsPrompt: fallbackLyrics,
+      lyricsPrompt: userLyrics || undefined,
       hasVocals: hasLyricsIntent,
       duration: dur,
       model,
       aspectRatio: '16:9',
       agentMessage: shouldGen
-        ? 'Directing your video with your preferred creative style.'
+        ? `Directing your ${dur}s video with your preferred creative style.`
         : "Hello! I'm Nue, your creative director. What kind of video would you like to create today?",
     };
   }

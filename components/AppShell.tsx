@@ -216,7 +216,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     feedbackContext?: string,
     overrideProjectIndex?: number,
     overrideProjectTitle?: string,
-    imageUrl?: string
+    imageUrl?: string,
+    chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
   ) => {
     const isConversational = isConversationalMessage(promptText) && !imageUrl && !feedbackContext;
     setIsGenerating(true);
@@ -234,6 +235,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           versionNumber,
           projectTitle: targetTitle,
           feedbackContext,
+          chatHistory,
           email: email || undefined,
           userId: email || undefined,
           imageUrl: imageUrl || undefined,
@@ -343,6 +345,11 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         // Deduct compute cost ($0.05) from user profile in Supabase
         deductCredits?.(0.05);
 
+        // Re-sync user memories so newly discovered preferences appear in UI immediately
+        if (email) {
+          fetchMemories(email);
+        }
+
         // Build agent response truthfully
         const dur = newVersion.generationDurationSeconds || 5;
         const cap = newVersion.livepeerCapability || 'pixverse-t2v';
@@ -418,18 +425,22 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         setMessages((prev) => [...prev, errorMsg]);
         console.error('[AppShell] Generate API error:', data.error);
       }
-    } catch (err) {
-      console.error('Generation error:', err);
+    } catch (err: any) {
+      console.error('[handleGenerate] Error:', err);
       const errorMsg: ChatMessage = {
         id: `msg-err-${Date.now()}`,
         sender: 'agent',
-        content: `Sorry, something went wrong: ${err instanceof Error ? err.message : 'Network error'}. Please try again.`,
+        content: `Error: ${err?.message || 'Media generation failed.'}`,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsGenerating(false);
       setGenerationStage(null);
+      setServerStageDescription(undefined);
+      setServerProgress(undefined);
+      setServerModel(undefined);
+      setServerExpectedSla(undefined);
     }
   };
 
@@ -462,7 +473,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       setProjects([newProj]);
       setCurrentProjectIndex(0);
       persistProjectToDb(newProj);
-      await handleGenerate(text, 1, undefined, 0, newProj.title, imageUrl);
+      await handleGenerate(text, 1, undefined, 0, newProj.title, imageUrl, [{ role: 'user', content: text }]);
       return;
     }
 
@@ -478,10 +489,19 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       return updated;
     });
 
+    // Extract recent chat history so the LLM remembers previous turns and never neglects the prompt
+    const chatHistory: Array<{ role: 'user' | 'assistant'; content: string }> = (currentProj.messages || [])
+      .slice(-12)
+      .map((m) => ({
+        role: m.sender === 'user' ? ('user' as const) : ('assistant' as const),
+        content: m.content,
+      }));
+    chatHistory.push({ role: 'user', content: text });
+
     // Check if the message is conversational / inquiry
     const isConversational = isConversationalMessage(text) && !imageUrl;
     if (isConversational) {
-      await handleGenerate(text, 0, undefined, targetIndex, currentProj.title);
+      await handleGenerate(text, 0, undefined, targetIndex, currentProj.title, undefined, chatHistory);
       return;
     }
 
@@ -496,7 +516,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           return updated;
         });
       }
-      await handleGenerate(text, 1, undefined, targetIndex, currentProj.title, imageUrl);
+      await handleGenerate(text, 1, undefined, targetIndex, currentProj.title, imageUrl, chatHistory);
       return;
     }
 
@@ -514,17 +534,19 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         text,
         targetIndex,
         currentProj.title,
-        imageUrl
+        imageUrl,
+        chatHistory
       );
     } else {
-      // Fresh creative prompt within this project
+      // Fresh creative prompt within this project with full conversational memory
       await handleGenerate(
         text,
         nextVersionNumber,
         undefined,
         targetIndex,
         currentProj.title,
-        imageUrl
+        imageUrl,
+        chatHistory
       );
     }
   };

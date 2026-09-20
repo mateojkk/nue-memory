@@ -31,67 +31,67 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, job });
     }
 
-    // MULTI-SCENE 30S PIPELINE
+    // DYNAMIC MULTI-SCENE PIPELINE (15s to 60s+)
     if (job?.isMultiScene) {
-      const scene1JobId = job.scene1JobId || job.livepeerJobId || paramLivepeerJobId;
-      const scene2JobId = job.scene2JobId || paramScene2JobId;
-      let scene1Url = job.scene1Url;
-      let scene2Url = job.scene2Url;
+      const scenesList = Array.isArray(job.scenes) && job.scenes.length > 0
+        ? job.scenes
+        : [
+            {
+              sceneNumber: 1,
+              durationSeconds: 15,
+              title: 'Scene 1: Opening Take',
+              prompt: job.scene1Prompt || 'Scene 1',
+              jobId: job.scene1JobId || job.livepeerJobId || paramLivepeerJobId,
+              url: job.scene1Url,
+              model: job.modelToUse || 'seedance-25-t2v',
+            },
+            {
+              sceneNumber: 2,
+              durationSeconds: 15,
+              title: 'Scene 2: Narrative Progression',
+              prompt: job.scene2Prompt || 'Scene 2',
+              jobId: job.scene2JobId || paramScene2JobId,
+              url: job.scene2Url,
+              model: job.modelToUse || 'seedance-25-t2v',
+            },
+          ];
 
-      // Validate that scene jobs exist
-      if ((!scene1Url && !scene1JobId) || (!scene2Url && !scene2JobId)) {
-        updateJob(jobId, { status: 'failed', error: 'Multi-scene job configuration missing scene identifiers.' });
-        return NextResponse.json({
-          success: true,
-          job: { status: 'failed', error: 'Multi-scene job configuration missing scene identifiers.' },
-        });
+      // Poll any scenes that do not yet have a resolved URL
+      let allScenesCompleted = true;
+      for (const scene of scenesList) {
+        if (!scene.url && scene.jobId) {
+          const poll = await livepeerAgent.pollJobStatus(scene.jobId);
+          if (poll.status === 'failed') {
+            updateJob(jobId, { status: 'failed', error: poll.error || `Scene ${scene.sceneNumber} render failed.` });
+            return NextResponse.json({
+              success: true,
+              job: { status: 'failed', error: poll.error || `Scene ${scene.sceneNumber} render failed.` },
+            });
+          }
+          if (poll.status === 'completed' && poll.url) {
+            scene.url = poll.url;
+            updateJob(jobId, { scenes: scenesList });
+          } else {
+            allScenesCompleted = false;
+          }
+        } else if (!scene.url) {
+          allScenesCompleted = false;
+        }
       }
 
-      // Poll Scene 1 if not done
-      if (!scene1Url && scene1JobId) {
-        const poll1 = await livepeerAgent.pollJobStatus(scene1JobId);
-        if (poll1.status === 'failed') {
-          updateJob(jobId, { status: 'failed', error: poll1.error || 'Livepeer Scene 1 render failed.' });
-          return NextResponse.json({
-            success: true,
-            job: { status: 'failed', error: poll1.error || 'Livepeer Scene 1 render failed.' },
-          });
-        }
-        if (poll1.status === 'completed' && poll1.url) {
-          scene1Url = poll1.url;
-          updateJob(jobId, { scene1Url });
-        }
-      }
-
-      // Poll Scene 2 if not done
-      if (!scene2Url && scene2JobId) {
-        const poll2 = await livepeerAgent.pollJobStatus(scene2JobId);
-        if (poll2.status === 'failed') {
-          updateJob(jobId, { status: 'failed', error: poll2.error || 'Livepeer Scene 2 render failed.' });
-          return NextResponse.json({
-            success: true,
-            job: { status: 'failed', error: poll2.error || 'Livepeer Scene 2 render failed.' },
-          });
-        }
-        if (poll2.status === 'completed' && poll2.url) {
-          scene2Url = poll2.url;
-          updateJob(jobId, { scene2Url });
-        }
-      }
-
-      // If either scene is still rendering, return combined progress
-      if (!scene1Url || !scene2Url) {
+      // If any scene is still actively rendering, report aggregate progress
+      if (!allScenesCompleted) {
+        const completedCount = scenesList.filter((s) => Boolean(s.url)).length;
         const elapsedSec = Math.max(1, Math.round((Date.now() - new Date(job.createdAt).getTime()) / 1000));
         const modelName = job.modelToUse || 'seedance-25-t2v';
         const expectedSla = modelName.includes('seedance') ? '~4 min' : '~45s';
         const progress = Math.min(88, 20 + Math.round((elapsedSec / 240) * 65));
-        const stageDescription = scene1Url
-          ? `Scene 1 take ready (15s), Scene 2 finishing (${elapsedSec}s / ${expectedSla})...`
-          : scene2Url
-          ? `Scene 2 take ready (15s), Scene 1 finishing (${elapsedSec}s / ${expectedSla})...`
-          : `Rendering 30s takes (Scene 1 & Scene 2 in parallel on ${modelName}, ${elapsedSec}s / ${expectedSla})...`;
+        const targetDuration = job.effectiveDuration || scenesList.length * 15;
+        const stageDescription = completedCount > 0
+          ? `${completedCount}/${scenesList.length} scenes rendered (${targetDuration}s total, ${elapsedSec}s / ${expectedSla})...`
+          : `Rendering ${targetDuration}s video (${scenesList.length} scenes in parallel on ${modelName}, ${elapsedSec}s / ${expectedSla})...`;
 
-        updateJob(jobId, { progress, stageDescription });
+        updateJob(jobId, { progress, stageDescription, scenes: scenesList });
         return NextResponse.json({
           success: true,
           job: {
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
         });
       }
 
-      // Both scenes finished! Poll audio if pending
+      // All scenes finished! Poll audio if pending
       const modelName = job.modelToUse || 'seedance-25-t2v';
       const directorBrief = job.directorBrief;
       const syntheticPreferences = job.syntheticPreferences || [];
@@ -120,15 +120,17 @@ export async function GET(request: Request) {
         }
       }
 
-      // Assemble 30s timeline with audio
-      let finalMediaUrl = scene1Url;
+      // Assemble all clips into continuous timeline with synchronized soundtrack
+      const clips = scenesList.map((s, idx) => ({
+        src: s.url!,
+        title: s.title || `Scene ${idx + 1}`,
+      }));
+
+      let finalMediaUrl = clips[0]?.src || '';
       let wasMuxed = false;
       try {
         const assembled = await livepeerAgent.assembleTimeline({
-          clips: [
-            { src: scene1Url, title: 'Scene 1: Opening' },
-            { src: scene2Url, title: 'Scene 2: Finale' },
-          ],
+          clips,
           audioUrl: finalAudioUrl,
           transition: 'cut',
         });
@@ -137,46 +139,29 @@ export async function GET(request: Request) {
           wasMuxed = true;
         }
       } catch (e) {
-        console.warn('[generate:GET] assembleTimeline 30s notice:', e);
+        console.warn('[generate:GET] assembleTimeline notice:', e);
       }
 
       const versionNumber = job.versionNumber || 1;
-      const actualDuration = wasMuxed ? 30 : 15;
-      const scenes = [
-        {
-          sceneNumber: 1,
-          durationSeconds: 15,
-          title: 'Scene 1: Opening Take',
-          prompt: job.scene1Prompt || directorBrief?.scenePrompts?.[0] || 'Scene 1',
-          mediaUrl: scene1Url,
-          model: modelName,
-        },
-        {
-          sceneNumber: 2,
-          durationSeconds: 15,
-          title: 'Scene 2: Narrative Finale',
-          prompt: job.scene2Prompt || directorBrief?.scenePrompts?.[1] || 'Scene 2',
-          mediaUrl: scene2Url,
-          model: modelName,
-        },
-      ];
+      const totalTimelineSec = scenesList.reduce((acc, s) => acc + (s.durationSeconds || 15), 0);
+      const actualDuration = wasMuxed ? totalTimelineSec : (scenesList[0]?.durationSeconds || 15);
 
       let truthfulDirectorMessage = directorBrief?.agentMessage || 'Your video has been directed and composed successfully.';
       if (wasMuxed) {
         truthfulDirectorMessage = truthfulDirectorMessage
-          .replace(/\b(?:8|15)[- ]seconds?\b/gi, '30-second')
-          .replace(/\b(?:8|15)s\b/gi, '30s');
+          .replace(/\b(?:8|15|30|45)[- ]seconds?\b/gi, `${actualDuration}-second`)
+          .replace(/\b(?:8|15|30|45)s\b/gi, `${actualDuration}s`);
       } else {
         truthfulDirectorMessage = truthfulDirectorMessage
-          .replace(/\b30[- ]seconds?\b/gi, '15-second')
-          .replace(/\b30s\b/gi, '15s');
+          .replace(/\b(?:30|45|60)[- ]seconds?\b/gi, '15-second')
+          .replace(/\b(?:30|45|60)s\b/gi, '15s');
       }
 
       const mediaVersion: MediaVersion = {
         versionNumber,
         createdAt: new Date().toISOString(),
-        brief: directorBrief?.enrichedPrompt || `${actualDuration}s AI Video Take`,
-        enrichedBrief: directorBrief?.enrichedPrompt || `${actualDuration}s AI Video Take`,
+        brief: directorBrief?.enrichedPrompt || `${actualDuration}s AI Video`,
+        enrichedBrief: directorBrief?.enrichedPrompt || `${actualDuration}s AI Video`,
         appliedPreferences: syntheticPreferences,
         mediaUrl: finalMediaUrl,
         aspectRatio: directorBrief?.aspectRatio || '16:9',
@@ -196,11 +181,11 @@ export async function GET(request: Request) {
         },
         visualTheme: directorBrief?.visualTheme || 'Cinematic',
         agentNotes: wasMuxed
-          ? `Livepeer Agent sequenced 2 scenes into a continuous 30s timeline via [${modelName} + assemble].`
+          ? `Livepeer Agent sequenced ${scenesList.length} scenes into a continuous ${actualDuration}s timeline via [${modelName} + assemble].`
           : `Livepeer Agent composed Scene 1 take (15s) on ${modelName}. Multi-scene assembly fallback applied.`,
         generationDurationSeconds: actualDuration,
         livepeerCapability: wasMuxed ? `${modelName} + assemble` : modelName,
-        scenes,
+        scenes: scenesList,
       };
 
       const result = {
@@ -215,7 +200,7 @@ export async function GET(request: Request) {
       updateJob(jobId, {
         status: 'completed',
         progress: 100,
-        stageDescription: '30-second video assembly complete',
+        stageDescription: `${actualDuration}-second video assembly complete`,
         result,
       });
 
@@ -225,7 +210,7 @@ export async function GET(request: Request) {
           id: jobId,
           status: 'completed',
           progress: 100,
-          stageDescription: '30-second video assembly complete',
+          stageDescription: `${actualDuration}-second video assembly complete`,
           result,
         },
       });
@@ -389,7 +374,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { brief, versionNumber = 1, projectTitle = 'Media Project', feedbackContext, userId, email, imageUrl } = body;
+    const { brief, versionNumber = 1, projectTitle = 'Media Project', feedbackContext, chatHistory, userId, email, imageUrl } = body;
 
     // Step 1: Authenticate caller identity
     const auth = await authenticateRequest(request, email || userId);
@@ -465,12 +450,13 @@ export async function POST(request: Request) {
       }
     }
 
-    // Step 6: Direct creative brief via Groq + MemWal (~5s synchronous)
+    // Step 6: Direct creative brief via Groq + MemWal (~5s synchronous) with full chat history
     const directorBrief = await directCreativeBrief(sanitizedBrief, {
       email: effectiveUserId,
       feedbackContext: sanitizedFeedback,
       projectTitle: sanitizedTitle,
       imageUrl: validatedImageUrl,
+      chatHistory: Array.isArray(chatHistory) ? chatHistory : undefined,
     });
 
     // Handle conversational messages immediately without dispatching media
@@ -489,9 +475,39 @@ export async function POST(request: Request) {
       });
     }
 
+    // Automatically persist newly discovered creative preferences to Supabase memories table
+    if (supabase && effectiveUserId) {
+      try {
+        if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Creative Direction') {
+          await supabase.from('memories').upsert({
+            id: `pref_visual_${effectiveUserId}`,
+            user_id: effectiveUserId,
+            category: 'visual_style',
+            preference: directorBrief.visualTheme,
+            strength: 'high',
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        }
+        if (directorBrief.audioEnabled && directorBrief.audioStyle) {
+          await supabase.from('memories').upsert({
+            id: `pref_audio_${effectiveUserId}`,
+            user_id: effectiveUserId,
+            category: 'audio',
+            preference: directorBrief.audioStyle,
+            strength: 'high',
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        }
+      } catch (memErr) {
+        console.warn('Memory auto-persist notice:', memErr);
+      }
+    }
+
     // Build synthetic preferences
     const syntheticPreferences = [];
-    if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Modern Product Showcase') {
+    if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Creative Direction') {
       syntheticPreferences.push({
         id: `dir-visual-${Date.now()}`,
         type: 'media_preference' as const,
@@ -540,12 +556,13 @@ export async function POST(request: Request) {
     if (directorBrief.audioEnabled && directorBrief.audioStyle) {
       const isVocal = Boolean(directorBrief.hasVocals || directorBrief.lyricsPrompt);
       const audioPrompt = isVocal
-        ? `${directorBrief.audioStyle} with expressive melodious singing voice, clear child-friendly song cadence`
+        ? `${directorBrief.audioStyle}, expressive melodic vocals singing the lyrics continuously from start to finish across the full ${requestedDuration}s song, clear musical cadence`
         : `${directorBrief.audioStyle} soundtrack, ${directorBrief.pacing === 'fast' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation`;
 
       const audioArgs: Record<string, any> = {
         action: 'music',
         prompt: audioPrompt,
+        duration: Math.min(60, Math.max(15, requestedDuration)),
         async: true,
       };
 
@@ -571,61 +588,72 @@ export async function POST(request: Request) {
     });
 
     if (isMultiScene) {
-      let scene1Prompt = directorBrief.scenePrompts?.[0];
-      let scene2Prompt = directorBrief.scenePrompts?.[1];
-      if (!scene1Prompt || !scene2Prompt) {
-        scene1Prompt = `${directorBrief.enrichedPrompt} (Scene 1 Opening: character entrance and starting choreography)`;
-        scene2Prompt = `${directorBrief.enrichedPrompt} (Scene 2 Finale: celebratory high-energy dancing and group sync)`;
+      const numScenes = Math.min(4, Math.max(2, Math.ceil(requestedDuration / 15)));
+      const totalAssembledDuration = numScenes * 15;
+
+      const scenePromptsToUse: string[] = [];
+      for (let i = 0; i < numScenes; i++) {
+        if (directorBrief.scenePrompts && directorBrief.scenePrompts[i]) {
+          scenePromptsToUse.push(directorBrief.scenePrompts[i]);
+        } else {
+          const sceneLabels = [
+            'Scene 1 Opening: Setting the environment, atmosphere, and initial character motion',
+            'Scene 2 Development: Dynamic character action, camera movement, and visual interaction',
+            'Scene 3 Climax: Vibrant energy, peak visual detail, and expressive motion',
+            'Scene 4 Finale: Celebratory closing sequence and graceful visual ending',
+          ];
+          scenePromptsToUse.push(`${directorBrief.enrichedPrompt} (${sceneLabels[i] || `Scene ${i + 1}`})`);
+        }
       }
 
-      const [scene1Dispatch, scene2Dispatch] = await Promise.all([
-        livepeerAgent.dispatchCreateMedia({
-          action: 'generate',
-          prompt: `${scene1Prompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
-          model_override: modelToUse,
-          duration: 15,
-          async: true,
-        }),
-        livepeerAgent.dispatchCreateMedia({
-          action: 'generate',
-          prompt: `${scene2Prompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
-          model_override: modelToUse,
-          duration: 15,
-          async: true,
-        }),
-      ]);
+      const sceneDispatches = await Promise.all(
+        scenePromptsToUse.map((scenePrompt) =>
+          livepeerAgent.dispatchCreateMedia({
+            action: 'generate',
+            prompt: `${scenePrompt}. Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
+            model_override: modelToUse,
+            duration: 15,
+            async: true,
+          })
+        )
+      );
 
-      if (
-        scene1Dispatch.status === 'failed' ||
-        scene2Dispatch.status === 'failed' ||
-        (!scene1Dispatch.jobId && !scene1Dispatch.url) ||
-        (!scene2Dispatch.jobId && !scene2Dispatch.url)
-      ) {
-        return NextResponse.json({
-          success: false,
-          error: scene1Dispatch.error || scene2Dispatch.error || 'Failed to dispatch one of the multi-scene takes to Livepeer.',
-        }, { status: 500 });
+      const anyFailed = sceneDispatches.some(d => d.status === 'failed' || (!d.jobId && !d.url));
+      if (anyFailed) {
+        const err = sceneDispatches.find(d => d.error)?.error || 'Failed to dispatch one of the scene takes to Livepeer.';
+        return NextResponse.json({ success: false, error: err }, { status: 500 });
       }
+
+      const scenes = sceneDispatches.map((disp, idx) => ({
+        sceneNumber: idx + 1,
+        durationSeconds: 15,
+        title: `Scene ${idx + 1}`,
+        prompt: scenePromptsToUse[idx],
+        jobId: disp.jobId,
+        url: disp.url,
+        model: modelToUse,
+      }));
 
       updateJob(jobId, {
         status: 'rendering',
         progress: 20,
-        stageDescription: `Directing 30s multi-scene sequence on ${modelToUse} (Scene 1 & Scene 2 in parallel)...`,
+        stageDescription: `Directing ${totalAssembledDuration}s multi-scene sequence (${numScenes} scenes on ${modelToUse})...`,
         isMultiScene: true,
-        scene1JobId: scene1Dispatch.jobId,
-        scene2JobId: scene2Dispatch.jobId,
-        scene1Url: scene1Dispatch.url,
-        scene2Url: scene2Dispatch.url,
-        scene1Prompt,
-        scene2Prompt,
-        livepeerJobId: scene1Dispatch.jobId,
+        scenes,
+        scene1JobId: scenes[0]?.jobId,
+        scene2JobId: scenes[1]?.jobId,
+        scene1Url: scenes[0]?.url,
+        scene2Url: scenes[1]?.url,
+        scene1Prompt: scenes[0]?.prompt,
+        scene2Prompt: scenes[1]?.prompt,
+        livepeerJobId: scenes[0]?.jobId,
         audioJobId,
         audioUrl,
         directorBrief,
         syntheticPreferences,
         modelToUse,
-        singleTakeDuration: 30,
-        effectiveDuration: 30,
+        singleTakeDuration: totalAssembledDuration,
+        effectiveDuration: totalAssembledDuration,
         expectedSla: '~4 min',
       });
 
@@ -633,13 +661,13 @@ export async function POST(request: Request) {
         success: true,
         jobId,
         status: 'rendering',
-        livepeerJobId: scene1Dispatch.jobId,
-        scene2JobId: scene2Dispatch.jobId,
+        livepeerJobId: scenes[0]?.jobId,
+        scene2JobId: scenes[1]?.jobId,
         audioJobId,
         isMultiScene: true,
         model: modelToUse,
         expectedSla: '~4 min',
-        stageDescription: `Directing 30s multi-scene sequence on ${modelToUse} (Scene 1 & Scene 2 in parallel)...`,
+        stageDescription: `Directing ${totalAssembledDuration}s multi-scene sequence (${numScenes} scenes on ${modelToUse})...`,
         progress: 20,
       });
     }

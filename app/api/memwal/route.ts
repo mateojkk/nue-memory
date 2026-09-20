@@ -5,6 +5,7 @@ import { MediaPreference } from '@/lib/types';
 import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
+import { supabase } from '@/lib/supabase/client';
 
 /**
  * Maps Walrus configuration failures to an explicit 503 so the UI can render
@@ -48,7 +49,42 @@ export async function GET(request: Request) {
     }
 
     await memWalService.initialize();
-    const preferences = await memWalService.getAllPreferencesAsync(effectiveUserId, true);
+    let preferences = await memWalService.getAllPreferencesAsync(effectiveUserId, true);
+
+    // Merge in persisted memories from Supabase memories table
+    if (supabase) {
+      const { data: dbMems } = await supabase
+        .from('memories')
+        .select('*')
+        .eq('user_id', effectiveUserId)
+        .eq('is_active', true)
+        .neq('category', 'theme')
+        .order('created_at', { ascending: false });
+
+      if (dbMems && dbMems.length > 0) {
+        const existingTexts = new Set(preferences.map((p) => p.preference.toLowerCase().trim()));
+        for (const m of dbMems) {
+          if (!existingTexts.has(m.preference.toLowerCase().trim())) {
+            preferences.push({
+              id: m.id,
+              userId: m.user_id,
+              type: 'media_preference',
+              category: (m.category as any) || 'visual_style',
+              preference: m.preference,
+              strength: (m.strength as any) || 'high',
+              scope: 'media',
+              source: 'user_feedback',
+              createdAt: m.created_at,
+              updatedAt: m.updated_at,
+              isActive: m.is_active,
+              memwalBlobId: m.memwal_blob_id || undefined,
+            });
+            existingTexts.add(m.preference.toLowerCase().trim());
+          }
+        }
+      }
+    }
+
     const connection = await memWalService.getConnectionState(effectiveUserId);
     return NextResponse.json({
       success: true,
@@ -127,6 +163,25 @@ export async function POST(request: Request) {
           storedItems.push(result);
         }
 
+        // Dual persist to Supabase memories table
+        if (supabase) {
+          for (const item of itemsToRemember) {
+            try {
+              await supabase.from('memories').upsert({
+                id: item.id || `pref_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                user_id: effectiveUserId,
+                category: item.category || 'visual_style',
+                preference: item.preference,
+                strength: item.strength || 'high',
+                is_active: true,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'id' });
+            } catch (err) {
+              console.warn('Supabase memory upsert notice:', err);
+            }
+          }
+        }
+
         const activeList = memWalService.getAllPreferences(effectiveUserId, false);
 
         return NextResponse.json({
@@ -143,6 +198,11 @@ export async function POST(request: Request) {
     }
 
     if (action === 'forget' && id) {
+      if (supabase) {
+        try {
+          await supabase.from('memories').update({ is_active: false, updated_at: new Date().toISOString() }).eq('id', id);
+        } catch {}
+      }
       // Rehydrate user namespace memories from Walrus in case of serverless cold-start
       await memWalService.getAllPreferencesAsync(effectiveUserId, true);
       await memWalService.forgetPreference(id);
@@ -150,6 +210,11 @@ export async function POST(request: Request) {
     }
 
     if (action === 'reset') {
+      if (supabase && effectiveUserId) {
+        try {
+          await supabase.from('memories').update({ is_active: false }).eq('user_id', effectiveUserId);
+        } catch {}
+      }
       memWalService.clearAll();
       return NextResponse.json({ success: true, message: 'All memories cleared' });
     }
