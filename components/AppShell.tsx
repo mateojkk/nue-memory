@@ -656,14 +656,23 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     setProjects((prev) => {
       const updated = prev.map((p) => {
         if (p.id === projectId) {
+          const targetVer = (p.versions || [])[versionIndex];
+          const deletedVNum = targetVer?.versionNumber;
           const newVersions = (p.versions || []).filter((_, idx) => idx !== versionIndex);
           const newIdx = Math.max(0, Math.min(p.currentVersionIndex, newVersions.length - 1));
+          const newMessages = deletedVNum !== undefined
+            ? (p.messages || []).filter((m) => m.versionNumber !== deletedVNum)
+            : (p.messages || []);
           const updatedProj: CreativeProject = {
             ...p,
             versions: newVersions,
             currentVersionIndex: newIdx,
+            messages: newMessages,
           };
           persistProjectToDb(updatedProj);
+          if (p.id === activeProject?.id) {
+            setMessages(newMessages);
+          }
           return updatedProj;
         }
         return p;
@@ -769,15 +778,22 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
 
     setPendingPreferences([]);
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: `msg-delete-${Date.now()}`,
-        sender: 'agent',
-        content: 'Project deleted. Your saved preferences remain intact.',
-        timestamp: new Date().toISOString(),
-      },
-    ]);
+    if (remaining[nextIdx]) {
+      setMessages(
+        remaining[nextIdx].messages && remaining[nextIdx].messages.length > 0
+          ? remaining[nextIdx].messages
+          : [
+              {
+                id: `msg-sel-${Date.now()}`,
+                sender: 'agent',
+                content: `Loaded "${remaining[nextIdx].title}". Ready for your creative instructions.`,
+                timestamp: new Date().toISOString(),
+              },
+            ]
+      );
+    } else {
+      setMessages([]);
+    }
   };
 
   // Reset Project (clears generated versions and chat while preserving project and memory in DB)

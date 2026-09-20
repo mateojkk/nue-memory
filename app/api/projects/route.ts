@@ -129,11 +129,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sanitize title and prompt
+    // Sanitize title and prompt (unwrap if already a JSON payload)
+    let rawText = project.initialPrompt || '';
+    if (typeof rawText === 'string' && rawText.startsWith('{') && rawText.includes('"messages"')) {
+      try {
+        const parsed = JSON.parse(rawText);
+        rawText = parsed.text || '';
+      } catch {}
+    }
+
     const titleCheck = sanitizeText(project.title || 'Untitled Project', 120, 'Project title');
     const sanitizedTitle = titleCheck.valid ? titleCheck.sanitized! : 'Untitled Project';
 
-    const promptCheck = sanitizeText(project.initialPrompt || '', 2500, 'Initial prompt');
+    const promptCheck = sanitizeText(rawText, 2500, 'Initial prompt');
     const sanitizedPrompt = promptCheck.valid ? promptCheck.sanitized! : '';
 
     if (!supabase) {

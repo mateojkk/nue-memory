@@ -106,6 +106,7 @@ export function MediaMemoryWorkspace({
   const [editedTitle, setEditedTitle] = useState('');
   const [isThinkingEnabled, setIsThinkingEnabled] = useState(true);
   const [isListening, setIsListening] = useState(false);
+  const [activePlayingVersionNumber, setActivePlayingVersionNumber] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(() => {
     if (typeof window !== 'undefined') {
       if (window.innerWidth < 1024) return false;
@@ -903,6 +904,13 @@ export function MediaMemoryWorkspace({
                             projectId={activeProject?.id}
                             userEmail={userEmail}
                             onRefreshProjects={onRefreshProjects}
+                            isGloballyPlaying={activePlayingVersionNumber === matchingVersion.versionNumber}
+                            onGlobalPlay={() => setActivePlayingVersionNumber(matchingVersion.versionNumber)}
+                            onGlobalPause={() => {
+                              setActivePlayingVersionNumber((prev) =>
+                                prev === matchingVersion.versionNumber ? null : prev
+                              );
+                            }}
                           />
                         )}
 

@@ -143,6 +143,8 @@ export async function POST(request: Request) {
     }
 
     if (action === 'forget' && id) {
+      // Rehydrate user namespace memories from Walrus in case of serverless cold-start
+      await memWalService.getAllPreferencesAsync(effectiveUserId, true);
       await memWalService.forgetPreference(id);
       return NextResponse.json({ success: true, removedId: id });
     }

@@ -10,6 +10,9 @@ interface InlineVideoCardProps {
   projectId?: string;
   userEmail?: string;
   onRefreshProjects?: (preferredId?: string) => void;
+  isGloballyPlaying?: boolean;
+  onGlobalPlay?: () => void;
+  onGlobalPause?: () => void;
 }
 
 function resolveMediaUrl(url?: string): string {
@@ -33,6 +36,9 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   projectId,
   userEmail,
   onRefreshProjects,
+  isGloballyPlaying,
+  onGlobalPlay,
+  onGlobalPause,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -98,6 +104,16 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   const audioSrc = !isAudioMuxed ? resolveMediaUrl(version.audioStyle?.audioUrl) : undefined;
 
   useEffect(() => {
+    if (isGloballyPlaying === false && isPlaying && videoRef.current) {
+      videoRef.current.pause();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setIsPlaying(false);
+    }
+  }, [isGloballyPlaying, isPlaying]);
+
+  useEffect(() => {
     if (version.aspectRatio) {
       setAspectMode(version.aspectRatio);
     }
@@ -117,6 +133,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
         playPromise
           .then(() => {
             setIsPlaying(true);
+            if (onGlobalPlay) onGlobalPlay();
             if (!isAudioMuxed && audioRef.current && audioSrc) {
               audioRef.current.muted = isMuted;
               audioRef.current.play().catch(() => {});
@@ -127,7 +144,10 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             if (videoRef.current) {
               videoRef.current.muted = true;
               setIsMuted(true);
-              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+              videoRef.current.play().then(() => {
+                setIsPlaying(true);
+                if (onGlobalPlay) onGlobalPlay();
+              }).catch(() => {});
             }
           });
       }
@@ -137,6 +157,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
         audioRef.current.pause();
       }
       setIsPlaying(false);
+      if (onGlobalPause) onGlobalPause();
     }
   };
 
@@ -228,8 +249,14 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
           preload="auto"
           crossOrigin="anonymous"
           muted={isMuted}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onPlay={() => {
+            setIsPlaying(true);
+            if (onGlobalPlay) onGlobalPlay();
+          }}
+          onPause={() => {
+            setIsPlaying(false);
+            if (onGlobalPause) onGlobalPause();
+          }}
           onTimeUpdate={handleTimeUpdate}
           onEnded={() => {
             setIsPlaying(false);
@@ -238,6 +265,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
               audioRef.current.pause();
               audioRef.current.currentTime = 0;
             }
+            if (onGlobalPause) onGlobalPause();
           }}
           onClick={(e) => {
             e.stopPropagation();
