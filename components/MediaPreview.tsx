@@ -58,11 +58,29 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       setIsPlaying(false);
       setProgress(0);
     }
-    if (version?.audioStyle?.audioUrl && audioRef.current) {
+
+    const isAudioMuxed = Boolean(
+      version?.audioStyle?.isMuxed ||
+      version?.livepeerCapability?.includes('assemble') ||
+      version?.livepeerCapability?.includes('mux') ||
+      version?.agentNotes?.includes('Synchronized') ||
+      (version?.scenes && version.scenes.length > 0)
+    );
+
+    if (!isAudioMuxed && version?.audioStyle?.audioUrl && audioRef.current) {
       audioRef.current.src = version.audioStyle.audioUrl;
       audioRef.current.currentTime = 0;
     }
   }, [version]);
+
+  const isAudioMuxed = Boolean(
+    version?.audioStyle?.isMuxed ||
+    version?.livepeerCapability?.includes('assemble') ||
+    version?.livepeerCapability?.includes('mux') ||
+    version?.agentNotes?.includes('Synchronized') ||
+    (version?.scenes && version.scenes.length > 0)
+  );
+  const unMuxedAudioUrl = !isAudioMuxed ? version?.audioStyle?.audioUrl : undefined;
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -74,7 +92,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         .play()
         .then(() => {
           setIsPlaying(true);
-          if (audioRef.current && version?.audioStyle?.audioUrl) {
+          if (!isAudioMuxed && audioRef.current && unMuxedAudioUrl) {
             audioRef.current.muted = isMuted;
             audioRef.current.play().catch(() => {});
           }
@@ -362,10 +380,10 @@ ${version.captionStyle.text}
                   className="w-full h-full object-cover cursor-pointer"
                   onClick={togglePlay}
                 />
-                {version.audioStyle?.audioUrl && (
+                {!isAudioMuxed && unMuxedAudioUrl && (
                   <audio
                     ref={audioRef}
-                    src={version.audioStyle.audioUrl}
+                    src={unMuxedAudioUrl}
                     loop
                     muted={isMuted}
                     playsInline

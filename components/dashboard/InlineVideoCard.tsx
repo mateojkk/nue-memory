@@ -22,7 +22,16 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const videoSrc = version.mediaUrl;
-  const audioSrc = version.audioStyle?.audioUrl;
+  // If the audio was muxed into the MP4 container by Livepeer assemble, do NOT play a separate audio element
+  // (playing both causes a phase echo / dual-source artifact)
+  const isAudioMuxed = Boolean(
+    version.audioStyle?.isMuxed ||
+    version.livepeerCapability?.includes('assemble') ||
+    version.livepeerCapability?.includes('mux') ||
+    version.agentNotes?.includes('Synchronized') ||
+    (version.scenes && version.scenes.length > 0)
+  );
+  const audioSrc = !isAudioMuxed ? version.audioStyle?.audioUrl : undefined;
 
   useEffect(() => {
     if (version.aspectRatio) {
@@ -40,7 +49,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
         .play()
         .then(() => {
           setIsPlaying(true);
-          if (audioRef.current && audioSrc) {
+          if (!isAudioMuxed && audioRef.current && audioSrc) {
             audioRef.current.muted = isMuted;
             audioRef.current.play().catch(() => {});
           }

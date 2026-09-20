@@ -78,6 +78,7 @@ export interface MediaVersion {
     style: string;
     tempo: 'energetic' | 'ambient' | 'none';
     audioUrl?: string;
+    isMuxed?: boolean;
   };
   visualTheme: string;
   agentNotes: string;

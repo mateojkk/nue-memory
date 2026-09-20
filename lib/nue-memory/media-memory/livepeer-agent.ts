@@ -630,6 +630,7 @@ export class LivepeerMediaAgent {
 
     let finalMediaUrl = realMediaUrl;
     const finalImageUrl = realMediaUrl;
+    let wasAudioMuxed = false;
 
     // Multi-scene sequence assembly and soundtrack muxing via Livepeer assemble MCP tool
     if (clipCount > 1 || audioUrl) {
@@ -770,10 +771,11 @@ export class LivepeerMediaAgent {
         if (assembledUrl) {
           finalMediaUrl = assembledUrl;
           generationDuration = clipUrls.length * singleTakeDuration;
+          wasAudioMuxed = Boolean(audioUrl);
           livepeerCapability = isLongForm
             ? `${modelToUse} + assemble (${generationDuration}s timeline, ${clipUrls.length} unique scenes)`
-            : modelToUse;
-          console.log(`[LivepeerAgent] Multi-scene timeline assembled successfully! Duration: ${generationDuration}s, URL: ${finalMediaUrl}`);
+            : (wasAudioMuxed ? `${modelToUse} + audio mux` : modelToUse);
+          console.log(`[LivepeerAgent] Timeline assembled successfully! Duration: ${generationDuration}s, URL: ${finalMediaUrl}`);
           // Audio is now muxed into the assembled MP4 - clear the separate audioUrl
           // to prevent UI components from playing a duplicate <audio> element on top
           audioUrl = null;
@@ -844,6 +846,7 @@ export class LivepeerMediaAgent {
         style: audioStyle,
         tempo: audioTempo,
         audioUrl: audioUrl || undefined,
+        isMuxed: wasAudioMuxed,
       },
       visualTheme,
       agentNotes,

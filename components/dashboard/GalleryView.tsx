@@ -197,7 +197,15 @@ function GalleryItemCard({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const audioSrc = version.audioStyle?.audioUrl;
+  // If the audio was muxed into the MP4 container by Livepeer assemble, do NOT play a separate audio element
+  const isAudioMuxed = Boolean(
+    version.audioStyle?.isMuxed ||
+    version.livepeerCapability?.includes('assemble') ||
+    version.livepeerCapability?.includes('mux') ||
+    version.agentNotes?.includes('Synchronized') ||
+    (version.scenes && version.scenes.length > 0)
+  );
+  const audioSrc = !isAudioMuxed ? version.audioStyle?.audioUrl : undefined;
 
   const isCurrentPlaying = activePlayingUrl === version.mediaUrl;
 
@@ -206,7 +214,7 @@ function GalleryItemCard({
     if (videoRef.current && videoRef.current.muted) {
       videoRef.current.muted = false;
     }
-    if (audioRef.current && audioSrc) {
+    if (!isAudioMuxed && audioRef.current && audioSrc) {
       audioRef.current.currentTime = videoRef.current?.currentTime || 0;
       audioRef.current.muted = videoRef.current?.muted ?? false;
       audioRef.current.volume = videoRef.current?.volume ?? 1;
