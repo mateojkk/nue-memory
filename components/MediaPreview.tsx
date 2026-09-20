@@ -12,7 +12,7 @@ interface MediaPreviewProps {
   isLoading?: boolean;
   projectId?: string;
   userEmail?: string;
-  onRefreshProjects?: () => void;
+  onRefreshProjects?: (preferredId?: string) => void;
 }
 
 function resolveMediaUrl(url?: string): string {
@@ -56,13 +56,19 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       const res = await fetch('/api/studio-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, email: emailToUse, action }),
+        body: JSON.stringify({
+          projectId,
+          email: emailToUse,
+          action,
+          versionNumber: version?.versionNumber,
+          options: { sourceMediaUrl: version?.mediaUrl },
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setStudioFeedback(`Created Version ${data.version.versionNumber}!`);
         if (onRefreshProjects) {
-          onRefreshProjects();
+          onRefreshProjects(projectId);
         }
       } else {
         setStudioFeedback(data.error || 'Studio processing failed');

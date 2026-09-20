@@ -9,7 +9,7 @@ interface InlineVideoCardProps {
   isLatest?: boolean;
   projectId?: string;
   userEmail?: string;
-  onRefreshProjects?: () => void;
+  onRefreshProjects?: (preferredId?: string) => void;
 }
 
 function resolveMediaUrl(url?: string): string {
@@ -57,13 +57,19 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
       const res = await fetch('/api/studio-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, email: emailToUse, action }),
+        body: JSON.stringify({
+          projectId,
+          email: emailToUse,
+          action,
+          versionNumber: version.versionNumber,
+          options: { sourceMediaUrl: version.mediaUrl },
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setStudioFeedback(`Created Version ${data.version.versionNumber}!`);
         if (onRefreshProjects) {
-          onRefreshProjects();
+          onRefreshProjects(projectId);
         }
       } else {
         setStudioFeedback(data.error || 'Studio processing failed');
@@ -205,12 +211,12 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
 
       {/* Video Viewport Container */}
       <div
-        className={`relative w-full bg-black flex items-center justify-center overflow-hidden group select-none transition-all ${
+        className={`relative bg-black flex items-center justify-center overflow-hidden group select-none transition-all mx-auto ${
           aspectMode === '9:16'
-            ? 'aspect-[9/16] max-h-[520px]'
+            ? 'w-[260px] sm:w-[300px] aspect-[9/16] max-h-[530px] rounded-xl my-2 shadow-lg border border-[var(--border)]'
             : aspectMode === '1:1'
-            ? 'aspect-square max-h-[460px]'
-            : 'aspect-video max-h-[420px]'
+            ? 'w-full max-w-[460px] aspect-square max-h-[460px]'
+            : 'w-full aspect-video max-h-[420px]'
         }`}
       >
         <video

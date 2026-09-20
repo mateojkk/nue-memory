@@ -82,7 +82,7 @@ interface NueDashboardProps {
   projects: CreativeProject[];
   currentProjectIndex: number;
   onSelectProject: (index: number) => void;
-  onRefreshProjects?: () => void;
+  onRefreshProjects?: (preferredId?: string) => void;
   userNamespace?: string;
   userEmail?: string;
 }

@@ -133,15 +133,15 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   }, [email]);
 
-  const loadProjects = async (userEmail: string) => {
+  const loadProjects = async (userEmail: string, preferredProjectId?: string) => {
     try {
       const res = await fetch(`/api/projects?email=${encodeURIComponent(userEmail)}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.projects) && data.projects.length > 0) {
         setProjects(data.projects);
 
-        // Restore active project from initialProjectId, URL param, or localStorage
-        let targetId = initialProjectId;
+        // Restore active project from preferredProjectId, activeProject, initialProjectId, URL param, or localStorage
+        let targetId = preferredProjectId || activeProject?.id || initialProjectId;
         if (!targetId && typeof window !== 'undefined') {
           try {
             const urlParams = new URLSearchParams(window.location.search);
@@ -848,8 +848,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
               return updated;
             });
           }}
-          onRefreshProjects={() => {
-            if (email) loadProjects(email);
+          onRefreshProjects={(preferredId?: string) => {
+            if (email) loadProjects(email, preferredId || activeProject?.id);
           }}
           isGenerating={isGenerating}
           generationStage={generationStage}

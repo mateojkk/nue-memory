@@ -62,12 +62,16 @@ export async function POST(request: Request) {
       Math.max(0, projectRow.current_version_index ?? versions.length - 1),
       versions.length - 1
     );
-    const activeVersion = versions[currentIdx];
-    const sourceMediaUrl = activeVersion.mediaUrl;
+    const targetVersion =
+      (body.versionNumber ? versions.find((v) => v.versionNumber === Number(body.versionNumber)) : null) ||
+      versions[currentIdx] ||
+      versions[versions.length - 1];
+
+    const sourceMediaUrl = options?.sourceMediaUrl || targetVersion.mediaUrl;
 
     if (!sourceMediaUrl) {
       return NextResponse.json(
-        { success: false, error: 'Active version does not have a valid media URL' },
+        { success: false, error: 'Target version does not have a valid media URL' },
         { status: 400 }
       );
     }
@@ -190,7 +194,7 @@ export async function POST(request: Request) {
       case 'add_voiceover': {
         const voiceText =
           options?.voiceText ||
-          activeVersion.brief ||
+          targetVersion.brief ||
           'Welcome to the next generation of creative media production with Nue.';
         const voiceAudioUrl = await agent.generateSpeech({
           text: voiceText,
@@ -204,7 +208,7 @@ export async function POST(request: Request) {
         }
 
         let audioToMux = voiceAudioUrl;
-        const existingBgAudio = activeVersion.audioStyle?.audioUrl;
+        const existingBgAudio = targetVersion.audioStyle?.audioUrl;
 
         // If background music already exists, mix voiceover with ducked background music
         if (existingBgAudio) {
@@ -248,11 +252,11 @@ export async function POST(request: Request) {
     // 4. Create new non-destructive version
     const nextVersionNumber = versions.length + 1;
     const newVersion: MediaVersion = {
-      ...activeVersion,
+      ...targetVersion,
       versionNumber: nextVersionNumber,
       createdAt: new Date().toISOString(),
       mediaUrl: newMediaUrl,
-      aspectRatio: newAspectRatio || activeVersion.aspectRatio || '16:9',
+      aspectRatio: newAspectRatio || targetVersion.aspectRatio || '16:9',
       livepeerCapability: `Livepeer Studio [${action}]`,
       agentNotes: newNote,
     };
@@ -261,11 +265,12 @@ export async function POST(request: Request) {
     const newCurrentIdx = updatedVersions.length - 1;
 
     // 5. Append assistant message to chat history
-    let existingPrompt = projectRow.initial_prompt || '';
+    let rawPromptText = projectRow.initial_prompt || '';
     let existingMessages: any[] = [];
-    if (existingPrompt.startsWith('{') && existingPrompt.includes('"messages"')) {
+    if (rawPromptText.startsWith('{') && rawPromptText.includes('"messages"')) {
       try {
-        const parsed = JSON.parse(existingPrompt);
+        const parsed = JSON.parse(rawPromptText);
+        rawPromptText = parsed.text || '';
         existingMessages = Array.isArray(parsed.messages) ? parsed.messages : [];
       } catch {}
     }
@@ -280,7 +285,7 @@ export async function POST(request: Request) {
     existingMessages.push(postActionMessage);
 
     const updatedPromptPayload = JSON.stringify({
-      text: projectRow.title || '',
+      text: rawPromptText,
       messages: existingMessages.slice(-100),
     });
 
