@@ -29,6 +29,14 @@ export interface GenerationJob {
   updatedAt: string;
   result?: GenerationJobResult;
   error?: string;
+  livepeerJobId?: string;
+  audioJobId?: string;
+  audioUrl?: string;
+  directorBrief?: any;
+  syntheticPreferences?: any[];
+  modelToUse?: string;
+  singleTakeDuration?: number;
+  effectiveDuration?: number;
 }
 
 // Global in-memory job map across requests within this server instance
@@ -75,9 +83,14 @@ export function getJob(jobId: string): GenerationJob | undefined {
   return jobRegistry.get(jobId);
 }
 
+export function setJob(job: GenerationJob): GenerationJob {
+  jobRegistry.set(job.id, job);
+  return job;
+}
+
 export function updateJob(
   jobId: string,
-  updates: Partial<Pick<GenerationJob, 'status' | 'progress' | 'stageDescription' | 'result' | 'error'>>
+  updates: Partial<Omit<GenerationJob, 'id' | 'createdAt'>>
 ): GenerationJob | undefined {
   const job = jobRegistry.get(jobId);
   if (!job) return undefined;

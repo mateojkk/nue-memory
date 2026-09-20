@@ -6,179 +6,182 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText, validateImageSource } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
+import { MediaVersion } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-// GET: Check status of an asynchronous video generation job
+// GET: Check status of an asynchronous video generation job via live Livepeer polling
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
+    const paramLivepeerJobId = searchParams.get('livepeerJobId') || undefined;
+    const paramAudioJobId = searchParams.get('audioJobId') || undefined;
 
     if (!jobId) {
       return NextResponse.json({ success: false, error: 'jobId query parameter is required' }, { status: 400 });
     }
 
     const job = getJob(jobId);
-    if (!job) {
+
+    // If job was already marked completed in registry, return cached result immediately
+    if (job?.status === 'completed' && job.result) {
+      return NextResponse.json({ success: true, job });
+    }
+
+    const livepeerJobId = job?.livepeerJobId || paramLivepeerJobId;
+    if (!livepeerJobId) {
+      if (job) return NextResponse.json({ success: true, job });
       return NextResponse.json({ success: false, error: 'Job not found or expired' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, job });
-  } catch (error) {
-    console.error('[generate:status] Error:', error);
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
-  }
-}
+    // Active 150ms check of Livepeer MCP
+    const pollResult = await livepeerAgent.pollJobStatus(livepeerJobId);
 
-// Background runner that executes the video generation pipeline
-async function runGenerationJob(params: {
-  jobId: string;
-  brief: string;
-  versionNumber: number;
-  projectTitle: string;
-  feedbackContext?: string;
-  effectiveUserId: string;
-  validatedImageUrl?: string;
-}) {
-  const { jobId, brief, versionNumber, projectTitle, feedbackContext, effectiveUserId, validatedImageUrl } = params;
+    if (pollResult.status === 'failed') {
+      updateJob(jobId, { status: 'failed', error: pollResult.error || 'Livepeer render failed.' });
+      return NextResponse.json({
+        success: true,
+        job: { status: 'failed', error: pollResult.error || 'Livepeer render failed.' },
+      });
+    }
 
-  try {
-    // Step 1: Directing
-    updateJob(jobId, {
-      status: 'directing',
-      progress: 15,
-      stageDescription: 'Directing creative brief and visual scenes...',
-    });
+    if (pollResult.status === 'running') {
+      const elapsedSec = job ? Math.max(1, Math.round((Date.now() - new Date(job.createdAt).getTime()) / 1000)) : 10;
+      const modelName = job?.modelToUse || 'seedance-25-t2v';
+      const expectedSla = modelName.includes('seedance') ? '~4 min' : '~40s';
+      const maxEstimatedSec = modelName.includes('seedance') ? 240 : 45;
+      const progress = Math.min(85, 25 + Math.round((elapsedSec / maxEstimatedSec) * 60));
+      const stageDescription = `Rendering on ${modelName} (${elapsedSec}s / ${expectedSla})...`;
 
-    const directorBrief = await directCreativeBrief(brief, {
-      email: effectiveUserId,
-      feedbackContext,
-      projectTitle,
-      imageUrl: validatedImageUrl,
-    });
+      updateJob(jobId, { progress, stageDescription });
+      return NextResponse.json({
+        success: true,
+        job: {
+          id: jobId,
+          status: 'rendering',
+          progress,
+          stageDescription,
+        },
+      });
+    }
 
-    // Handle conversational messages that don't need video generation
-    if (!directorBrief.shouldGenerate) {
+    if (pollResult.status === 'completed' && pollResult.url) {
+      const videoUrl = pollResult.url;
+      const modelName = job?.modelToUse || pollResult.capability || 'seedance-25-t2v';
+      const directorBrief = job?.directorBrief;
+      const syntheticPreferences = job?.syntheticPreferences || [];
+      let finalAudioUrl = job?.audioUrl;
+
+      // If audio was dispatched asynchronously, check if audio is ready
+      const audioJobId = job?.audioJobId || paramAudioJobId;
+      if (!finalAudioUrl && audioJobId) {
+        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId);
+        if (audioPoll.status === 'completed' && audioPoll.url) {
+          finalAudioUrl = audioPoll.url;
+        }
+      }
+
+      // Assemble timeline if audio is present
+      let finalMediaUrl = videoUrl;
+      let wasMuxed = false;
+      if (finalAudioUrl) {
+        try {
+          const assembled = await livepeerAgent.assembleTimeline({
+            clips: [{ src: videoUrl }],
+            audioUrl: finalAudioUrl,
+            transition: 'cut',
+          });
+          if (assembled) {
+            finalMediaUrl = assembled;
+            wasMuxed = true;
+          }
+        } catch (e) {
+          console.warn('[generate:GET] assembleTimeline notice:', e);
+        }
+      }
+
+      const versionNumber = job?.versionNumber || 1;
+      const actualDuration = job?.singleTakeDuration || 15;
+      const requestedDuration = directorBrief?.duration || actualDuration;
+      let truthfulDirectorMessage = directorBrief?.agentMessage || 'Your video take has been composed successfully.';
+
+      if (actualDuration >= 24 || actualDuration >= requestedDuration) {
+        truthfulDirectorMessage = truthfulDirectorMessage
+          .replace(/\b8[- ]seconds?\b/gi, `${actualDuration}-second`)
+          .replace(/\b8s\b/gi, `${actualDuration}s`);
+      } else if (requestedDuration > actualDuration) {
+        truthfulDirectorMessage = truthfulDirectorMessage
+          .replace(/\b\d+[- ]seconds?\b/gi, `${actualDuration}-second`)
+          .replace(/\b\d+s\b/gi, `${actualDuration}s`);
+        truthfulDirectorMessage += ` Note: Rendered a ${actualDuration}s take on ${modelName}.`;
+      }
+
+      const mediaVersion: MediaVersion = {
+        versionNumber,
+        createdAt: new Date().toISOString(),
+        brief: directorBrief?.enrichedPrompt || 'AI Video Take',
+        enrichedBrief: directorBrief?.enrichedPrompt || 'AI Video Take',
+        appliedPreferences: syntheticPreferences,
+        mediaUrl: finalMediaUrl,
+        aspectRatio: directorBrief?.aspectRatio || '16:9',
+        pacing: directorBrief?.pacing || 'cinematic',
+        captionStyle: {
+          enabled: true,
+          size: 'medium',
+          highlight: 'NUE MOTION',
+          text: directorBrief?.enrichedPrompt?.slice(0, 48) || 'Nue Motion',
+        },
+        audioStyle: {
+          enabled: Boolean(directorBrief?.audioEnabled),
+          style: directorBrief?.audioStyle || 'Ambient',
+          tempo: directorBrief?.audioEnabled ? 'ambient' : 'none',
+          audioUrl: wasMuxed ? undefined : finalAudioUrl,
+          isMuxed: wasMuxed,
+        },
+        visualTheme: directorBrief?.visualTheme || 'Cinematic',
+        agentNotes: `Livepeer Agent composed version ${versionNumber} via [${modelName}${wasMuxed ? ' + assemble' : ''}].`,
+        generationDurationSeconds: actualDuration,
+        livepeerCapability: modelName + (wasMuxed ? ' + assemble' : ''),
+      };
+
+      const result = {
+        mediaVersion,
+        enrichedPrompt: directorBrief?.enrichedPrompt,
+        appliedMemories: syntheticPreferences,
+        directorMessage: truthfulDirectorMessage,
+        summaryTokens: [directorBrief?.visualTheme || 'Cinematic', directorBrief?.pacing || 'cinematic', `${actualDuration}s`],
+        retrievalCount: syntheticPreferences.length,
+      };
+
       updateJob(jobId, {
         status: 'completed',
         progress: 100,
-        stageDescription: 'Directing complete',
-        result: {
-          mediaVersion: null,
-          directorMessage: directorBrief.agentMessage,
-          appliedMemories: [],
-          summaryTokens: [],
-          retrievalCount: 0,
+        stageDescription: 'Video generation complete',
+        result,
+      });
+
+      return NextResponse.json({
+        success: true,
+        job: {
+          id: jobId,
+          status: 'completed',
+          progress: 100,
+          stageDescription: 'Video generation complete',
+          result,
         },
       });
-      return;
     }
 
-    // Build synthetic preferences
-    const syntheticPreferences = [];
-    if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Modern Product Showcase') {
-      syntheticPreferences.push({
-        id: `dir-visual-${Date.now()}`,
-        type: 'media_preference' as const,
-        category: 'visual_style' as const,
-        preference: directorBrief.visualTheme,
-        strength: 'high' as const,
-        scope: 'media' as const,
-        source: 'user_feedback' as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isActive: true,
-      });
-    }
-    if (directorBrief.audioEnabled && directorBrief.audioStyle) {
-      syntheticPreferences.push({
-        id: `dir-audio-${Date.now()}`,
-        type: 'media_preference' as const,
-        category: 'audio' as const,
-        preference: directorBrief.audioStyle,
-        strength: 'high' as const,
-        scope: 'media' as const,
-        source: 'user_feedback' as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        isActive: true,
-      });
-    }
-
-    // Step 2: Rendering via Livepeer
-    updateJob(jobId, {
-      status: 'rendering',
-      progress: 30,
-      stageDescription: 'Dispatching neural video takes via Livepeer...',
-    });
-
-    const mediaVersion = await livepeerAgent.generateMedia({
-      brief,
-      enrichedBrief: directorBrief.enrichedPrompt,
-      appliedPreferences: syntheticPreferences,
-      versionNumber: Number(versionNumber) || 1,
-      projectTitle,
-      feedbackContext,
-      creativeDirectives: {
-        pacing: directorBrief.pacing,
-        audioStyle: directorBrief.audioStyle,
-        aspectRatio: directorBrief.aspectRatio,
-        visualStyle: directorBrief.visualTheme,
-        duration: directorBrief.duration,
-        model: directorBrief.model,
-      },
-      imageUrl: validatedImageUrl,
-      scenePrompts: directorBrief.scenePrompts,
-      onProgress: (progress, stage) => {
-        updateJob(jobId, { progress, stageDescription: stage });
-      },
-    });
-
-    // Step 3: Duration truthfulness check
-    const actualDuration = mediaVersion.generationDurationSeconds || 5;
-    const requestedDuration = directorBrief.duration;
-    let truthfulDirectorMessage = directorBrief.agentMessage;
-
-    if (actualDuration >= 24 || actualDuration >= requestedDuration) {
-      truthfulDirectorMessage = truthfulDirectorMessage
-        .replace(/\b8[- ]seconds?\b/gi, `${actualDuration}-second`)
-        .replace(/\b8s\b/gi, `${actualDuration}s`);
-    } else if (requestedDuration > actualDuration) {
-      const modelCap = mediaVersion.livepeerCapability || 'Livepeer';
-      truthfulDirectorMessage = truthfulDirectorMessage
-        .replace(/\b\d+[- ]seconds?\b/gi, `${actualDuration}-second`)
-        .replace(/\b\d+s\b/gi, `${actualDuration}s`);
-      truthfulDirectorMessage += ` Note: Rendered an ${actualDuration}s take (single-shot model limit for ${modelCap}). You can direct subsequent takes to build a longer multi-scene sequence.`;
-    }
-
-    // Mark job completed
-    updateJob(jobId, {
-      status: 'completed',
-      progress: 100,
-      stageDescription: 'Video generation complete',
-      result: {
-        mediaVersion,
-        enrichedPrompt: directorBrief.enrichedPrompt,
-        appliedMemories: syntheticPreferences,
-        directorMessage: truthfulDirectorMessage,
-        summaryTokens: [directorBrief.visualTheme, directorBrief.pacing, `${actualDuration}s`],
-        retrievalCount: syntheticPreferences.length,
-      },
-    });
-  } catch (err: any) {
-    console.error(`[generate:job] Error in job ${jobId}:`, err);
-    updateJob(jobId, {
-      status: 'failed',
-      progress: 100,
-      stageDescription: 'Generation failed',
-      error: err?.message || 'Video generation failed. Please try again.',
-    });
+    return NextResponse.json({ success: true, job });
+  } catch (error: any) {
+    console.error('[generate:status] Error:', error);
+    return NextResponse.json({ success: false, error: error?.message || 'Internal server error' }, { status: 500 });
   }
 }
 
-// POST: Create and dispatch an asynchronous video generation job
+// POST: Direct brief and dispatch media generation to Livepeer (<10s, never freezes on serverless)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -258,9 +261,106 @@ export async function POST(request: Request) {
       }
     }
 
-    // Step 6: Create Async Generation Job and return immediately
+    // Step 6: Direct creative brief via Groq + MemWal (~5s synchronous)
+    const directorBrief = await directCreativeBrief(sanitizedBrief, {
+      email: effectiveUserId,
+      feedbackContext: sanitizedFeedback,
+      projectTitle: sanitizedTitle,
+      imageUrl: validatedImageUrl,
+    });
+
+    // Handle conversational messages immediately without dispatching media
+    if (!directorBrief.shouldGenerate) {
+      return NextResponse.json({
+        success: true,
+        jobId: null,
+        status: 'completed',
+        result: {
+          mediaVersion: null,
+          directorMessage: directorBrief.agentMessage,
+          appliedMemories: [],
+          summaryTokens: [],
+          retrievalCount: 0,
+        },
+      });
+    }
+
+    // Build synthetic preferences
+    const syntheticPreferences = [];
+    if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Modern Product Showcase') {
+      syntheticPreferences.push({
+        id: `dir-visual-${Date.now()}`,
+        type: 'media_preference' as const,
+        category: 'visual_style' as const,
+        preference: directorBrief.visualTheme,
+        strength: 'high' as const,
+        scope: 'media' as const,
+        source: 'user_feedback' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      });
+    }
+    if (directorBrief.audioEnabled && directorBrief.audioStyle) {
+      syntheticPreferences.push({
+        id: `dir-audio-${Date.now()}`,
+        type: 'media_preference' as const,
+        category: 'audio' as const,
+        preference: directorBrief.audioStyle,
+        strength: 'high' as const,
+        scope: 'media' as const,
+        source: 'user_feedback' as const,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: true,
+      });
+    }
+
+    // Step 7: Dispatch media generation to Livepeer (<3s synchronous)
+    const isImageToVideo = Boolean(validatedImageUrl);
+    const modelToUse = isImageToVideo
+      ? (directorBrief.model?.includes('pixverse') ? 'pixverse-i2v' : 'seedance-25-i2v')
+      : directorBrief.model || 'seedance-25-t2v';
+
+    const singleTakeDuration = modelToUse.includes('seedance')
+      ? Math.min(15, Math.max(5, directorBrief.duration || 15))
+      : 8;
+
+    const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
+
+    const dispatchArgs: Record<string, any> = {
+      action: isImageToVideo ? 'animate' : 'generate',
+      prompt: livepeerPrompt,
+      model_override: modelToUse,
+      duration: singleTakeDuration,
+      ...(validatedImageUrl ? { source_url: validatedImageUrl } : {}),
+    };
+
+    const videoDispatch = await livepeerAgent.dispatchCreateMedia(dispatchArgs);
+
+    if (videoDispatch.status === 'failed') {
+      return NextResponse.json({
+        success: false,
+        error: videoDispatch.error || 'Failed to dispatch media generation to Livepeer.',
+      }, { status: 500 });
+    }
+
+    // Dispatch background soundtrack in parallel if requested
+    let audioJobId: string | undefined;
+    let audioUrl: string | undefined;
+    if (directorBrief.audioEnabled && directorBrief.audioStyle) {
+      const audioPrompt = `${directorBrief.audioStyle} soundtrack, ${directorBrief.pacing === 'fast' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation`;
+      const audioDispatch = await livepeerAgent.dispatchCreateMedia({
+        action: 'music',
+        prompt: audioPrompt,
+      });
+      if (audioDispatch.url) audioUrl = audioDispatch.url;
+      else if (audioDispatch.jobId) audioJobId = audioDispatch.jobId;
+    }
+
     const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
+    // Create job in registry with all contextual metadata
     createJob({
       id: jobId,
       userId: effectiveUserId,
@@ -268,25 +368,30 @@ export async function POST(request: Request) {
       versionNumber: Number(versionNumber) || 1,
     });
 
-    // Fire generation in background asynchronously (unawaited)
-    runGenerationJob({
-      jobId,
-      brief: sanitizedBrief,
-      versionNumber: Number(versionNumber) || 1,
-      projectTitle: sanitizedTitle,
-      feedbackContext: sanitizedFeedback,
-      effectiveUserId,
-      validatedImageUrl,
-    }).catch((err) => {
-      console.error(`[generate] Unhandled error in background job ${jobId}:`, err);
+    updateJob(jobId, {
+      status: 'rendering',
+      progress: 25,
+      stageDescription: `Rendering on ${modelToUse} (~4 min)...`,
+      livepeerJobId: videoDispatch.jobId,
+      audioJobId,
+      audioUrl,
+      directorBrief,
+      syntheticPreferences,
+      modelToUse,
+      singleTakeDuration,
+      effectiveDuration: singleTakeDuration,
     });
 
-    // Return immediate response with jobId in < 1 second
+    // Return immediate response with jobId and livepeerJobId in <8 seconds total
     return NextResponse.json({
       success: true,
       jobId,
-      status: 'queued',
-      message: 'Video generation job queued successfully',
+      status: 'rendering',
+      livepeerJobId: videoDispatch.jobId,
+      audioJobId,
+      model: modelToUse,
+      stageDescription: `Rendering on ${modelToUse} (~4 min)...`,
+      progress: 25,
     });
   } catch (error) {
     const err = error as Error & { code?: string };
@@ -296,7 +401,7 @@ export async function POST(request: Request) {
         { status: 503 }
       );
     }
-    console.error('[generate] Error:', err?.message || error);
+    console.error('[generate:POST] Error:', err?.message || error);
     return NextResponse.json({ success: false, error: err?.message || String(error) }, { status: 500 });
   }
 }

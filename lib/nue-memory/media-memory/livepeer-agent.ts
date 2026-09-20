@@ -165,6 +165,128 @@ export class LivepeerMediaAgent {
   }
 
   /**
+   * Dispatches create_media tool call and returns immediately (<5s) with either URL or jobId
+   */
+  public async dispatchCreateMedia(args: Record<string, any>): Promise<{
+    status: 'completed' | 'running' | 'failed';
+    url?: string;
+    jobId?: string;
+    capability?: string;
+    error?: string;
+    etaSeconds?: number;
+  }> {
+    try {
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'create_media',
+            arguments: args,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        return { status: 'failed', error: `Livepeer HTTP failure: ${res.status}` };
+      }
+
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      if (data.result?.isError || data.error || content?.error) {
+        return {
+          status: 'failed',
+          error: content?.error?.message || data.error?.message || 'Livepeer dispatch failed',
+        };
+      }
+
+      const jobId = content?.job_id;
+      if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
+        return {
+          status: 'completed',
+          url: content.url,
+          capability: content.capability || args.model_override,
+        };
+      }
+
+      if (jobId) {
+        return {
+          status: 'running',
+          jobId,
+          capability: content?.capability || args.model_override,
+          etaSeconds: content?.eta_seconds || (args.model_override?.includes('seedance') ? 240 : 40),
+        };
+      }
+
+      return { status: 'failed', error: 'No media URL or job ID returned by Livepeer' };
+    } catch (err: any) {
+      return { status: 'failed', error: err?.message || 'Network error calling Livepeer MCP' };
+    }
+  }
+
+  /**
+   * Fast 150ms check of get_create_media for a given jobId
+   */
+  public async pollJobStatus(jobId: string): Promise<{
+    status: 'running' | 'completed' | 'failed';
+    url?: string;
+    capability?: string;
+    error?: string;
+  }> {
+    try {
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'get_create_media',
+            arguments: { job_id: jobId },
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        return { status: 'running' }; // Transient HTTP status, keep polling
+      }
+
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
+        return {
+          status: 'completed',
+          url: content.url,
+          capability: content.capability,
+        };
+      }
+
+      if (content?.status === 'failed' || content?.error) {
+        return {
+          status: 'failed',
+          error: content.error?.message || (typeof content.error === 'string' ? content.error : 'Render failed'),
+        };
+      }
+
+      return { status: 'running' };
+    } catch {
+      return { status: 'running' }; // Network blip, keep polling
+    }
+  }
+
+  /**
    * Muxes video clip with audio track using Livepeer assemble tool (backward compat)
    */
   private async muxVideoAndAudio(videoUrl: string, audioUrl: string): Promise<string | null> {

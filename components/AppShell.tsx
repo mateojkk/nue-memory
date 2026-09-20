@@ -257,17 +257,35 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         );
       }
 
+      // Handle conversational response directly (no video rendering needed)
+      if (data.success && data.status === 'completed' && data.result) {
+        data = { success: true, ...data.result };
+      }
       // Asynchronous Job Polling Architecture
-      if (data.success && data.jobId) {
+      else if (data.success && data.jobId) {
         const jobId = data.jobId;
+        const livepeerJobId = data.livepeerJobId;
+        const audioJobId = data.audioJobId;
         const pollIntervalMs = 3000;
-        const maxPollAttempts = 300; // 300 * 3s = 900s (15 min window for multi-scene Seedance renders + audio muxing)
+        const maxPollAttempts = 300; // 300 * 3s = 900s (15 min window for Seedance takes)
         let completedResult: any = null;
+
+        if (data.stageDescription) {
+          setServerStageDescription(data.stageDescription);
+        }
+        if (data.progress !== undefined) {
+          setServerProgress(data.progress);
+        }
 
         for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
           await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
           try {
-            const pollRes = await fetch(`/api/generate?jobId=${encodeURIComponent(jobId)}`);
+            const pollUrl =
+              `/api/generate?jobId=${encodeURIComponent(jobId)}` +
+              (livepeerJobId ? `&livepeerJobId=${encodeURIComponent(livepeerJobId)}` : '') +
+              (audioJobId ? `&audioJobId=${encodeURIComponent(audioJobId)}` : '');
+
+            const pollRes = await fetch(pollUrl);
             if (pollRes.ok) {
               const pollData = await pollRes.json();
               if (pollData.success && pollData.job) {
