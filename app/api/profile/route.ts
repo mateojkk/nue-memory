@@ -65,11 +65,29 @@ export async function GET(request: Request) {
       profile = newProfile;
     }
 
+    // Query theme preference from memories table
+    let theme: 'dark' | 'light' = 'dark';
+    if (supabase) {
+      const { data: themeData } = await supabase
+        .from('memories')
+        .select('preference')
+        .eq('user_id', email)
+        .eq('category', 'theme')
+        .eq('is_active', true)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (themeData?.preference === 'light' || themeData?.preference === 'dark') {
+        theme = themeData.preference;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       profile: {
         ...profile,
         credit_balance: Number(profile.credit_balance ?? 10.0),
+        theme,
       },
     });
   } catch (err: any) {
@@ -80,7 +98,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email: emailInput, action, amount } = body;
+    const { email: emailInput, action, amount, theme } = body;
 
     // Authenticate request and validate email
     const auth = await authenticateRequest(request, emailInput);
@@ -100,9 +118,31 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate action
+    // Handle theme persistence
+    if (action === 'set_theme') {
+      const themeValue: 'dark' | 'light' = theme === 'light' ? 'light' : 'dark';
+      if (supabase) {
+        const { error: upsertErr } = await supabase
+          .from('memories')
+          .upsert({
+            id: `theme_${email}`,
+            user_id: email,
+            category: 'theme',
+            preference: themeValue,
+            strength: 'high',
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        if (upsertErr) {
+          console.warn('Supabase set_theme warning:', upsertErr);
+        }
+      }
+      return NextResponse.json({ success: true, theme: themeValue });
+    }
+
+    // Validate credit action
     if (action !== 'topup' && action !== 'deduct') {
-      return NextResponse.json({ success: false, error: 'Invalid action: must be topup or deduct' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Invalid action: must be topup, deduct, or set_theme' }, { status: 400 });
     }
 
     // Strict amount validation: must be a finite positive number

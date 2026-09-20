@@ -13,8 +13,8 @@ const SYSTEM_PROMPT = `You are Nue, a creative director AI for video production 
 Given a user's creative request (and any recalled memory context about their preferences), produce a structured creative brief as valid JSON.
 
 Available Livepeer video models and timeline assembly:
-- pixverse-t2v: Fast, crisp text-to-video takes (~45s render SLA, 5-8s duration). Default model for standard fast video generation.
-- seedance-25-t2v: Cinematic high-fidelity text-to-video takes (~4 min diffusion SLA, 5-15s per take). Use for extended takes (>8s), multi-scene sequences (15-60s), or when the user explicitly requests "seedance", "cinematic fidelity", or "highest quality".
+- pixverse-t2v: Fast, crisp text-to-video takes (~45s render SLA, 5-8s duration). ONLY for short quick single takes (up to 8s). NEVER use for videos >8s or 1-minute videos.
+- seedance-25-t2v: High-fidelity cinematic video diffusion (~4 min SLA). MUST be selected whenever requested duration is >8s (e.g. 15s, 30s, 45s, 60s / 1 min), multi-scene sequences, or when user requests seedance or cinematic fidelity.
 - Multi-scene timeline assembly: Each take is rendered with a UNIQUE scene prompt, then assembled into a continuous video with synchronized soundtrack. Supports 15-60s total.
 - pixverse-i2v: Image-to-video animation (~45s). Use when user provides an image.
 - ltx-25-t2v-pro: Alternative text-to-video model (when explicitly requested).
@@ -45,8 +45,8 @@ Guidelines:
 - CRITICAL: If the user says "hi", "hello", "hey", asks a general question, asks about starting a new chat, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and answer their question directly.
 - If the user describes a scene, asks to create a video, gives revision feedback, or attaches an image, set "shouldGenerate": true.
 - Model Selection & Take Duration:
-  * For standard quick video takes (default): use duration: 5 or 8, and model: "pixverse-t2v" (renders fast in ~45s).
-  * When the user requests 15-60 seconds (e.g. "make it 30 seconds", "1 minute video") or asks for seedance/cinematic fidelity: set duration to the requested number. Use model: "seedance-25-t2v". Generate scenePrompts with enough unique scene descriptions (for seedance 15s takes: 30s -> 2 scenes, 45s -> 3 scenes, 60s -> 4 scenes). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits.
+  * For standard quick video takes (3-8s only): use duration: 5 or 8, and model: "pixverse-t2v" (renders fast in ~45s).
+  * CRITICAL FOR LONG VIDEOS (>8s, 15s, 30s, 45s, 60s / 1 min): You MUST set model: "seedance-25-t2v". NEVER output "pixverse-t2v" when duration is >8s or when user requests 15s, 30s, 45s, 60s, or 1 minute. Set duration to the requested number. Generate scenePrompts with enough unique scene descriptions (for seedance 15s takes: 30s -> 2 scenes, 45s -> 3 scenes, 60s -> 4 scenes). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits.
 - Singing Vocals & Lyrics:
   * If the user mentions singing, songs, lyrics, rhymes, or vocal voices, set hasVocals: true and provide lyricsPrompt formatted with [Verse] and [Chorus].
   * If the user prompt quotes lyrics or provides lines (e.g. "quack quack quack", "hop hop hop"), include those exact lines inside lyricsPrompt.
@@ -316,7 +316,12 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       lyricsPrompt,
       hasVocals,
       duration,
-      model: parsed.model || (duration > 8 || /\b(seedance|bytedance|cinematic|high fidelity|ultra quality|extended|slow motion)\b/i.test(userMessage) ? 'seedance-25-t2v' : 'pixverse-t2v'),
+      model: (() => {
+        const isLongDuration = duration > 8 || /\b(seedance|bytedance|cinematic|high fidelity|ultra quality|extended|slow motion|1\s*min|60\s*s|30\s*s|45\s*s|15\s*s)\b/i.test(userMessage);
+        if (isLongDuration) return 'seedance-25-t2v';
+        if (parsed.model && parsed.model !== 'seedance-25-t2v') return parsed.model;
+        return 'pixverse-t2v';
+      })(),
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
       agentMessage: parsed.agentMessage || (shouldGen
         ? 'Directing your video with your preferred creative style.'

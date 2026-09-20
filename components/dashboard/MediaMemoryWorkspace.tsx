@@ -422,7 +422,7 @@ export function MediaMemoryWorkspace({
     1: 'Stage 1 of 4: Creative Direction & Scene Architecture',
     2: `Stage 2 of 4: Neural Video Diffusion on ${serverModel || 'Livepeer GPU'}`,
     3: 'Stage 3 of 4: AI Soundtrack & Audio Synthesis',
-    4: 'Stage 4 of 4: Timeline Assembly & Walrus Storage',
+    4: 'Stage 4 of 4: Video Assembly & Final Encoding',
   };
 
   const activeModelName = serverModel || (generationElapsedSeconds > 45 ? 'seedance-25-t2v' : 'pixverse-t2v');

@@ -65,6 +65,14 @@ export function useAuth() {
       const data = await res.json();
       if (data.success && data.profile) {
         setCreditBalance(Number(data.profile.credit_balance ?? 10.0));
+        if (data.profile.theme === 'light' || data.profile.theme === 'dark') {
+          const isDarkTheme = data.profile.theme === 'dark';
+          document.documentElement.classList.toggle('dark', isDarkTheme);
+          try {
+            localStorage.setItem('nue-theme', data.profile.theme);
+            window.dispatchEvent(new CustomEvent('nue-theme-sync', { detail: data.profile.theme }));
+          } catch {}
+        }
       }
     } catch (e) {
       console.warn('Failed to load user profile credit balance:', e);

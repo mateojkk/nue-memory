@@ -9,14 +9,50 @@ export function ThemeToggle({ className = '' }: { className?: string }) {
 
   useEffect(() => {
     setIsDark(document.documentElement.classList.contains('dark'));
+
+    const handleSync = (e: Event) => {
+      const customEvt = e as CustomEvent<string>;
+      if (customEvt.detail === 'dark' || customEvt.detail === 'light') {
+        setIsDark(customEvt.detail === 'dark');
+      }
+    };
+
+    window.addEventListener('nue-theme-sync', handleSync);
+    return () => window.removeEventListener('nue-theme-sync', handleSync);
   }, []);
 
   function toggle() {
     const next = !isDark;
     setIsDark(next);
     document.documentElement.classList.toggle('dark', next);
+    const themeStr = next ? 'dark' : 'light';
     try {
-      localStorage.setItem('nue-theme', next ? 'dark' : 'light');
+      localStorage.setItem('nue-theme', themeStr);
+    } catch {}
+
+    // Persist theme to database for authenticated user
+    try {
+      const saved = localStorage.getItem('nue_demo_user') || sessionStorage.getItem('nue_demo_user');
+      let userEmail: string | null = null;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          userEmail = parsed?.email || null;
+        } catch {
+          userEmail = saved;
+        }
+      }
+      if (!userEmail) {
+        userEmail = localStorage.getItem('nue_user_email');
+      }
+
+      if (userEmail) {
+        fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: userEmail, action: 'set_theme', theme: themeStr }),
+        }).catch((err) => console.warn('Theme DB save error:', err));
+      }
     } catch {}
   }
 

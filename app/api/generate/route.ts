@@ -523,9 +523,12 @@ export async function POST(request: Request) {
     // Step 7: Dispatch media generation to Livepeer (<3s synchronous)
     const isImageToVideo = Boolean(validatedImageUrl);
     const rawRequestedDuration = directorBrief.duration || (directorBrief.model?.includes('seedance') ? 15 : 5);
-    const modelToUse: string = isImageToVideo
+    let modelToUse: string = isImageToVideo
       ? (directorBrief.model?.includes('pixverse') ? 'pixverse-i2v' : 'seedance-25-i2v')
-      : directorBrief.model || (rawRequestedDuration > 8 ? 'seedance-25-t2v' : 'pixverse-t2v');
+      : ((rawRequestedDuration > 8 || directorBrief.model?.includes('seedance')) ? 'seedance-25-t2v' : (directorBrief.model || 'pixverse-t2v'));
+    if (!isImageToVideo && rawRequestedDuration > 8) {
+      modelToUse = 'seedance-25-t2v';
+    }
     const expectedSla = modelToUse.includes('seedance') ? '~4 min' : '~45s';
 
     const requestedDuration = directorBrief.duration || (modelToUse.includes('seedance') ? 15 : 5);
