@@ -37,6 +37,14 @@ export interface GenerationJob {
   modelToUse?: string;
   singleTakeDuration?: number;
   effectiveDuration?: number;
+  isMultiScene?: boolean;
+  scene1JobId?: string;
+  scene2JobId?: string;
+  scene1Url?: string;
+  scene2Url?: string;
+  scene1Prompt?: string;
+  scene2Prompt?: string;
+  scenes?: any[];
 }
 
 // Global in-memory job map across requests within this server instance

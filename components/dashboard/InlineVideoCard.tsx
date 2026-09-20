@@ -9,6 +9,21 @@ interface InlineVideoCardProps {
   isLatest?: boolean;
 }
 
+function resolveMediaUrl(url?: string): string {
+  if (!url) return '';
+  if (url.includes('agent.livepeer.org/a/')) {
+    const match = url.match(/\/a\/([a-zA-Z0-9_\-=]+)/);
+    if (match) {
+      try {
+        const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = typeof window !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString('utf8');
+        if (decoded.startsWith('http')) return decoded;
+      } catch {}
+    }
+  }
+  return url;
+}
+
 export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -21,7 +36,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const videoSrc = version.mediaUrl;
+  const videoSrc = resolveMediaUrl(version.mediaUrl);
   // If the audio was muxed into the MP4 container by Livepeer assemble, do NOT play a separate audio element
   // (playing both causes a phase echo / dual-source artifact)
   const isAudioMuxed = Boolean(
@@ -31,7 +46,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
     version.agentNotes?.includes('Synchronized') ||
     (version.scenes && version.scenes.length > 0)
   );
-  const audioSrc = !isAudioMuxed ? version.audioStyle?.audioUrl : undefined;
+  const audioSrc = !isAudioMuxed ? resolveMediaUrl(version.audioStyle?.audioUrl) : undefined;
 
   useEffect(() => {
     if (version.aspectRatio) {
@@ -39,29 +54,34 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
     }
   }, [version.aspectRatio]);
 
-  const togglePlay = () => {
+  const togglePlay = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
       if (videoRef.current.muted && !isMuted) {
         videoRef.current.muted = false;
       }
-      videoRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          if (!isAudioMuxed && audioRef.current && audioSrc) {
-            audioRef.current.muted = isMuted;
-            audioRef.current.play().catch(() => {});
-          }
-        })
-        .catch((err) => {
-          console.warn('[InlineVideoCard] Playback notice:', err);
-          if (videoRef.current && !videoRef.current.muted) {
-            videoRef.current.muted = true;
-            setIsMuted(true);
-            videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-          }
-        });
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            if (!isAudioMuxed && audioRef.current && audioSrc) {
+              audioRef.current.muted = isMuted;
+              audioRef.current.play().catch(() => {});
+            }
+          })
+          .catch((err) => {
+            console.warn('[InlineVideoCard] Playback notice, retrying muted:', err);
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              setIsMuted(true);
+              videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+            }
+          });
+      }
     } else {
       videoRef.current.pause();
       if (audioRef.current) {
@@ -71,7 +91,10 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
     }
   };
 
-  const toggleMute = () => {
+  const toggleMute = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     if (!videoRef.current) return;
     const nextMuted = !isMuted;
     videoRef.current.muted = nextMuted;
@@ -90,6 +113,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
   };
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
     if (!videoRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -106,7 +130,8 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
     setCurrentTime(seekTime);
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!videoSrc) return;
     setIsDownloading(true);
     try {
@@ -150,7 +175,11 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
           src={videoSrc}
           poster={version.thumbnailUrl}
           playsInline
+          preload="auto"
+          crossOrigin="anonymous"
           muted={isMuted}
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
           onEnded={() => {
             setIsPlaying(false);
@@ -160,14 +189,21 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
               audioRef.current.currentTime = 0;
             }
           }}
-          onClick={togglePlay}
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay(e);
+          }}
           className="w-full h-full object-contain cursor-pointer"
         />
 
         {/* Big Center Play Button Overlay */}
         {!isPlaying && (
           <button
-            onClick={togglePlay}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePlay(e);
+            }}
             className="absolute inset-0 m-auto w-14 h-14 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-sm shadow-xl hover:scale-110 active:scale-95 transition-all duration-200 z-10"
             title="Play video"
           >
@@ -219,7 +255,11 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
           <div className="flex items-center justify-between text-white text-xs pt-0.5 font-mono">
             <div className="flex items-center gap-2">
               <button
-                onClick={togglePlay}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlay(e);
+                }}
                 className="p-1 rounded hover:bg-white/20 text-white transition active:scale-95"
                 title={isPlaying ? 'Pause' : 'Play'}
               >
@@ -227,7 +267,11 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
               </button>
 
               <button
-                onClick={toggleMute}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleMute(e);
+                }}
                 className="p-1 rounded hover:bg-white/20 text-white transition active:scale-95"
                 title={isMuted ? 'Unmute' : 'Mute'}
               >
@@ -242,7 +286,11 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
             <div className="flex items-center gap-1.5">
               {version.scenes && version.scenes.length > 0 && (
                 <button
-                  onClick={() => setShowStoryboard(!showStoryboard)}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowStoryboard(!showStoryboard);
+                  }}
                   className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] text-white/90 flex items-center gap-1 transition"
                   title="Toggle multi-scene storyboard breakdown"
                 >
@@ -252,6 +300,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({ version }) => 
               )}
 
               <button
+                type="button"
                 onClick={handleDownload}
                 disabled={isDownloading}
                 className="px-2.5 py-1 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-[10px] font-medium flex items-center gap-1 transition active:scale-95 shadow-xs"

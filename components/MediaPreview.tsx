@@ -12,6 +12,21 @@ interface MediaPreviewProps {
   isLoading?: boolean;
 }
 
+function resolveMediaUrl(url?: string): string {
+  if (!url) return '';
+  if (url.includes('agent.livepeer.org/a/')) {
+    const match = url.match(/\/a\/([a-zA-Z0-9_\-=]+)/);
+    if (match) {
+      try {
+        const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = typeof window !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString('utf8');
+        if (decoded.startsWith('http')) return decoded;
+      } catch {}
+    }
+  }
+  return url;
+}
+
 export const MediaPreview: React.FC<MediaPreviewProps> = ({
   version,
   allVersions,
@@ -19,15 +34,16 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   onSelectVersion,
   isLoading = false,
 }) => {
+  const resolvedMediaUrl = resolveMediaUrl(version?.mediaUrl);
   const isVideoAsset = Boolean(
-    version?.mediaUrl &&
-    (version.mediaUrl.endsWith('.mp4') ||
-     version.mediaUrl.endsWith('.webm') ||
-     version.mediaUrl.includes('.mp4') ||
-     version.mediaUrl.includes('video') ||
-     version.livepeerCapability?.includes('pixverse') ||
-     version.livepeerCapability?.includes('t2v') ||
-     version.livepeerCapability?.includes('video'))
+    resolvedMediaUrl &&
+    (resolvedMediaUrl.endsWith('.mp4') ||
+     resolvedMediaUrl.endsWith('.webm') ||
+     resolvedMediaUrl.includes('.mp4') ||
+     resolvedMediaUrl.includes('video') ||
+     version?.livepeerCapability?.includes('pixverse') ||
+     version?.livepeerCapability?.includes('t2v') ||
+     version?.livepeerCapability?.includes('video'))
   );
 
   const [isPlaying, setIsPlaying] = useState(false);
@@ -364,10 +380,12 @@ ${version.captionStyle.text}
               <>
                 <video
                   ref={videoRef}
-                  src={version.mediaUrl}
+                  src={resolvedMediaUrl}
                   loop
                   playsInline
                   autoPlay
+                  preload="auto"
+                  crossOrigin="anonymous"
                   muted={isMuted}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}

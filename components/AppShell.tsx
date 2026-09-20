@@ -265,6 +265,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       else if (data.success && data.jobId) {
         const jobId = data.jobId;
         const livepeerJobId = data.livepeerJobId;
+        const scene2JobId = data.scene2JobId;
         const audioJobId = data.audioJobId;
         const pollIntervalMs = 3000;
         const maxPollAttempts = 300; // 300 * 3s = 900s (15 min window for Seedance takes)
@@ -283,6 +284,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
             const pollUrl =
               `/api/generate?jobId=${encodeURIComponent(jobId)}` +
               (livepeerJobId ? `&livepeerJobId=${encodeURIComponent(livepeerJobId)}` : '') +
+              (scene2JobId ? `&scene2JobId=${encodeURIComponent(scene2JobId)}` : '') +
               (audioJobId ? `&audioJobId=${encodeURIComponent(audioJobId)}` : '');
 
             const pollRes = await fetch(pollUrl);

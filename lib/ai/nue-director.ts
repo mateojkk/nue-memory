@@ -33,6 +33,8 @@ Output ONLY valid JSON with these fields:
   "pacing": "fast" | "moderate" | "cinematic",
   "audioStyle": "description of audio mood (e.g. 'Deep ambient atmospheric', 'Upbeat electronic', 'Cheerful kids song')",
   "audioEnabled": true | false,
+  "lyricsPrompt": "[Verse]\nSung lyric line 1\nSung lyric line 2..." (REQUIRED whenever user requests singing, lyrics, song, vocal melody, or nursery rhyme. Structure the sung words with [Verse] / [Chorus] tags. Do NOT leave empty if user provided lyrics or asked for singing.),
+  "hasVocals": true | false (true if user asked for singing vocals, lyrics, song, or nursery rhyme; false for instrumental beat),
   "duration": number (seconds, e.g. 30, 45, or 60 if requested by user, or 5-8 for short takes),
   "model": "seedance-25-t2v" | "pixverse-t2v" | "ltx-25-t2v-pro",
   "aspectRatio": "16:9" | "9:16" | "1:1",
@@ -42,6 +44,9 @@ Output ONLY valid JSON with these fields:
 Guidelines:
 - CRITICAL: If the user says "hi", "hello", "hey", asks a general question, asks about starting a new chat, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and answer their question directly.
 - If the user describes a scene, asks to create a video, gives revision feedback, or attaches an image, set "shouldGenerate": true.
+- Singing Vocals & Lyrics:
+  * If the user mentions singing, songs, lyrics, rhymes, or vocal voices, set hasVocals: true and provide lyricsPrompt formatted with [Verse] and [Chorus].
+  * If the user prompt quotes lyrics or provides lines (e.g. "quack quack quack", "hop hop hop"), include those exact lines inside lyricsPrompt.
 - Video duration and multi-scene sequences:
   * When the user requests 15-60 seconds (e.g. "make it 30 seconds", "1 minute video"): set duration to the requested number. Use model: "seedance-25-t2v" by default. Generate scenePrompts with enough unique scene descriptions (for seedance 15s takes: 30s -> 2 scenes, 45s -> 3 scenes, 60s -> 4 scenes). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits.
   * For standard single-scene requests without explicit duration, set duration: 10 or 15. Do NOT include scenePrompts.
@@ -60,6 +65,8 @@ export interface DirectorResult {
   pacing: 'fast' | 'moderate' | 'cinematic';
   audioStyle: string;
   audioEnabled: boolean;
+  lyricsPrompt?: string;
+  hasVocals?: boolean;
   duration: number;
   model: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
@@ -275,6 +282,29 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       if (scenePrompts!.length === 0) scenePrompts = undefined;
     }
 
+    // Extract singing vocals and lyrics
+    const hasLyricsIntent = /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
+    const hasVocals = parsed.hasVocals !== undefined ? Boolean(parsed.hasVocals) : hasLyricsIntent;
+    let lyricsPrompt = typeof parsed.lyricsPrompt === 'string' && parsed.lyricsPrompt.trim()
+      ? parsed.lyricsPrompt.trim()
+      : undefined;
+
+    if (!lyricsPrompt && hasLyricsIntent) {
+      // Fallback: extract lyrics if quoted in userMessage or create from prompt context
+      const quotes = Array.from(userMessage.matchAll(/"([^"]+)"/g)).map((m) => m[1]);
+      if (quotes.length > 0) {
+        lyricsPrompt = `[Verse]\n${quotes.join('\n')}`;
+      } else {
+        const phrases = userMessage
+          .split(/[,.\n]+/)
+          .map((s) => s.trim())
+          .filter((s) => s.length > 5 && s.length < 80 && !/^(a |the |in a |with a |lasting |create |make )/i.test(s));
+        if (phrases.length > 0) {
+          lyricsPrompt = `[Verse]\n${phrases.slice(0, 4).join('\n')}`;
+        }
+      }
+    }
+
     return {
       shouldGenerate: shouldGen,
       enrichedPrompt: parsed.enrichedPrompt || parsed.prompt || userMessage || text,
@@ -283,6 +313,8 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       pacing: ['fast', 'moderate', 'cinematic'].includes(parsed.pacing) ? parsed.pacing : 'moderate',
       audioStyle: parsed.audioStyle || 'Ambient modern electronic',
       audioEnabled: parsed.audioEnabled !== false,
+      lyricsPrompt,
+      hasVocals,
       duration,
       model: parsed.model || 'seedance-25-t2v',
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
@@ -300,13 +332,19 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
     const dur = Math.max(3, Math.min(60, parsedDur));
     const model = 'seedance-25-t2v';
 
+    const hasLyricsIntent = /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
+    const quotes = Array.from(userMessage.matchAll(/"([^"]+)"/g)).map((m) => m[1]);
+    const fallbackLyrics = quotes.length > 0 ? `[Verse]\n${quotes.join('\n')}` : undefined;
+
     return {
       shouldGenerate: shouldGen,
       enrichedPrompt: userMessage,
       visualTheme: 'Creative Direction',
       pacing: 'moderate',
-      audioStyle: 'Ambient modern electronic',
+      audioStyle: hasLyricsIntent ? 'Cheerful melodic song' : 'Ambient modern electronic',
       audioEnabled: true,
+      lyricsPrompt: fallbackLyrics,
+      hasVocals: hasLyricsIntent,
       duration: dur,
       model,
       aspectRatio: '16:9',

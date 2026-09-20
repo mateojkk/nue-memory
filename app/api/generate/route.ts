@@ -17,6 +17,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
     const paramLivepeerJobId = searchParams.get('livepeerJobId') || undefined;
+    const paramScene2JobId = searchParams.get('scene2JobId') || undefined;
     const paramAudioJobId = searchParams.get('audioJobId') || undefined;
 
     if (!jobId) {
@@ -30,6 +31,186 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, job });
     }
 
+    // MULTI-SCENE 30S PIPELINE
+    if (job?.isMultiScene) {
+      const scene1JobId = job.scene1JobId || job.livepeerJobId || paramLivepeerJobId;
+      const scene2JobId = job.scene2JobId || paramScene2JobId;
+      let scene1Url = job.scene1Url;
+      let scene2Url = job.scene2Url;
+
+      // Poll Scene 1 if not done
+      if (!scene1Url && scene1JobId) {
+        const poll1 = await livepeerAgent.pollJobStatus(scene1JobId);
+        if (poll1.status === 'failed') {
+          updateJob(jobId, { status: 'failed', error: poll1.error || 'Livepeer Scene 1 render failed.' });
+          return NextResponse.json({
+            success: true,
+            job: { status: 'failed', error: poll1.error || 'Livepeer Scene 1 render failed.' },
+          });
+        }
+        if (poll1.status === 'completed' && poll1.url) {
+          scene1Url = poll1.url;
+          updateJob(jobId, { scene1Url });
+        }
+      }
+
+      // Poll Scene 2 if not done
+      if (!scene2Url && scene2JobId) {
+        const poll2 = await livepeerAgent.pollJobStatus(scene2JobId);
+        if (poll2.status === 'failed') {
+          updateJob(jobId, { status: 'failed', error: poll2.error || 'Livepeer Scene 2 render failed.' });
+          return NextResponse.json({
+            success: true,
+            job: { status: 'failed', error: poll2.error || 'Livepeer Scene 2 render failed.' },
+          });
+        }
+        if (poll2.status === 'completed' && poll2.url) {
+          scene2Url = poll2.url;
+          updateJob(jobId, { scene2Url });
+        }
+      }
+
+      // If either scene is still rendering, return combined progress
+      if (!scene1Url || !scene2Url) {
+        const elapsedSec = Math.max(1, Math.round((Date.now() - new Date(job.createdAt).getTime()) / 1000));
+        const modelName = job.modelToUse || 'seedance-25-t2v';
+        const progress = Math.min(88, 20 + Math.round((elapsedSec / 240) * 65));
+        const stageDescription = scene1Url
+          ? `Scene 1 take ready (15s), Scene 2 finishing (${elapsedSec}s / ~4 min)...`
+          : scene2Url
+          ? `Scene 2 take ready (15s), Scene 1 finishing (${elapsedSec}s / ~4 min)...`
+          : `Rendering 30s takes (Scene 1 & Scene 2 in parallel on ${modelName}, ${elapsedSec}s / ~4 min)...`;
+
+        updateJob(jobId, { progress, stageDescription });
+        return NextResponse.json({
+          success: true,
+          job: {
+            id: jobId,
+            status: 'rendering',
+            progress,
+            stageDescription,
+          },
+        });
+      }
+
+      // Both scenes finished! Poll audio if pending
+      const modelName = job.modelToUse || 'seedance-25-t2v';
+      const directorBrief = job.directorBrief;
+      const syntheticPreferences = job.syntheticPreferences || [];
+      let finalAudioUrl = job.audioUrl;
+
+      const audioJobId = job.audioJobId || paramAudioJobId;
+      if (!finalAudioUrl && audioJobId) {
+        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId);
+        if (audioPoll.status === 'completed' && audioPoll.url) {
+          finalAudioUrl = audioPoll.url;
+          updateJob(jobId, { audioUrl: finalAudioUrl });
+        }
+      }
+
+      // Assemble 30s timeline with audio
+      let finalMediaUrl = scene1Url;
+      let wasMuxed = false;
+      try {
+        const assembled = await livepeerAgent.assembleTimeline({
+          clips: [
+            { src: scene1Url, title: 'Scene 1: Opening' },
+            { src: scene2Url, title: 'Scene 2: Finale' },
+          ],
+          audioUrl: finalAudioUrl,
+          transition: 'cut',
+        });
+        if (assembled) {
+          finalMediaUrl = assembled;
+          wasMuxed = true;
+        }
+      } catch (e) {
+        console.warn('[generate:GET] assembleTimeline 30s notice:', e);
+      }
+
+      const versionNumber = job.versionNumber || 1;
+      const scenes = [
+        {
+          sceneNumber: 1,
+          durationSeconds: 15,
+          title: 'Scene 1: Opening Take',
+          prompt: job.scene1Prompt || directorBrief?.scenePrompts?.[0] || 'Scene 1',
+          mediaUrl: scene1Url,
+          model: modelName,
+        },
+        {
+          sceneNumber: 2,
+          durationSeconds: 15,
+          title: 'Scene 2: Narrative Finale',
+          prompt: job.scene2Prompt || directorBrief?.scenePrompts?.[1] || 'Scene 2',
+          mediaUrl: scene2Url,
+          model: modelName,
+        },
+      ];
+
+      let truthfulDirectorMessage = directorBrief?.agentMessage || 'Your 30-second multi-scene video has been directed and assembled successfully.';
+      truthfulDirectorMessage = truthfulDirectorMessage
+        .replace(/\b(?:8|15)[- ]seconds?\b/gi, '30-second')
+        .replace(/\b(?:8|15)s\b/gi, '30s');
+
+      const mediaVersion: MediaVersion = {
+        versionNumber,
+        createdAt: new Date().toISOString(),
+        brief: directorBrief?.enrichedPrompt || '30s AI Video Take',
+        enrichedBrief: directorBrief?.enrichedPrompt || '30s AI Video Take',
+        appliedPreferences: syntheticPreferences,
+        mediaUrl: finalMediaUrl,
+        aspectRatio: directorBrief?.aspectRatio || '16:9',
+        pacing: directorBrief?.pacing || 'cinematic',
+        captionStyle: {
+          enabled: true,
+          size: 'medium',
+          highlight: 'NUE MOTION',
+          text: directorBrief?.enrichedPrompt?.slice(0, 48) || 'Nue Motion',
+        },
+        audioStyle: {
+          enabled: Boolean(directorBrief?.audioEnabled),
+          style: directorBrief?.audioStyle || 'Melodic',
+          tempo: directorBrief?.audioEnabled ? 'ambient' : 'none',
+          audioUrl: wasMuxed ? undefined : finalAudioUrl,
+          isMuxed: wasMuxed,
+        },
+        visualTheme: directorBrief?.visualTheme || 'Cinematic',
+        agentNotes: `Livepeer Agent sequenced 2 scenes into a continuous 30s timeline via [${modelName} + assemble].`,
+        generationDurationSeconds: 30,
+        livepeerCapability: `${modelName} + assemble`,
+        scenes,
+      };
+
+      const result = {
+        mediaVersion,
+        enrichedPrompt: directorBrief?.enrichedPrompt,
+        appliedMemories: syntheticPreferences,
+        directorMessage: truthfulDirectorMessage,
+        summaryTokens: [directorBrief?.visualTheme || 'Cinematic', directorBrief?.pacing || 'cinematic', '30s'],
+        retrievalCount: syntheticPreferences.length,
+      };
+
+      updateJob(jobId, {
+        status: 'completed',
+        progress: 100,
+        stageDescription: '30-second video assembly complete',
+        result,
+      });
+
+      return NextResponse.json({
+        success: true,
+        job: {
+          id: jobId,
+          status: 'completed',
+          progress: 100,
+          stageDescription: '30-second video assembly complete',
+          result,
+        },
+      });
+    }
+
+    // SINGLE-SCENE PIPELINE (duration <= 15)
     const livepeerJobId = job?.livepeerJobId || paramLivepeerJobId;
     if (!livepeerJobId) {
       if (job) return NextResponse.json({ success: true, job });
@@ -322,8 +503,113 @@ export async function POST(request: Request) {
       ? (directorBrief.model?.includes('pixverse') ? 'pixverse-i2v' : 'seedance-25-i2v')
       : directorBrief.model || 'seedance-25-t2v';
 
+    const requestedDuration = directorBrief.duration || 15;
+    const isMultiScene = !isImageToVideo && requestedDuration > 15;
+
+    // Dispatch background soundtrack in parallel if requested (with singing vocals / lyrics support)
+    let audioJobId: string | undefined;
+    let audioUrl: string | undefined;
+    if (directorBrief.audioEnabled && directorBrief.audioStyle) {
+      const isVocal = Boolean(directorBrief.hasVocals || directorBrief.lyricsPrompt);
+      const audioPrompt = isVocal
+        ? `${directorBrief.audioStyle} with expressive melodious singing voice, clear child-friendly song cadence`
+        : `${directorBrief.audioStyle} soundtrack, ${directorBrief.pacing === 'fast' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation`;
+
+      const audioArgs: Record<string, any> = {
+        action: 'music',
+        prompt: audioPrompt,
+        async: true,
+      };
+
+      if (isVocal) {
+        audioArgs.instrumental = false;
+        if (directorBrief.lyricsPrompt) {
+          audioArgs.lyrics_prompt = directorBrief.lyricsPrompt;
+        }
+      }
+
+      const audioDispatch = await livepeerAgent.dispatchCreateMedia(audioArgs);
+      if (audioDispatch.url) audioUrl = audioDispatch.url;
+      else if (audioDispatch.jobId) audioJobId = audioDispatch.jobId;
+    }
+
+    const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    createJob({
+      id: jobId,
+      userId: effectiveUserId,
+      projectTitle: sanitizedTitle,
+      versionNumber: Number(versionNumber) || 1,
+    });
+
+    if (isMultiScene) {
+      let scene1Prompt = directorBrief.scenePrompts?.[0];
+      let scene2Prompt = directorBrief.scenePrompts?.[1];
+      if (!scene1Prompt || !scene2Prompt) {
+        scene1Prompt = `${directorBrief.enrichedPrompt} (Scene 1 Opening: character entrance and starting choreography)`;
+        scene2Prompt = `${directorBrief.enrichedPrompt} (Scene 2 Finale: celebratory high-energy dancing and group sync)`;
+      }
+
+      const [scene1Dispatch, scene2Dispatch] = await Promise.all([
+        livepeerAgent.dispatchCreateMedia({
+          action: 'generate',
+          prompt: `${scene1Prompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
+          model_override: modelToUse,
+          duration: 15,
+        }),
+        livepeerAgent.dispatchCreateMedia({
+          action: 'generate',
+          prompt: `${scene2Prompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
+          model_override: modelToUse,
+          duration: 15,
+        }),
+      ]);
+
+      if (scene1Dispatch.status === 'failed' && scene2Dispatch.status === 'failed') {
+        return NextResponse.json({
+          success: false,
+          error: scene1Dispatch.error || scene2Dispatch.error || 'Failed to dispatch media generation to Livepeer.',
+        }, { status: 500 });
+      }
+
+      updateJob(jobId, {
+        status: 'rendering',
+        progress: 20,
+        stageDescription: `Directing 30s multi-scene sequence on ${modelToUse} (Scene 1 & Scene 2 in parallel)...`,
+        isMultiScene: true,
+        scene1JobId: scene1Dispatch.jobId,
+        scene2JobId: scene2Dispatch.jobId,
+        scene1Url: scene1Dispatch.url,
+        scene2Url: scene2Dispatch.url,
+        scene1Prompt,
+        scene2Prompt,
+        livepeerJobId: scene1Dispatch.jobId,
+        audioJobId,
+        audioUrl,
+        directorBrief,
+        syntheticPreferences,
+        modelToUse,
+        singleTakeDuration: 30,
+        effectiveDuration: 30,
+      });
+
+      return NextResponse.json({
+        success: true,
+        jobId,
+        status: 'rendering',
+        livepeerJobId: scene1Dispatch.jobId,
+        scene2JobId: scene2Dispatch.jobId,
+        audioJobId,
+        isMultiScene: true,
+        model: modelToUse,
+        stageDescription: `Directing 30s multi-scene sequence on ${modelToUse} (Scene 1 & Scene 2 in parallel)...`,
+        progress: 20,
+      });
+    }
+
+    // Single-scene path (duration <= 15)
     const singleTakeDuration = modelToUse.includes('seedance')
-      ? Math.min(15, Math.max(5, directorBrief.duration || 15))
+      ? Math.min(15, Math.max(5, requestedDuration))
       : 8;
 
     const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
@@ -345,29 +631,6 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
-    // Dispatch background soundtrack in parallel if requested
-    let audioJobId: string | undefined;
-    let audioUrl: string | undefined;
-    if (directorBrief.audioEnabled && directorBrief.audioStyle) {
-      const audioPrompt = `${directorBrief.audioStyle} soundtrack, ${directorBrief.pacing === 'fast' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation`;
-      const audioDispatch = await livepeerAgent.dispatchCreateMedia({
-        action: 'music',
-        prompt: audioPrompt,
-      });
-      if (audioDispatch.url) audioUrl = audioDispatch.url;
-      else if (audioDispatch.jobId) audioJobId = audioDispatch.jobId;
-    }
-
-    const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-
-    // Create job in registry with all contextual metadata
-    createJob({
-      id: jobId,
-      userId: effectiveUserId,
-      projectTitle: sanitizedTitle,
-      versionNumber: Number(versionNumber) || 1,
-    });
-
     updateJob(jobId, {
       status: 'rendering',
       progress: 25,
@@ -382,7 +645,6 @@ export async function POST(request: Request) {
       effectiveDuration: singleTakeDuration,
     });
 
-    // Return immediate response with jobId and livepeerJobId in <8 seconds total
     return NextResponse.json({
       success: true,
       jobId,

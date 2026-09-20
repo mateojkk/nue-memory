@@ -1,5 +1,28 @@
 import { MediaPreference, MediaVersion, GenerateMediaRequest } from './types';
 
+/**
+ * Unwraps Livepeer proxy URLs (https://agent.livepeer.org/a/...) to direct cloud storage URLs
+ * (https://storage.googleapis.com/...) so browsers can perform byte-range requests and seamless playback.
+ */
+export function unwrapLivepeerUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.includes('agent.livepeer.org/a/')) {
+    const match = url.match(/\/a\/([a-zA-Z0-9_\-=]+)/);
+    if (match) {
+      try {
+        const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = typeof Buffer !== 'undefined'
+          ? Buffer.from(b64, 'base64').toString('utf8')
+          : atob(b64);
+        if (decoded.startsWith('http')) {
+          return decoded;
+        }
+      } catch {}
+    }
+  }
+  return url;
+}
+
 export class LivepeerMediaAgent {
   private endpoint: string;
   private bearer?: string;
@@ -155,7 +178,7 @@ export class LivepeerMediaAgent {
         const data = await res.json();
         const content = data.result?.structuredContent;
         if (content?.url && (!content?.warnings || content.warnings.length === 0)) {
-          return content.url;
+          return unwrapLivepeerUrl(content.url);
         }
       }
     } catch (err) {
@@ -211,7 +234,7 @@ export class LivepeerMediaAgent {
       if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
         return {
           status: 'completed',
-          url: content.url,
+          url: unwrapLivepeerUrl(content.url),
           capability: content.capability || args.model_override,
         };
       }
@@ -268,7 +291,7 @@ export class LivepeerMediaAgent {
       if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
         return {
           status: 'completed',
-          url: content.url,
+          url: unwrapLivepeerUrl(content.url),
           capability: content.capability,
         };
       }
