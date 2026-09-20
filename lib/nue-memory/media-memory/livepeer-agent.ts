@@ -448,10 +448,13 @@ export class LivepeerMediaAgent {
         scale: options.scale ?? 0.18,
         opacity: options.opacity ?? 0.9,
       };
-      if (options.imageUrl) args.image_url = options.imageUrl;
-      if (options.name) args.name = options.name;
-      if (options.title) args.title = options.title;
-      if (options.brandColor) args.brand_color = options.brandColor;
+      if (options.imageUrl) {
+        args.image_url = options.imageUrl;
+      } else {
+        args.name = options.name || 'Nue Motion';
+        args.title = options.title || 'AI Studio';
+        args.brand_color = options.brandColor || '#fbbf24';
+      }
 
       const res = await fetch(this.endpoint, {
         method: 'POST',
@@ -581,6 +584,53 @@ export class LivepeerMediaAgent {
       }
     } catch (err) {
       console.warn('[LivepeerAgent] generateSpeech error:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Mixes multiple audio stems (e.g. voiceover narration + ducked background music) using Livepeer ffmpeg-audio-mix
+   */
+  public async mixAudioTracks(options: {
+    tracks: Array<{ url: string; volume?: number; delay_ms?: number }>;
+  }): Promise<string | null> {
+    try {
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'create_media',
+            arguments: {
+              action: 'mix_tracks',
+              tracks: options.tracks,
+            },
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      if (content?.url) return unwrapLivepeerUrl(content.url);
+      if (content?.job_id) {
+        const jobId = content.job_id;
+        for (let i = 0; i < 20; i++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          const poll = await this.pollJobStatus(jobId);
+          if (poll.status === 'completed' && poll.url) return poll.url;
+          if (poll.status === 'failed') break;
+        }
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] mixAudioTracks error:', err);
     }
     return null;
   }

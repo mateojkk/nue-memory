@@ -270,6 +270,7 @@ export function NueDashboard({
             currentProjectIndex={currentProjectIndex}
             onSelectProject={onSelectProject}
             onRefreshProjects={onRefreshProjects}
+            userEmail={userEmail}
           />
         )}
 

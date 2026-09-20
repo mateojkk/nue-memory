@@ -8,6 +8,7 @@ interface InlineVideoCardProps {
   version: MediaVersion;
   isLatest?: boolean;
   projectId?: string;
+  userEmail?: string;
   onRefreshProjects?: () => void;
 }
 
@@ -30,6 +31,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   version,
   isLatest,
   projectId,
+  userEmail,
   onRefreshProjects,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -51,10 +53,11 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
     setActiveStudioAction(action);
     setStudioFeedback(null);
     try {
+      const emailToUse = userEmail || (typeof window !== 'undefined' ? localStorage.getItem('nue_user_email') : undefined);
       const res = await fetch('/api/studio-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, action }),
+        body: JSON.stringify({ projectId, email: emailToUse, action }),
       });
       const data = await res.json();
       if (data.success) {

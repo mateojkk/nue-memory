@@ -65,6 +65,7 @@ interface MediaMemoryWorkspaceProps {
   currentProjectIndex?: number;
   onSelectProject?: (index: number) => void;
   onRefreshProjects?: () => void;
+  userEmail?: string;
 }
 
 export function MediaMemoryWorkspace({
@@ -73,6 +74,7 @@ export function MediaMemoryWorkspace({
   allVersions,
   onSelectVersion,
   onRefreshProjects,
+  userEmail,
   isGenerating,
   generationStage = 'thinking',
   generationElapsedSeconds = 0,
@@ -899,6 +901,7 @@ export function MediaMemoryWorkspace({
                             version={matchingVersion}
                             isLatest={index === realMessages.length - 1}
                             projectId={activeProject?.id}
+                            userEmail={userEmail}
                             onRefreshProjects={onRefreshProjects}
                           />
                         )}

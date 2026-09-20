@@ -4,19 +4,13 @@ import { authenticateRequest } from '@/lib/auth/server';
 import { LivepeerMediaAgent } from '@/lib/nue-memory/media-memory/livepeer-agent';
 import { MediaVersion } from '@/lib/types';
 
+export const runtime = 'nodejs';
+export const maxDuration = 300;
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { projectId, email: emailInput, action, options } = body;
-
-    // 1. Authenticate caller identity
-    const auth = await authenticateRequest(request, emailInput);
-    if (!auth.authenticated || !auth.email) {
-      return NextResponse.json(
-        { success: false, error: auth.error || 'Authentication required' },
-        { status: 401 }
-      );
-    }
 
     if (!projectId || !action) {
       return NextResponse.json(
@@ -32,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Fetch project record
+    // 1. Fetch project record to verify existence and ownership
     const { data: projectRow, error: fetchErr } = await supabase
       .from('projects')
       .select('*')
@@ -43,6 +37,16 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: fetchErr?.message || 'Project not found' },
         { status: 404 }
+      );
+    }
+
+    // 2. Authenticate caller identity (allow matching project owner or bearer token)
+    const callerEmail = emailInput || projectRow.user_id;
+    const auth = await authenticateRequest(request, callerEmail);
+    if (!auth.authenticated || !auth.email) {
+      return NextResponse.json(
+        { success: false, error: auth.error || 'Authentication required' },
+        { status: 401 }
       );
     }
 
@@ -85,16 +89,26 @@ export async function POST(request: Request) {
           captionPosition: options?.captionPosition || 'bottom',
           language: options?.language,
         });
-        if (!subRes || !subRes.url) {
+
+        if (!subRes) {
           return NextResponse.json(
-            { success: false, error: 'Subtitle burning did not produce a video' },
+            { success: false, error: 'Livepeer transcription service was temporarily unreachable' },
             { status: 502 }
           );
         }
+
+        if (subRes.warning && (!subRes.srt || subRes.srt.length === 0)) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'No audible lyrics or spoken dialogue detected in this clip to generate timed subtitles.',
+            },
+            { status: 422 }
+          );
+        }
+
         newMediaUrl = subRes.url;
-        newNote = subRes.warning
-          ? `Livepeer transcribe notice: ${subRes.warning}`
-          : `Livepeer transcribe: Timed karaoke subtitles burned into video`;
+        newNote = `Livepeer transcribe (ffmpeg-burn-subtitles): Hardcoded timed karaoke captions onto video`;
         break;
       }
 
@@ -106,13 +120,13 @@ export async function POST(request: Request) {
         });
         if (!refRes) {
           return NextResponse.json(
-            { success: false, error: 'Video reframing to 9:16 failed' },
+            { success: false, error: 'Livepeer video reframing to 9:16 failed' },
             { status: 502 }
           );
         }
         newMediaUrl = refRes;
         newAspectRatio = '9:16';
-        newNote = `Livepeer edit_clip (ffmpeg-reframe): Converted to 9:16 vertical for TikTok & Reels`;
+        newNote = `Livepeer edit_clip (ffmpeg-reframe): Converted to 9:16 vertical portrait for TikTok & Reels`;
         break;
       }
 
@@ -124,7 +138,7 @@ export async function POST(request: Request) {
         });
         if (!refRes) {
           return NextResponse.json(
-            { success: false, error: 'Video reframing to 16:9 failed' },
+            { success: false, error: 'Livepeer video reframing to 16:9 failed' },
             { status: 502 }
           );
         }
@@ -142,7 +156,7 @@ export async function POST(request: Request) {
         });
         if (!cleanRes) {
           return NextResponse.json(
-            { success: false, error: 'Speech cleaning failed' },
+            { success: false, error: 'Livepeer speech cleanup failed' },
             { status: 502 }
           );
         }
@@ -152,24 +166,24 @@ export async function POST(request: Request) {
       }
 
       case 'add_watermark': {
-        const watermarkUrl =
-          options?.watermarkUrl ||
-          'https://raw.githubusercontent.com/livepeer/brand-assets/main/logo/livepeer-symbol-green.png';
         const overlayRes = await agent.overlayBrand({
           sourceUrl: sourceMediaUrl,
-          imageUrl: watermarkUrl,
+          imageUrl: options?.watermarkUrl,
+          name: options?.name || 'Nue Motion',
+          title: options?.title || 'AI Studio',
+          brandColor: options?.brandColor || '#fbbf24',
           position: 'bottom-right',
           scale: 0.16,
           opacity: 0.85,
         });
         if (!overlayRes) {
           return NextResponse.json(
-            { success: false, error: 'Watermark overlay failed' },
+            { success: false, error: 'Livepeer watermark overlay failed' },
             { status: 502 }
           );
         }
         newMediaUrl = overlayRes;
-        newNote = `Livepeer overlay: Brand watermark composited onto bottom-right`;
+        newNote = `Livepeer overlay: Branded lower-third/watermark composited onto video`;
         break;
       }
 
@@ -184,13 +198,31 @@ export async function POST(request: Request) {
         });
         if (!voiceAudioUrl) {
           return NextResponse.json(
-            { success: false, error: 'Voiceover speech generation failed' },
+            { success: false, error: 'Livepeer voiceover speech generation failed' },
             { status: 502 }
           );
         }
+
+        let audioToMux = voiceAudioUrl;
+        const existingBgAudio = activeVersion.audioStyle?.audioUrl;
+
+        // If background music already exists, mix voiceover with ducked background music
+        if (existingBgAudio) {
+          console.log('[StudioPost] Mixing voiceover narration over ducked background music...');
+          const mixedAudio = await agent.mixAudioTracks({
+            tracks: [
+              { url: voiceAudioUrl, volume: 1.0 },
+              { url: existingBgAudio, volume: 0.35 },
+            ],
+          });
+          if (mixedAudio) {
+            audioToMux = mixedAudio;
+          }
+        }
+
         const muxedUrl = await agent.assembleTimeline({
           clips: [{ src: sourceMediaUrl }],
-          audioUrl: voiceAudioUrl,
+          audioUrl: audioToMux,
           transition: 'cut',
         });
         if (!muxedUrl) {
@@ -200,7 +232,9 @@ export async function POST(request: Request) {
           );
         }
         newMediaUrl = muxedUrl;
-        newNote = `Livepeer Gemini TTS: Spoken narration generated and synchronized with video`;
+        newNote = existingBgAudio
+          ? `Livepeer TTS + ffmpeg-audio-mix: Spoken narration layered over ducked soundtrack`
+          : `Livepeer Gemini TTS: Spoken narration generated and synchronized with video`;
         break;
       }
 
