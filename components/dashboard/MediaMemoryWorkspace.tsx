@@ -24,7 +24,6 @@ import {
   RotateCcw,
   Trash2,
   Check,
-  MessageSquarePlus,
   MessageSquare,
   History,
   Search,
@@ -527,17 +526,6 @@ export function MediaMemoryWorkspace({
                       <Edit2 className="w-2.5 h-2.5 opacity-40 group-hover:opacity-100 transition" />
                     </span>
 
-                    {onNewChat && (
-                      <button
-                        onClick={onNewChat}
-                        className="flex items-center gap-1.5 text-xs font-mono text-[var(--fg-muted)] hover:text-[var(--fg)] px-2.5 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--surface-3)] transition border-none"
-                        title="Start a new chat thread in this project (keeps your generated videos)"
-                      >
-                        <MessageSquarePlus className="w-3.5 h-3.5 text-[var(--accent)]" />
-                        <span>New Chat</span>
-                      </button>
-                    )}
-
                     {onDeleteProject && (
                       <button
                         onClick={() => {
@@ -682,7 +670,7 @@ export function MediaMemoryWorkspace({
                 value={historySearch}
                 onChange={(e) => setHistorySearch(e.target.value)}
                 placeholder="Filter sessions..."
-                className="w-full pl-8 pr-2 py-1.5 rounded-lg text-[11px] font-mono bg-[var(--surface)] text-[var(--fg)] placeholder:text-[var(--fg-faint)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                className="w-full pl-8 pr-2 py-1.5 rounded-lg text-[11px] font-mono bg-[var(--surface)] text-[var(--fg)] placeholder:text-[var(--fg-faint)] focus:outline-none focus:bg-[var(--surface-2)] border-none"
               />
             </div>
 
@@ -802,7 +790,7 @@ export function MediaMemoryWorkspace({
             {/* Center Input Box */}
             <form
               onSubmit={handleSubmit}
-              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)]/40 transition-all px-4 py-3 flex items-center gap-3"
+              className="w-full rounded-2xl bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl transition-all px-4 py-3 flex items-center gap-3 border-none"
             >
               <button
                 type="button"
@@ -1118,7 +1106,7 @@ export function MediaMemoryWorkspace({
               {/* Bottom Input Box */}
               <form
                 onSubmit={handleSubmit}
-                className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-[var(--accent)]/40 transition-all px-4 py-2.5 flex items-center gap-3"
+                className="rounded-2xl bg-[var(--surface)] shadow-md hover:shadow-lg focus-within:shadow-xl transition-all px-4 py-2.5 flex items-center gap-3 border-none"
               >
                 <button
                   type="button"

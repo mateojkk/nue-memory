@@ -235,7 +235,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
       <div
         className={`relative bg-black flex items-center justify-center overflow-hidden group select-none transition-all mx-auto ${
           aspectMode === '9:16'
-            ? 'w-[260px] sm:w-[300px] aspect-[9/16] max-h-[530px] rounded-xl my-2 shadow-lg border border-[var(--border)]'
+            ? 'w-[260px] sm:w-[300px] aspect-[9/16] max-h-[530px] rounded-xl my-2 shadow-lg overflow-hidden border-none'
             : aspectMode === '1:1'
             ? 'w-full max-w-[460px] aspect-square max-h-[460px]'
             : 'w-full aspect-video max-h-[420px]'
@@ -418,7 +418,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
       )}
 
       {/* Livepeer Studio Suite Post-Production Toolbar */}
-      <div className="px-3 py-2 bg-[var(--surface)] border-t border-[var(--border)]/60 flex items-center justify-between gap-2 flex-wrap">
+      <div className="px-3 py-2 bg-[var(--surface-2)]/60 flex items-center justify-between gap-2 flex-wrap border-none">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[10px] font-mono text-[var(--accent)] font-semibold uppercase tracking-wider flex items-center gap-1 mr-1">
             <Sparkles className="w-3 h-3 text-[var(--accent)]" />
@@ -428,7 +428,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             type="button"
             disabled={Boolean(activeStudioAction)}
             onClick={() => handleTriggerStudioAction('burn_subtitles')}
-            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50"
+            className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition border-none shadow-xs disabled:opacity-50"
             title="Burn karaoke subtitles directly into MP4 container via Livepeer transcribe"
           >
             <Subtitles className="w-3 h-3" />
@@ -438,7 +438,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             type="button"
             disabled={Boolean(activeStudioAction)}
             onClick={() => handleTriggerStudioAction('reframe_9_16')}
-            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50"
+            className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition border-none shadow-xs disabled:opacity-50"
             title="Reframe 16:9 into 9:16 vertical for TikTok & Reels via Livepeer edit_clip"
           >
             <Crop className="w-3 h-3" />
@@ -448,7 +448,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             type="button"
             disabled={Boolean(activeStudioAction)}
             onClick={() => handleTriggerStudioAction('clean_audio')}
-            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50"
+            className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition border-none shadow-xs disabled:opacity-50"
             title="Remove filler words ('um/uh') and pauses via Livepeer clean_speech"
           >
             <Wand2 className="w-3 h-3" />
@@ -458,7 +458,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             type="button"
             disabled={Boolean(activeStudioAction)}
             onClick={() => handleTriggerStudioAction('add_watermark')}
-            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50"
+            className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition border-none shadow-xs disabled:opacity-50"
             title="Composite brand watermark onto video via Livepeer overlay"
           >
             <ShieldCheck className="w-3 h-3" />
@@ -468,7 +468,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             type="button"
             disabled={Boolean(activeStudioAction)}
             onClick={() => handleTriggerStudioAction('add_voiceover')}
-            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50"
+            className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition border-none shadow-xs disabled:opacity-50"
             title="Generate spoken narration via Livepeer Gemini TTS and mix into timeline"
           >
             <Volume2 className="w-3 h-3" />
