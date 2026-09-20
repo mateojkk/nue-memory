@@ -23,6 +23,21 @@ interface GalleryItem {
   versionIndex: number;
 }
 
+function resolveMediaUrl(url?: string): string {
+  if (!url) return '';
+  if (url.includes('agent.livepeer.org/a/')) {
+    const match = url.match(/\/a\/([a-zA-Z0-9_\-=]+)/);
+    if (match) {
+      try {
+        const b64 = match[1].replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = typeof window !== 'undefined' ? atob(b64) : Buffer.from(b64, 'base64').toString('utf8');
+        if (decoded.startsWith('http')) return decoded;
+      } catch {}
+    }
+  }
+  return url;
+}
+
 interface GalleryViewProps {
   projects: CreativeProject[];
   onOpenWorkspace: () => void;
@@ -62,20 +77,22 @@ export function GalleryView({
     );
   });
 
-  const handleDownload = async (mediaUrl: string, title: string, versionNumber: number) => {
+  const handleDownload = async (mediaUrl: string, title: string, versionNumber: number, aspect?: string) => {
+    const targetUrl = resolveMediaUrl(mediaUrl);
     try {
-      const response = await fetch(mediaUrl);
+      const response = await fetch(targetUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-v${versionNumber}.mp4`;
+      const aspectTag = aspect === '9:16' ? '-9x16' : aspect === '1:1' ? '-1x1' : '';
+      a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-v${versionNumber}${aspectTag}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch {
-      window.open(mediaUrl, '_blank');
+      window.open(targetUrl, '_blank');
     }
   };
 
@@ -179,7 +196,7 @@ interface GalleryItemCardProps {
   item: GalleryItem;
   activePlayingUrl: string | null;
   setActivePlayingUrl: (url: string | null) => void;
-  onDownload: (mediaUrl: string, title: string, versionNumber: number) => void;
+  onDownload: (mediaUrl: string, title: string, versionNumber: number, aspect?: string) => void;
   onGoToChat: (projectId: string, versionIndex: number) => void;
   onDelete: (projectId: string, versionIndex: number) => void;
 }
@@ -205,7 +222,8 @@ function GalleryItemCard({
     version.agentNotes?.includes('Synchronized') ||
     (version.scenes && version.scenes.length > 0)
   );
-  const audioSrc = !isAudioMuxed ? version.audioStyle?.audioUrl : undefined;
+  const videoSrc = resolveMediaUrl(version.mediaUrl);
+  const audioSrc = !isAudioMuxed ? resolveMediaUrl(version.audioStyle?.audioUrl) : undefined;
 
   const isCurrentPlaying = activePlayingUrl === version.mediaUrl;
 
@@ -268,15 +286,15 @@ function GalleryItemCard({
       )}
 
       {/* Video Player / Thumbnail */}
-      <div className="relative aspect-video w-full bg-black/40 overflow-hidden">
+      <div className="relative aspect-video w-full bg-black overflow-hidden flex items-center justify-center">
         <video
           ref={videoRef}
-          src={version.mediaUrl}
+          src={videoSrc}
           poster={version.thumbnailUrl}
           controls
           loop
           playsInline
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           onPlay={handlePlay}
           onPause={handlePause}
           onSeeked={handleSeeked}
@@ -340,7 +358,7 @@ function GalleryItemCard({
           <div className="flex items-center gap-1.5">
             <button
               onClick={() =>
-                onDownload(version.mediaUrl, project.title, version.versionNumber)
+                onDownload(version.mediaUrl, project.title, version.versionNumber, version.aspectRatio)
               }
               className="p-1.5 rounded-md hover:bg-[var(--surface-2)] text-[var(--fg-muted)] hover:text-[var(--fg)] transition"
               title="Download MP4 video"

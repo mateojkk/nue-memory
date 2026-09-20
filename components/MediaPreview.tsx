@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink, Download, Subtitles, Crop, Wand2, ShieldCheck, Loader2, Check } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink, Download, Subtitles, Crop, Wand2, ShieldCheck, Loader2, Check, AlertCircle } from 'lucide-react';
 import { MediaVersion } from '@/lib/types';
 
 interface MediaPreviewProps {
@@ -41,11 +41,11 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   onRefreshProjects,
 }) => {
   const [activeStudioAction, setActiveStudioAction] = useState<string | null>(null);
-  const [studioFeedback, setStudioFeedback] = useState<string | null>(null);
+  const [studioFeedback, setStudioFeedback] = useState<{ text: string; isError?: boolean } | null>(null);
 
   const handleTriggerStudioAction = async (action: string) => {
     if (!projectId) {
-      setStudioFeedback('No active project found');
+      setStudioFeedback({ text: 'No active project found', isError: true });
       setTimeout(() => setStudioFeedback(null), 3000);
       return;
     }
@@ -66,15 +66,15 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       });
       const data = await res.json();
       if (data.success) {
-        setStudioFeedback(`Created Version ${data.version.versionNumber}!`);
+        setStudioFeedback({ text: `Created Version ${data.version.versionNumber}!`, isError: false });
         if (onRefreshProjects) {
           onRefreshProjects(projectId);
         }
       } else {
-        setStudioFeedback(data.error || 'Studio processing failed');
+        setStudioFeedback({ text: data.error || 'Studio processing failed', isError: true });
       }
     } catch (err: any) {
-      setStudioFeedback(err?.message || 'Network error');
+      setStudioFeedback({ text: err?.message || 'Network error', isError: true });
     } finally {
       setActiveStudioAction(null);
       setTimeout(() => setStudioFeedback(null), 4000);
@@ -225,7 +225,8 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = `nue-v${version.versionNumber}-${version.visualTheme.replace(/\s+/g, '-').toLowerCase()}.mp4`;
+      const aspectTag = aspectMode === '9:16' ? '-9x16' : aspectMode === '1:1' ? '-1x1' : '';
+      a.download = `nue-v${version.versionNumber}-${(version.visualTheme || 'motion').replace(/\s+/g, '-').toLowerCase()}${aspectTag}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -680,9 +681,17 @@ ${version.captionStyle.text}
           )}
 
           {studioFeedback && (
-            <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400">
-              <Check className="w-3 h-3" />
-              <span>{studioFeedback}</span>
+            <div
+              className={`flex items-center gap-1 text-[10px] font-mono ${
+                studioFeedback.isError ? 'text-amber-400' : 'text-emerald-400'
+              }`}
+            >
+              {studioFeedback.isError ? (
+                <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+              ) : (
+                <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+              )}
+              <span>{studioFeedback.text}</span>
             </div>
           )}
         </div>

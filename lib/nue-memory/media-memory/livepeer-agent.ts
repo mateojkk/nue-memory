@@ -177,8 +177,9 @@ export class LivepeerMediaAgent {
       if (res.ok) {
         const data = await res.json();
         const content = data.result?.structuredContent;
-        if (content?.url && (!content?.warnings || content.warnings.length === 0)) {
-          return unwrapLivepeerUrl(content.url);
+        const finalUrl = content?.url || content?.video_url;
+        if (finalUrl) {
+          return unwrapLivepeerUrl(finalUrl);
         }
       }
     } catch (err) {
@@ -644,7 +645,10 @@ export class LivepeerMediaAgent {
     subjectHint?: string;
   }): Promise<string[] | null> {
     try {
-      const args: Record<string, any> = { source_url: options.sourceUrl };
+      const args: Record<string, any> = {
+        source_url: options.sourceUrl,
+        confirm: true,
+      };
       if (options.scenes) args.scenes = options.scenes;
       if (options.subjectHint) args.subject_hint = options.subjectHint;
 

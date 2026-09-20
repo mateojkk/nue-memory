@@ -328,9 +328,14 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
     const shouldGen = !isConversational;
 
     const durMatch = userMessage.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
-    const parsedDur = durMatch ? parseInt(durMatch[1], 10) : 5;
+    const parsedDur = durMatch ? parseInt(durMatch[1], 10) : 15;
     const dur = Math.max(3, Math.min(60, parsedDur));
     const model = 'seedance-25-t2v';
+
+    const scenePrompts = dur > 15 ? [
+      `${userMessage} (Scene 1: Opening take)`,
+      `${userMessage} (Scene 2: Narrative finale)`,
+    ] : undefined;
 
     const hasLyricsIntent = /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
     const quotes = Array.from(userMessage.matchAll(/"([^"]+)"/g)).map((m) => m[1]);
@@ -339,6 +344,7 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
     return {
       shouldGenerate: shouldGen,
       enrichedPrompt: userMessage,
+      scenePrompts,
       visualTheme: 'Creative Direction',
       pacing: 'moderate',
       audioStyle: hasLyricsIntent ? 'Cheerful melodic song' : 'Ambient modern electronic',

@@ -251,12 +251,23 @@ export async function POST(request: Request) {
 
     // 4. Create new non-destructive version
     const nextVersionNumber = versions.length + 1;
+    const updatedAudioStyle = action === 'add_voiceover'
+      ? {
+          enabled: true,
+          style: targetVersion.audioStyle?.style || 'Narrated Voiceover',
+          tempo: targetVersion.audioStyle?.tempo || 'speech',
+          audioUrl: undefined,
+          isMuxed: true,
+        }
+      : targetVersion.audioStyle;
+
     const newVersion: MediaVersion = {
       ...targetVersion,
       versionNumber: nextVersionNumber,
       createdAt: new Date().toISOString(),
       mediaUrl: newMediaUrl,
       aspectRatio: newAspectRatio || targetVersion.aspectRatio || '16:9',
+      audioStyle: updatedAudioStyle,
       livepeerCapability: `Livepeer Studio [${action}]`,
       agentNotes: newNote,
     };

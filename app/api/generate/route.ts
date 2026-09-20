@@ -38,6 +38,15 @@ export async function GET(request: Request) {
       let scene1Url = job.scene1Url;
       let scene2Url = job.scene2Url;
 
+      // Validate that scene jobs exist
+      if ((!scene1Url && !scene1JobId) || (!scene2Url && !scene2JobId)) {
+        updateJob(jobId, { status: 'failed', error: 'Multi-scene job configuration missing scene identifiers.' });
+        return NextResponse.json({
+          success: true,
+          job: { status: 'failed', error: 'Multi-scene job configuration missing scene identifiers.' },
+        });
+      }
+
       // Poll Scene 1 if not done
       if (!scene1Url && scene1JobId) {
         const poll1 = await livepeerAgent.pollJobStatus(scene1JobId);
@@ -129,6 +138,7 @@ export async function GET(request: Request) {
       }
 
       const versionNumber = job.versionNumber || 1;
+      const actualDuration = wasMuxed ? 30 : 15;
       const scenes = [
         {
           sceneNumber: 1,
@@ -148,16 +158,22 @@ export async function GET(request: Request) {
         },
       ];
 
-      let truthfulDirectorMessage = directorBrief?.agentMessage || 'Your 30-second multi-scene video has been directed and assembled successfully.';
-      truthfulDirectorMessage = truthfulDirectorMessage
-        .replace(/\b(?:8|15)[- ]seconds?\b/gi, '30-second')
-        .replace(/\b(?:8|15)s\b/gi, '30s');
+      let truthfulDirectorMessage = directorBrief?.agentMessage || 'Your video has been directed and composed successfully.';
+      if (wasMuxed) {
+        truthfulDirectorMessage = truthfulDirectorMessage
+          .replace(/\b(?:8|15)[- ]seconds?\b/gi, '30-second')
+          .replace(/\b(?:8|15)s\b/gi, '30s');
+      } else {
+        truthfulDirectorMessage = truthfulDirectorMessage
+          .replace(/\b30[- ]seconds?\b/gi, '15-second')
+          .replace(/\b30s\b/gi, '15s');
+      }
 
       const mediaVersion: MediaVersion = {
         versionNumber,
         createdAt: new Date().toISOString(),
-        brief: directorBrief?.enrichedPrompt || '30s AI Video Take',
-        enrichedBrief: directorBrief?.enrichedPrompt || '30s AI Video Take',
+        brief: directorBrief?.enrichedPrompt || `${actualDuration}s AI Video Take`,
+        enrichedBrief: directorBrief?.enrichedPrompt || `${actualDuration}s AI Video Take`,
         appliedPreferences: syntheticPreferences,
         mediaUrl: finalMediaUrl,
         aspectRatio: directorBrief?.aspectRatio || '16:9',
@@ -176,9 +192,11 @@ export async function GET(request: Request) {
           isMuxed: wasMuxed,
         },
         visualTheme: directorBrief?.visualTheme || 'Cinematic',
-        agentNotes: `Livepeer Agent sequenced 2 scenes into a continuous 30s timeline via [${modelName} + assemble].`,
-        generationDurationSeconds: 30,
-        livepeerCapability: `${modelName} + assemble`,
+        agentNotes: wasMuxed
+          ? `Livepeer Agent sequenced 2 scenes into a continuous 30s timeline via [${modelName} + assemble].`
+          : `Livepeer Agent composed Scene 1 take (15s) on ${modelName}. Multi-scene assembly fallback applied.`,
+        generationDurationSeconds: actualDuration,
+        livepeerCapability: wasMuxed ? `${modelName} + assemble` : modelName,
         scenes,
       };
 
@@ -187,7 +205,7 @@ export async function GET(request: Request) {
         enrichedPrompt: directorBrief?.enrichedPrompt,
         appliedMemories: syntheticPreferences,
         directorMessage: truthfulDirectorMessage,
-        summaryTokens: [directorBrief?.visualTheme || 'Cinematic', directorBrief?.pacing || 'cinematic', '30s'],
+        summaryTokens: [directorBrief?.visualTheme || 'Cinematic', directorBrief?.pacing || 'cinematic', `${actualDuration}s`],
         retrievalCount: syntheticPreferences.length,
       };
 
@@ -565,10 +583,15 @@ export async function POST(request: Request) {
         }),
       ]);
 
-      if (scene1Dispatch.status === 'failed' && scene2Dispatch.status === 'failed') {
+      if (
+        scene1Dispatch.status === 'failed' ||
+        scene2Dispatch.status === 'failed' ||
+        (!scene1Dispatch.jobId && !scene1Dispatch.url) ||
+        (!scene2Dispatch.jobId && !scene2Dispatch.url)
+      ) {
         return NextResponse.json({
           success: false,
-          error: scene1Dispatch.error || scene2Dispatch.error || 'Failed to dispatch media generation to Livepeer.',
+          error: scene1Dispatch.error || scene2Dispatch.error || 'Failed to dispatch one of the multi-scene takes to Livepeer.',
         }, { status: 500 });
       }
 
