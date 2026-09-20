@@ -466,13 +466,17 @@ export class LivepeerMediaAgent {
           if (content.capability) {
             livepeerCapability = content.capability;
           }
-        } else if (content?.job_id && (content.status === 'pending' || content.status === 'running')) {
           // Asynchronous long-form job (e.g. seedance-25-t2v). Poll until complete or max poll threshold reached.
           const jobId = content.job_id;
           console.log(`[LivepeerAgent] Async job ${jobId} initiated for ${modelToUse} (${effectiveDuration}s). Polling...`);
-          const maxAttempts = 35; // 35 * 5s = 175s (~3 minutes) for natural high-fidelity Seedance completion
+          // Livepeer official SLA: seedance-25-t2v p50 is 230s (~3.8m). Allow up to 65 attempts * 5s = 325s.
+          const maxAttempts = modelToUse.includes('seedance') ? 65 : 25;
+          const expectedSla = modelToUse.includes('seedance') ? '230s' : '38s';
           for (let attempt = 0; attempt < maxAttempts; attempt++) {
-            onProgress?.(Math.min(75, 30 + Math.round(attempt * 1.3)), `Rendering video take on ${modelToUse} (${(attempt + 1) * 5}s)...`);
+            onProgress?.(
+              Math.min(78, 25 + Math.round((attempt / maxAttempts) * 53)),
+              `Rendering on ${modelToUse} (${(attempt + 1) * 5}s / ~${expectedSla})...`
+            );
             await new Promise((resolve) => setTimeout(resolve, 5000));
             try {
               const pollRes = await fetch(this.endpoint, {
