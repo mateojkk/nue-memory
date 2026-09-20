@@ -63,6 +63,8 @@ interface NueDashboardProps {
   generationElapsedSeconds?: number;
   serverProgress?: number;
   serverStageDescription?: string;
+  serverModel?: string;
+  serverExpectedSla?: string;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -99,6 +101,8 @@ export function NueDashboard({
   generationElapsedSeconds = 0,
   serverProgress,
   serverStageDescription,
+  serverModel,
+  serverExpectedSla,
   messages,
   onSendMessage,
   onRegenerate,
@@ -252,6 +256,8 @@ export function NueDashboard({
             generationElapsedSeconds={generationElapsedSeconds}
             serverProgress={serverProgress}
             serverStageDescription={serverStageDescription}
+            serverModel={serverModel}
+            serverExpectedSla={serverExpectedSla}
             messages={messages}
             onSendMessage={onSendMessage}
             onRegenerate={onRegenerate}

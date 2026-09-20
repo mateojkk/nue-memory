@@ -35,6 +35,7 @@ export interface GenerationJob {
   directorBrief?: any;
   syntheticPreferences?: any[];
   modelToUse?: string;
+  expectedSla?: string;
   singleTakeDuration?: number;
   effectiveDuration?: number;
   isMultiScene?: boolean;

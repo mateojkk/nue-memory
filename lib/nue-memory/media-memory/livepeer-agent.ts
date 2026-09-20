@@ -200,6 +200,11 @@ export class LivepeerMediaAgent {
     etaSeconds?: number;
   }> {
     try {
+      const callArgs = {
+        async: true,
+        ...args,
+      };
+
       const res = await fetch(this.endpoint, {
         method: 'POST',
         headers: {
@@ -213,7 +218,7 @@ export class LivepeerMediaAgent {
           method: 'tools/call',
           params: {
             name: 'create_media',
-            arguments: args,
+            arguments: callArgs,
           },
         }),
       });

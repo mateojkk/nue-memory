@@ -101,6 +101,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const [generationElapsedSeconds, setGenerationElapsedSeconds] = useState(0);
   const [serverProgress, setServerProgress] = useState<number | undefined>(undefined);
   const [serverStageDescription, setServerStageDescription] = useState<string | undefined>(undefined);
+  const [serverModel, setServerModel] = useState<string | undefined>(undefined);
+  const [serverExpectedSla, setServerExpectedSla] = useState<string | undefined>(undefined);
   const [isSavingMemory, setIsSavingMemory] = useState(false);
 
   useEffect(() => {
@@ -114,6 +116,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       setGenerationElapsedSeconds(0);
       setServerProgress(undefined);
       setServerStageDescription(undefined);
+      setServerModel(undefined);
+      setServerExpectedSla(undefined);
     }
     return () => {
       if (interval) clearInterval(interval);
@@ -277,6 +281,12 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         if (data.progress !== undefined) {
           setServerProgress(data.progress);
         }
+        if (data.model) {
+          setServerModel(data.model);
+        }
+        if (data.expectedSla) {
+          setServerExpectedSla(data.expectedSla);
+        }
 
         for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
           await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
@@ -304,6 +314,12 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
                 }
                 if (job.progress !== undefined) {
                   setServerProgress(job.progress);
+                }
+                if (job.model) {
+                  setServerModel(job.model);
+                }
+                if (job.expectedSla) {
+                  setServerExpectedSla(job.expectedSla);
                 }
               }
             }
@@ -872,6 +888,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           generationElapsedSeconds={generationElapsedSeconds}
           serverProgress={serverProgress}
           serverStageDescription={serverStageDescription}
+          serverModel={serverModel}
+          serverExpectedSla={serverExpectedSla}
           messages={messages}
           onSendMessage={handleSendMessage}
           onRegenerate={() => {

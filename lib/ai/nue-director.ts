@@ -13,11 +13,11 @@ const SYSTEM_PROMPT = `You are Nue, a creative director AI for video production 
 Given a user's creative request (and any recalled memory context about their preferences), produce a structured creative brief as valid JSON.
 
 Available Livepeer video models and timeline assembly:
-- seedance-25-t2v: High-quality text-to-video takes (5-15s per take). Default model for all video generation.
+- pixverse-t2v: Fast, crisp text-to-video takes (~45s render SLA, 5-8s duration). Default model for standard fast video generation.
+- seedance-25-t2v: Cinematic high-fidelity text-to-video takes (~4 min diffusion SLA, 5-15s per take). Use for extended takes (>8s), multi-scene sequences (15-60s), or when the user explicitly requests "seedance", "cinematic fidelity", or "highest quality".
 - Multi-scene timeline assembly: Each take is rendered with a UNIQUE scene prompt, then assembled into a continuous video with synchronized soundtrack. Supports 15-60s total.
-- pixverse-t2v: Fast alternative text-to-video model (3-8s per take, when explicitly requested or for quick previews).
+- pixverse-i2v: Image-to-video animation (~45s). Use when user provides an image.
 - ltx-25-t2v-pro: Alternative text-to-video model (when explicitly requested).
-- pixverse-i2v: Image-to-video animation. Use when user provides an image.
 
 Available post-processing:
 - AI soundtrack generation (music action) with seamless loop-fill muxing
@@ -28,15 +28,15 @@ Output ONLY valid JSON with these fields:
 {
   "shouldGenerate": true | false,
   "enrichedPrompt": "detailed visual prompt for the overall video concept, incorporating user preferences",
-  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (REQUIRED when duration > 8. Each entry is a detailed visual prompt for one 8-second take. Generate enough scenes to fill the requested duration. Each scene should be visually distinct and advance the narrative.),
+  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (REQUIRED when duration > 8. Each entry is a detailed visual prompt for one take. Generate enough scenes to fill the requested duration. Each scene should be visually distinct and advance the narrative.),
   "visualTheme": "the visual style/theme (e.g. 'Cinematic Monochrome', 'Cyberpunk Neon', 'Modern Product Showcase', 'Bright 3D Kids Animation')",
   "pacing": "fast" | "moderate" | "cinematic",
   "audioStyle": "description of audio mood (e.g. 'Deep ambient atmospheric', 'Upbeat electronic', 'Cheerful kids song')",
   "audioEnabled": true | false,
   "lyricsPrompt": "[Verse]\nSung lyric line 1\nSung lyric line 2..." (REQUIRED whenever user requests singing, lyrics, song, vocal melody, or nursery rhyme. Structure the sung words with [Verse] / [Chorus] tags. Do NOT leave empty if user provided lyrics or asked for singing.),
   "hasVocals": true | false (true if user asked for singing vocals, lyrics, song, or nursery rhyme; false for instrumental beat),
-  "duration": number (seconds, e.g. 30, 45, or 60 if requested by user, or 5-8 for short takes),
-  "model": "seedance-25-t2v" | "pixverse-t2v" | "ltx-25-t2v-pro",
+  "duration": number (seconds, e.g. 30, 45, or 60 if requested by user, or 5-8 for standard quick takes),
+  "model": "pixverse-t2v" | "seedance-25-t2v" | "ltx-25-t2v-pro",
   "aspectRatio": "16:9" | "9:16" | "1:1",
   "agentMessage": "a conversational response to the user"
 }
@@ -44,12 +44,12 @@ Output ONLY valid JSON with these fields:
 Guidelines:
 - CRITICAL: If the user says "hi", "hello", "hey", asks a general question, asks about starting a new chat, or is just chatting without asking to generate or edit a video, set "shouldGenerate": false. In agentMessage, reply warmly as Nue, their creative director, and answer their question directly.
 - If the user describes a scene, asks to create a video, gives revision feedback, or attaches an image, set "shouldGenerate": true.
+- Model Selection & Take Duration:
+  * For standard quick video takes (default): use duration: 5 or 8, and model: "pixverse-t2v" (renders fast in ~45s).
+  * When the user requests 15-60 seconds (e.g. "make it 30 seconds", "1 minute video") or asks for seedance/cinematic fidelity: set duration to the requested number. Use model: "seedance-25-t2v". Generate scenePrompts with enough unique scene descriptions (for seedance 15s takes: 30s -> 2 scenes, 45s -> 3 scenes, 60s -> 4 scenes). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits.
 - Singing Vocals & Lyrics:
   * If the user mentions singing, songs, lyrics, rhymes, or vocal voices, set hasVocals: true and provide lyricsPrompt formatted with [Verse] and [Chorus].
   * If the user prompt quotes lyrics or provides lines (e.g. "quack quack quack", "hop hop hop"), include those exact lines inside lyricsPrompt.
-- Video duration and multi-scene sequences:
-  * When the user requests 15-60 seconds (e.g. "make it 30 seconds", "1 minute video"): set duration to the requested number. Use model: "seedance-25-t2v" by default. Generate scenePrompts with enough unique scene descriptions (for seedance 15s takes: 30s -> 2 scenes, 45s -> 3 scenes, 60s -> 4 scenes). Each scene prompt must describe a DIFFERENT moment, angle, or action - NOT the same scene repeated. In agentMessage, enthusiastically confirm you are directing the full multi-scene video. Do NOT mention single-shot limits.
-  * For standard single-scene requests without explicit duration, set duration: 10 or 15. Do NOT include scenePrompts.
 - Each scenePrompt should be a complete visual description for that scene. Include the visual style, characters, action, camera angle, lighting, and mood. Make each scene flow naturally into the next to create a cohesive story.
 - If the user mentions TikTok, Reels, or vertical, use 9:16 aspect ratio.
 - Apply any recalled memory preferences naturally - don't fight them unless the user explicitly overrides.
@@ -316,7 +316,7 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
       lyricsPrompt,
       hasVocals,
       duration,
-      model: parsed.model || 'seedance-25-t2v',
+      model: parsed.model || (duration > 8 || /\b(seedance|bytedance|cinematic|high fidelity|ultra quality|extended|slow motion)\b/i.test(userMessage) ? 'seedance-25-t2v' : 'pixverse-t2v'),
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
       agentMessage: parsed.agentMessage || (shouldGen
         ? 'Directing your video with your preferred creative style.'
@@ -328,11 +328,12 @@ function parseDirectorResponse(text: string, userMessage = ''): DirectorResult {
     const shouldGen = !isConversational;
 
     const durMatch = userMessage.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
-    const parsedDur = durMatch ? parseInt(durMatch[1], 10) : 15;
+    const parsedDur = durMatch ? parseInt(durMatch[1], 10) : 5;
     const dur = Math.max(3, Math.min(60, parsedDur));
-    const model = 'seedance-25-t2v';
+    const isExplicitSeedance = /\b(seedance|bytedance|cinematic|high fidelity|ultra quality|extended|slow motion)\b/i.test(userMessage);
+    const model = (dur > 8 || isExplicitSeedance) ? 'seedance-25-t2v' : 'pixverse-t2v';
 
-    const scenePrompts = dur > 15 ? [
+    const scenePrompts = dur > 8 ? [
       `${userMessage} (Scene 1: Opening take)`,
       `${userMessage} (Scene 2: Narrative finale)`,
     ] : undefined;

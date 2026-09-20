@@ -47,6 +47,8 @@ interface MediaMemoryWorkspaceProps {
   generationElapsedSeconds?: number;
   serverProgress?: number;
   serverStageDescription?: string;
+  serverModel?: string;
+  serverExpectedSla?: string;
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
@@ -80,6 +82,8 @@ export function MediaMemoryWorkspace({
   generationElapsedSeconds = 0,
   serverProgress,
   serverStageDescription,
+  serverModel,
+  serverExpectedSla,
   messages,
   onSendMessage,
   onRegenerate,
@@ -327,31 +331,71 @@ export function MediaMemoryWorkspace({
     }
   };
 
-  // Progress stages for video generation
-  const getCookingProgress = (seconds: number) => {
-    if (seconds < 6) {
+  // Progress stages for video generation with model-aware SLA interpolation
+  const getCookingProgress = (seconds: number, model?: string) => {
+    const isSeedance = Boolean(model?.includes('seedance'));
+    if (isSeedance) {
+      // Seedance SLA: ~240s (~4 min)
+      if (seconds < 8) {
+        return {
+          step: 1,
+          total: 4,
+          percent: Math.min(20, Math.max(10, Math.round((seconds / 8) * 20))),
+          title: 'Directing creative brief & scenes',
+          detail: 'Architecting multi-frame prompts and visual aesthetics',
+        };
+      }
+      if (seconds < 210) {
+        return {
+          step: 2,
+          total: 4,
+          percent: 20 + Math.min(60, Math.round(((seconds - 8) / 202) * 60)),
+          title: `Rendering neural video takes on ${model || 'seedance-25-t2v'}`,
+          detail: 'Deep multi-frame temporal diffusion in flight on Livepeer GPUs (~4 min)',
+        };
+      }
+      if (seconds < 230) {
+        return {
+          step: 3,
+          total: 4,
+          percent: 80 + Math.min(10, Math.round(((seconds - 210) / 20) * 10)),
+          title: 'Composing & synchronizing AI soundtrack',
+          detail: 'Synthesizing ambient audio track to match scene mood',
+        };
+      }
+      return {
+        step: 4,
+        total: 4,
+        percent: Math.min(96, 90 + Math.round(((seconds - 230) / 30) * 6)),
+        title: 'Assembling multi-scene timeline',
+        detail: 'Stitching takes and encoding seamless continuous MP4',
+      };
+    }
+
+    // Default fast Pixverse SLA: ~45s
+    if (seconds < 5) {
       return {
         step: 1,
         total: 4,
-        percent: Math.min(25, Math.max(10, Math.round((seconds / 6) * 25))),
+        percent: Math.min(25, Math.max(10, Math.round((seconds / 5) * 25))),
         title: 'Directing creative brief & scenes',
         detail: 'Setting visual style, pacing, and camera directives',
       };
     }
-    if (seconds < 22) {
+    if (seconds < 38) {
       return {
         step: 2,
         total: 4,
-        percent: 25 + Math.min(35, Math.round(((seconds - 6) / 16) * 35)),
-        title: 'Rendering neural video takes via Livepeer',
-        detail: 'Generating video takes with high temporal consistency',
+        percent: 25 + Math.min(55, Math.round(((seconds - 5) / 33) * 55)),
+        title: `Rendering neural video takes on ${model || 'pixverse-t2v'}`,
+        detail: 'Livepeer GPU diffusion inference actively running (~45s)',
       };
     }
-    if (seconds < 36) {
+    if (seconds < 42) {
       return {
         step: 3,
         total: 4,
-        percent: 60 + Math.min(25, Math.round(((seconds - 22) / 14) * 25)),
+        percent: 80 + Math.min(10, Math.round(((seconds - 38) / 4) * 10)),
         title: 'Composing & synchronizing AI soundtrack',
         detail: 'Synthesizing ambient audio track to match scene mood',
       };
@@ -359,19 +403,40 @@ export function MediaMemoryWorkspace({
     return {
       step: 4,
       total: 4,
-      percent: Math.min(95, 85 + Math.round(((seconds - 36) / 15) * 10)),
+      percent: Math.min(96, 90 + Math.round(((seconds - 42) / 10) * 6)),
       title: 'Assembling multi-scene timeline',
       detail: 'Stitching takes and encoding seamless continuous MP4',
     };
   };
 
-  const baseProgress = getCookingProgress(generationElapsedSeconds);
+  const estimatedSla = serverExpectedSla || (serverModel?.includes('seedance') ? '~4 min' : '~45s');
+  const baseProgress = getCookingProgress(generationElapsedSeconds, serverModel);
+
+  // Compute smooth percentage: between 3-second server poll ticks, advance smoothly with elapsed seconds
+  const currentPercent = serverProgress !== undefined
+    ? Math.max(serverProgress, baseProgress.percent)
+    : baseProgress.percent;
+
+  const currentStep = currentPercent < 25 ? 1 : currentPercent < 80 ? 2 : currentPercent < 90 ? 3 : 4;
+
+  const stageTitles: Record<number, string> = {
+    1: 'Stage 1 of 4: Creative Direction & Scene Architecture',
+    2: `Stage 2 of 4: Neural Video Diffusion on ${serverModel || 'Livepeer GPU'}`,
+    3: 'Stage 3 of 4: AI Soundtrack & Audio Synthesis',
+    4: 'Stage 4 of 4: Timeline Assembly & Walrus Storage',
+  };
+
+  const activeModelName = serverModel || (generationElapsedSeconds > 45 ? 'seedance-25-t2v' : 'pixverse-t2v');
+
   const cookingProgress = {
-    step: serverProgress !== undefined ? (serverProgress < 25 ? 1 : serverProgress < 60 ? 2 : serverProgress < 85 ? 3 : 4) : baseProgress.step,
+    step: currentStep,
     total: 4,
-    percent: serverProgress !== undefined ? serverProgress : baseProgress.percent,
+    percent: Math.min(96, currentPercent),
+    stageName: stageTitles[currentStep],
     title: serverStageDescription ? serverStageDescription : baseProgress.title,
-    detail: serverStageDescription ? 'Live updates from Livepeer neural pipeline' : baseProgress.detail,
+    detail: serverStageDescription ? baseProgress.detail : baseProgress.detail,
+    model: activeModelName,
+    expectedSla: estimatedSla,
   };
 
   const filteredProjects = projects.filter((p) => {
@@ -976,7 +1041,7 @@ export function MediaMemoryWorkspace({
                     <div className="flex items-center justify-between text-xs font-mono">
                       <div className="flex items-center gap-2 text-amber-500 font-medium">
                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                        <span>Cooking your video... ({cookingProgress.step}/{cookingProgress.total})</span>
+                        <span>{cookingProgress.stageName}</span>
                       </div>
                       <span className="text-[var(--fg-muted)] font-mono text-[11px]">
                         {generationElapsedSeconds}s elapsed
@@ -986,17 +1051,24 @@ export function MediaMemoryWorkspace({
                     {/* Progress Bar */}
                     <div className="w-full h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">
                       <div
-                        className="h-full bg-gradient-to-r from-amber-500 via-[var(--accent)] to-emerald-500 transition-all duration-500 rounded-full"
+                        className="h-full bg-gradient-to-r from-amber-500 via-[var(--accent)] to-emerald-500 transition-all duration-300 rounded-full"
                         style={{ width: `${cookingProgress.percent}%` }}
                       />
                     </div>
 
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-medium text-[var(--fg)]">
-                        {cookingProgress.title}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-medium text-[var(--fg)]">
+                        <span className="truncate pr-2">{cookingProgress.title}</span>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent)] font-mono shrink-0">
+                          {cookingProgress.model} ({cookingProgress.expectedSla})
+                        </span>
                       </div>
-                      <div className="text-[11px] text-[var(--fg-muted)] font-light">
-                        {cookingProgress.detail}
+                      <div className="text-[11px] text-[var(--fg-muted)] font-light leading-relaxed">
+                        {cookingProgress.step === 2 && cookingProgress.model.includes('seedance')
+                          ? 'Seedance 2.5 deep multi-frame temporal diffusion in flight on Livepeer GPUs (~3-4 min).'
+                          : cookingProgress.step === 2
+                          ? 'Diffusion inference actively running on Livepeer GPU nodes (~45s take).'
+                          : cookingProgress.detail}
                       </div>
                     </div>
                   </div>

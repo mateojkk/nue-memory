@@ -83,12 +83,13 @@ export async function GET(request: Request) {
       if (!scene1Url || !scene2Url) {
         const elapsedSec = Math.max(1, Math.round((Date.now() - new Date(job.createdAt).getTime()) / 1000));
         const modelName = job.modelToUse || 'seedance-25-t2v';
+        const expectedSla = modelName.includes('seedance') ? '~4 min' : '~45s';
         const progress = Math.min(88, 20 + Math.round((elapsedSec / 240) * 65));
         const stageDescription = scene1Url
-          ? `Scene 1 take ready (15s), Scene 2 finishing (${elapsedSec}s / ~4 min)...`
+          ? `Scene 1 take ready (15s), Scene 2 finishing (${elapsedSec}s / ${expectedSla})...`
           : scene2Url
-          ? `Scene 2 take ready (15s), Scene 1 finishing (${elapsedSec}s / ~4 min)...`
-          : `Rendering 30s takes (Scene 1 & Scene 2 in parallel on ${modelName}, ${elapsedSec}s / ~4 min)...`;
+          ? `Scene 2 take ready (15s), Scene 1 finishing (${elapsedSec}s / ${expectedSla})...`
+          : `Rendering 30s takes (Scene 1 & Scene 2 in parallel on ${modelName}, ${elapsedSec}s / ${expectedSla})...`;
 
         updateJob(jobId, { progress, stageDescription });
         return NextResponse.json({
@@ -97,6 +98,8 @@ export async function GET(request: Request) {
             id: jobId,
             status: 'rendering',
             progress,
+            model: modelName,
+            expectedSla,
             stageDescription,
           },
         });
@@ -248,10 +251,10 @@ export async function GET(request: Request) {
 
     if (pollResult.status === 'running') {
       const elapsedSec = job ? Math.max(1, Math.round((Date.now() - new Date(job.createdAt).getTime()) / 1000)) : 10;
-      const modelName = job?.modelToUse || 'seedance-25-t2v';
-      const expectedSla = modelName.includes('seedance') ? '~4 min' : '~40s';
+      const modelName = job?.modelToUse || 'pixverse-t2v';
+      const expectedSla = modelName.includes('seedance') ? '~4 min' : '~45s';
       const maxEstimatedSec = modelName.includes('seedance') ? 240 : 45;
-      const progress = Math.min(85, 25 + Math.round((elapsedSec / maxEstimatedSec) * 60));
+      const progress = Math.min(88, 25 + Math.round((elapsedSec / maxEstimatedSec) * 60));
       const stageDescription = `Rendering on ${modelName} (${elapsedSec}s / ${expectedSla})...`;
 
       updateJob(jobId, { progress, stageDescription });
@@ -261,6 +264,8 @@ export async function GET(request: Request) {
           id: jobId,
           status: 'rendering',
           progress,
+          model: modelName,
+          expectedSla,
           stageDescription,
         },
       });
@@ -517,11 +522,13 @@ export async function POST(request: Request) {
 
     // Step 7: Dispatch media generation to Livepeer (<3s synchronous)
     const isImageToVideo = Boolean(validatedImageUrl);
-    const modelToUse = isImageToVideo
+    const rawRequestedDuration = directorBrief.duration || (directorBrief.model?.includes('seedance') ? 15 : 5);
+    const modelToUse: string = isImageToVideo
       ? (directorBrief.model?.includes('pixverse') ? 'pixverse-i2v' : 'seedance-25-i2v')
-      : directorBrief.model || 'seedance-25-t2v';
+      : directorBrief.model || (rawRequestedDuration > 8 ? 'seedance-25-t2v' : 'pixverse-t2v');
+    const expectedSla = modelToUse.includes('seedance') ? '~4 min' : '~45s';
 
-    const requestedDuration = directorBrief.duration || 15;
+    const requestedDuration = directorBrief.duration || (modelToUse.includes('seedance') ? 15 : 5);
     const isMultiScene = !isImageToVideo && requestedDuration > 15;
 
     // Dispatch background soundtrack in parallel if requested (with singing vocals / lyrics support)
@@ -574,12 +581,14 @@ export async function POST(request: Request) {
           prompt: `${scene1Prompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
           model_override: modelToUse,
           duration: 15,
+          async: true,
         }),
         livepeerAgent.dispatchCreateMedia({
           action: 'generate',
           prompt: `${scene2Prompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
           model_override: modelToUse,
           duration: 15,
+          async: true,
         }),
       ]);
 
@@ -614,6 +623,7 @@ export async function POST(request: Request) {
         modelToUse,
         singleTakeDuration: 30,
         effectiveDuration: 30,
+        expectedSla: '~4 min',
       });
 
       return NextResponse.json({
@@ -625,6 +635,7 @@ export async function POST(request: Request) {
         audioJobId,
         isMultiScene: true,
         model: modelToUse,
+        expectedSla: '~4 min',
         stageDescription: `Directing 30s multi-scene sequence on ${modelToUse} (Scene 1 & Scene 2 in parallel)...`,
         progress: 20,
       });
@@ -633,7 +644,7 @@ export async function POST(request: Request) {
     // Single-scene path (duration <= 15)
     const singleTakeDuration = modelToUse.includes('seedance')
       ? Math.min(15, Math.max(5, requestedDuration))
-      : 8;
+      : Math.min(8, Math.max(3, requestedDuration >= 7 ? 8 : requestedDuration >= 4 ? 5 : 3));
 
     const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
 
@@ -642,6 +653,7 @@ export async function POST(request: Request) {
       prompt: livepeerPrompt,
       model_override: modelToUse,
       duration: singleTakeDuration,
+      async: true,
       ...(validatedImageUrl ? { source_url: validatedImageUrl } : {}),
     };
 
@@ -657,7 +669,7 @@ export async function POST(request: Request) {
     updateJob(jobId, {
       status: 'rendering',
       progress: 25,
-      stageDescription: `Rendering on ${modelToUse} (~4 min)...`,
+      stageDescription: `Rendering on ${modelToUse} (${expectedSla})...`,
       livepeerJobId: videoDispatch.jobId,
       audioJobId,
       audioUrl,
@@ -666,6 +678,7 @@ export async function POST(request: Request) {
       modelToUse,
       singleTakeDuration,
       effectiveDuration: singleTakeDuration,
+      expectedSla,
     });
 
     return NextResponse.json({
@@ -675,7 +688,8 @@ export async function POST(request: Request) {
       livepeerJobId: videoDispatch.jobId,
       audioJobId,
       model: modelToUse,
-      stageDescription: `Rendering on ${modelToUse} (~4 min)...`,
+      expectedSla,
+      stageDescription: `Rendering on ${modelToUse} (${expectedSla})...`,
       progress: 25,
     });
   } catch (error) {
