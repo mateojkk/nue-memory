@@ -261,7 +261,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       if (data.success && data.jobId) {
         const jobId = data.jobId;
         const pollIntervalMs = 3000;
-        const maxPollAttempts = 180; // 180 * 3s = 540s (9 minutes window for long-form / multi-scene takes)
+        const maxPollAttempts = 300; // 300 * 3s = 900s (15 min window for multi-scene Seedance renders + audio muxing)
         let completedResult: any = null;
 
         for (let attempt = 0; attempt < maxPollAttempts; attempt++) {

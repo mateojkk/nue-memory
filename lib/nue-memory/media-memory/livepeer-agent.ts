@@ -461,21 +461,26 @@ export class LivepeerMediaAgent {
       if (mcpCallRes.ok) {
         const mcpData = await mcpCallRes.json();
         const content = mcpData.result?.structuredContent;
-        if (content?.url) {
+        const jobId = content?.job_id;
+        const isAsync = Boolean(jobId) && (!content?.url || content?.status === 'pending' || content?.status === 'running');
+
+        // If a completed URL is returned directly (no async polling needed)
+        if (content?.url && !isAsync) {
           realMediaUrl = content.url;
-          if (content.capability) {
-            livepeerCapability = content.capability;
-          }
-          // Asynchronous long-form job (e.g. seedance-25-t2v). Poll until complete or max poll threshold reached.
-          const jobId = content.job_id;
-          console.log(`[LivepeerAgent] Async job ${jobId} initiated for ${modelToUse} (${effectiveDuration}s). Polling...`);
-          // Livepeer official SLA: seedance-25-t2v p50 is 230s (~3.8m). Allow up to 65 attempts * 5s = 325s.
-          const maxAttempts = modelToUse.includes('seedance') ? 65 : 25;
-          const expectedSla = modelToUse.includes('seedance') ? '230s' : '38s';
+          if (content.capability) livepeerCapability = content.capability;
+          generationDuration = effectiveDuration;
+          console.log(`[LivepeerAgent] Synchronous result from ${modelToUse}: ${realMediaUrl}`);
+        } else if (jobId) {
+          // Asynchronous job - poll until complete or max poll threshold reached.
+          // Livepeer official SLA: seedance-25-t2v p50 is 230s (~3.8m), p95 can be 400s+.
+          // Allow up to 80 attempts * 5s = 400s for seedance, 30 * 5s = 150s for others.
+          const maxAttempts = modelToUse.includes('seedance') ? 80 : 30;
+          const expectedSla = modelToUse.includes('seedance') ? '~4 min' : '~40s';
+          console.log(`[LivepeerAgent] Async job ${jobId} initiated for ${modelToUse} (${effectiveDuration}s). Polling up to ${maxAttempts * 5}s (SLA: ${expectedSla})...`);
           for (let attempt = 0; attempt < maxAttempts; attempt++) {
             onProgress?.(
               Math.min(78, 25 + Math.round((attempt / maxAttempts) * 53)),
-              `Rendering on ${modelToUse} (${(attempt + 1) * 5}s / ~${expectedSla})...`
+              `Rendering on ${modelToUse} (${(attempt + 1) * 5}s / ${expectedSla})...`
             );
             await new Promise((resolve) => setTimeout(resolve, 5000));
             try {
@@ -499,7 +504,7 @@ export class LivepeerMediaAgent {
               if (pollRes.ok) {
                 const pollData = await pollRes.json();
                 const pollContent = pollData.result?.structuredContent;
-                if (pollContent?.url) {
+                if (pollContent?.url && pollContent?.status !== 'pending' && pollContent?.status !== 'running') {
                   realMediaUrl = pollContent.url;
                   livepeerCapability = pollContent.capability || modelToUse;
                   generationDuration = effectiveDuration;
@@ -508,6 +513,7 @@ export class LivepeerMediaAgent {
                 }
                 if (pollContent?.status === 'failed' || pollContent?.error) {
                   console.warn(`[LivepeerAgent] Job ${jobId} failed:`, pollContent.error);
+                  realMediaUrl = null;
                   break;
                 }
               }
@@ -517,6 +523,8 @@ export class LivepeerMediaAgent {
           }
         } else if (mcpData.error) {
           console.error('[LivepeerAgent] MCP create_media error:', mcpData.error);
+        } else {
+          console.warn('[LivepeerAgent] MCP create_media returned no URL and no job_id:', JSON.stringify(content).slice(0, 500));
         }
       } else {
         console.error('[LivepeerAgent] MCP create_media HTTP failure:', mcpCallRes.status, await mcpCallRes.text().catch(() => ''));
@@ -675,11 +683,12 @@ export class LivepeerMediaAgent {
                     return content.url;
                   }
 
-                  // Handle async job (poll for completion)
-                  if (content?.job_id && (content.status === 'pending' || content.status === 'running')) {
+                  // Handle async job (poll for completion) - use same SLA-calibrated attempts as Scene 1
+                  if (content?.job_id && (content.status === 'pending' || content.status === 'running' || !content.url)) {
                     const jobId = content.job_id;
-                    console.log(`[LivepeerAgent] Scene ${sceneIndex} async job ${jobId} - polling...`);
-                    for (let attempt = 0; attempt < 25; attempt++) {
+                    const sceneMaxAttempts = modelToUse.includes('seedance') ? 80 : 30;
+                    console.log(`[LivepeerAgent] Scene ${sceneIndex} async job ${jobId} - polling up to ${sceneMaxAttempts * 5}s...`);
+                    for (let attempt = 0; attempt < sceneMaxAttempts; attempt++) {
                       await new Promise((resolve) => setTimeout(resolve, 5000));
                       try {
                         const pollRes = await fetch(this.endpoint, {
@@ -701,13 +710,14 @@ export class LivepeerMediaAgent {
                         });
                         if (pollRes.ok) {
                           const pollData = await pollRes.json();
-                          if (pollData.result?.structuredContent?.url) {
+                          const pc = pollData.result?.structuredContent;
+                          if (pc?.url && pc?.status !== 'pending' && pc?.status !== 'running') {
                             console.log(
-                              `[LivepeerAgent] Scene ${sceneIndex} completed: ${pollData.result.structuredContent.url}`
+                              `[LivepeerAgent] Scene ${sceneIndex} completed: ${pc.url}`
                             );
-                            return pollData.result.structuredContent.url;
+                            return pc.url;
                           }
-                          if (pollData.result?.structuredContent?.status === 'failed') break;
+                          if (pc?.status === 'failed') break;
                         }
                       } catch {
                         /* continue polling */
