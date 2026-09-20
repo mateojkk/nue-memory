@@ -757,19 +757,6 @@ export function MediaMemoryWorkspace({
 
               <button
                 type="button"
-                onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition shrink-0 ${
-                  isThinkingEnabled
-                    ? 'bg-[var(--surface-2)] text-[var(--accent)]'
-                    : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]'
-                }`}
-                title="Creative memory active"
-              >
-                <Brain className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
                 onClick={toggleSpeechRecognition}
                 className={`p-1.5 rounded-full transition shrink-0 ${
                   isListening
@@ -1073,19 +1060,6 @@ export function MediaMemoryWorkspace({
                   disabled={isGenerating}
                   className="flex-1 bg-transparent py-1 text-xs sm:text-sm text-[var(--fg)] placeholder-[var(--fg-muted)] focus:outline-none resize-none max-h-[180px] leading-relaxed"
                 />
-
-                <button
-                  type="button"
-                  onClick={() => setIsThinkingEnabled(!isThinkingEnabled)}
-                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition shrink-0 ${
-                    isThinkingEnabled
-                      ? 'bg-[var(--surface-2)] text-[var(--accent)]'
-                      : 'text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]'
-                  }`}
-                  title="Creative memory active"
-                >
-                  <Brain className="w-4 h-4" />
-                </button>
 
                 <button
                   type="button"
