@@ -848,6 +848,9 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
               return updated;
             });
           }}
+          onRefreshProjects={() => {
+            if (email) loadProjects(email);
+          }}
           isGenerating={isGenerating}
           generationStage={generationStage}
           generationElapsedSeconds={generationElapsedSeconds}

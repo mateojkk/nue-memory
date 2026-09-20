@@ -82,6 +82,7 @@ interface NueDashboardProps {
   projects: CreativeProject[];
   currentProjectIndex: number;
   onSelectProject: (index: number) => void;
+  onRefreshProjects?: () => void;
   userNamespace?: string;
   userEmail?: string;
 }
@@ -92,6 +93,7 @@ export function NueDashboard({
   activeVersion,
   allVersions,
   onSelectVersion,
+  onRefreshProjects,
   isGenerating,
   generationStage = 'thinking',
   generationElapsedSeconds = 0,
@@ -267,6 +269,7 @@ export function NueDashboard({
             projects={projects}
             currentProjectIndex={currentProjectIndex}
             onSelectProject={onSelectProject}
+            onRefreshProjects={onRefreshProjects}
           />
         )}
 

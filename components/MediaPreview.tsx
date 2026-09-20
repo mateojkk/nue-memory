@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink, Download, Subtitles } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Sparkles, Layers, Zap, Image as ImageIcon, Video, ExternalLink, Download, Subtitles, Crop, Wand2, ShieldCheck, Loader2, Check } from 'lucide-react';
 import { MediaVersion } from '@/lib/types';
 
 interface MediaPreviewProps {
@@ -10,6 +10,8 @@ interface MediaPreviewProps {
   selectedVersionIndex: number;
   onSelectVersion: (index: number) => void;
   isLoading?: boolean;
+  projectId?: string;
+  onRefreshProjects?: () => void;
 }
 
 function resolveMediaUrl(url?: string): string {
@@ -33,7 +35,43 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   selectedVersionIndex,
   onSelectVersion,
   isLoading = false,
+  projectId,
+  onRefreshProjects,
 }) => {
+  const [activeStudioAction, setActiveStudioAction] = useState<string | null>(null);
+  const [studioFeedback, setStudioFeedback] = useState<string | null>(null);
+
+  const handleTriggerStudioAction = async (action: string) => {
+    if (!projectId) {
+      setStudioFeedback('No active project found');
+      setTimeout(() => setStudioFeedback(null), 3000);
+      return;
+    }
+    setActiveStudioAction(action);
+    setStudioFeedback(null);
+    try {
+      const res = await fetch('/api/studio-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId, action }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStudioFeedback(`Created Version ${data.version.versionNumber}!`);
+        if (onRefreshProjects) {
+          onRefreshProjects();
+        }
+      } else {
+        setStudioFeedback(data.error || 'Studio processing failed');
+      }
+    } catch (err: any) {
+      setStudioFeedback(err?.message || 'Network error');
+    } finally {
+      setActiveStudioAction(null);
+      setTimeout(() => setStudioFeedback(null), 4000);
+    }
+  };
+
   const resolvedMediaUrl = resolveMediaUrl(version?.mediaUrl);
   const isVideoAsset = Boolean(
     resolvedMediaUrl &&
@@ -564,6 +602,82 @@ ${version.captionStyle.text}
           </div>
         )}
       </div>
+
+      {/* Livepeer Studio Suite Action Bar */}
+      {version && (
+        <div className="px-4 py-2 bg-[var(--surface-2)]/70 border-t border-[var(--border)] flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-mono text-[var(--accent)] font-semibold uppercase tracking-wider flex items-center gap-1 mr-1">
+              <Sparkles className="w-3 h-3 text-[var(--accent)]" />
+              Livepeer Studio:
+            </span>
+            <button
+              type="button"
+              disabled={Boolean(activeStudioAction)}
+              onClick={() => handleTriggerStudioAction('burn_subtitles')}
+              className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50 shadow-xs"
+              title="Burn karaoke subtitles directly into MP4 via Livepeer transcribe"
+            >
+              <Subtitles className="w-3 h-3 text-[var(--accent)]" />
+              <span>Burn Subtitles</span>
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(activeStudioAction)}
+              onClick={() => handleTriggerStudioAction('reframe_9_16')}
+              className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50 shadow-xs"
+              title="Convert 16:9 widescreen to 9:16 vertical for TikTok & Reels via Livepeer edit_clip"
+            >
+              <Crop className="w-3 h-3 text-[var(--accent)]" />
+              <span>Reframe 9:16</span>
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(activeStudioAction)}
+              onClick={() => handleTriggerStudioAction('clean_audio')}
+              className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50 shadow-xs"
+              title="Remove filler words and pauses via Livepeer clean_speech"
+            >
+              <Wand2 className="w-3 h-3 text-[var(--accent)]" />
+              <span>Clean Speech</span>
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(activeStudioAction)}
+              onClick={() => handleTriggerStudioAction('add_watermark')}
+              className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50 shadow-xs"
+              title="Overlay brand watermark onto video via Livepeer overlay"
+            >
+              <ShieldCheck className="w-3 h-3 text-[var(--accent)]" />
+              <span>Watermark</span>
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(activeStudioAction)}
+              onClick={() => handleTriggerStudioAction('add_voiceover')}
+              className="px-2 py-1 rounded bg-[var(--surface)] hover:bg-[var(--accent-deep)] hover:text-[#4a2c0e] border border-[var(--border)] text-[10px] font-mono text-[var(--fg)] flex items-center gap-1 transition disabled:opacity-50 shadow-xs"
+              title="Generate spoken narration via Livepeer Gemini TTS and mix into timeline"
+            >
+              <Volume2 className="w-3 h-3 text-[var(--accent)]" />
+              <span>Voiceover</span>
+            </button>
+          </div>
+
+          {activeStudioAction && (
+            <div className="flex items-center gap-1.5 text-[10px] font-mono text-[var(--accent)] font-medium animate-pulse">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              <span>Processing Livepeer {activeStudioAction}...</span>
+            </div>
+          )}
+
+          {studioFeedback && (
+            <div className="flex items-center gap-1 text-[10px] font-mono text-emerald-400">
+              <Check className="w-3 h-3" />
+              <span>{studioFeedback}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Version History Tabs */}
       <div className="px-4 py-2.5 bg-[var(--surface)] border-t border-[var(--border)] flex items-center gap-2 overflow-x-auto no-scrollbar">

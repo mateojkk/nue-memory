@@ -64,6 +64,7 @@ interface MediaMemoryWorkspaceProps {
   projects?: CreativeProject[];
   currentProjectIndex?: number;
   onSelectProject?: (index: number) => void;
+  onRefreshProjects?: () => void;
 }
 
 export function MediaMemoryWorkspace({
@@ -71,6 +72,7 @@ export function MediaMemoryWorkspace({
   activeVersion,
   allVersions,
   onSelectVersion,
+  onRefreshProjects,
   isGenerating,
   generationStage = 'thinking',
   generationElapsedSeconds = 0,
@@ -896,6 +898,8 @@ export function MediaMemoryWorkspace({
                           <InlineVideoCard
                             version={matchingVersion}
                             isLatest={index === realMessages.length - 1}
+                            projectId={activeProject?.id}
+                            onRefreshProjects={onRefreshProjects}
                           />
                         )}
 

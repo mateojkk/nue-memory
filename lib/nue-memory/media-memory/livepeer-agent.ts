@@ -321,6 +321,353 @@ export class LivepeerMediaAgent {
   }
 
   /**
+   * Transcribes audio track and burns timed captions directly onto the video using Livepeer transcribe tool (ffmpeg-burn-subtitles)
+   */
+  public async burnSubtitles(options: {
+    sourceUrl: string;
+    fontSize?: number;
+    fontColor?: string;
+    captionPosition?: 'bottom' | 'top' | 'middle';
+    language?: string;
+  }): Promise<{ url: string; transcript?: string; srt?: string; warning?: string } | null> {
+    try {
+      const args: Record<string, any> = {
+        source_url: options.sourceUrl,
+        burn: true,
+        caption_position: options.captionPosition || 'bottom',
+      };
+      if (options.fontSize) args.font_size = options.fontSize;
+      if (options.fontColor) args.font_color = options.fontColor;
+      if (options.language) args.language = options.language;
+
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'transcribe',
+            arguments: args,
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      const finalUrl = content?.url || content?.captioned_video_url || content?.video_url;
+      if (finalUrl) {
+        return {
+          url: unwrapLivepeerUrl(finalUrl),
+          transcript: content?.transcript || content?.text,
+          srt: content?.srt,
+        };
+      }
+      if (content?.warnings && content.warnings.length > 0) {
+        return {
+          url: unwrapLivepeerUrl(options.sourceUrl),
+          transcript: content?.text || '',
+          warning: content.warnings[0],
+        };
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] burnSubtitles error:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Deterministic video finishing edit using Livepeer edit_clip tool (reframe to 9:16, stabilize, denoise)
+   */
+  public async reframeVideo(options: {
+    sourceUrl: string;
+    aspect?: '9:16' | '1:1' | '16:9';
+    op?: 'reframe' | 'stabilize' | 'denoise' | 'silence_cut' | 'kenburns';
+  }): Promise<string | null> {
+    try {
+      const args: Record<string, any> = {
+        source_url: options.sourceUrl,
+        op: options.op || 'reframe',
+        aspect: options.aspect || '9:16',
+      };
+
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'edit_clip',
+            arguments: args,
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      const finalUrl = content?.url || content?.video_url;
+      if (finalUrl) {
+        return unwrapLivepeerUrl(finalUrl);
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] reframeVideo error:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Overlays watermark logo or branded lower-third onto video using Livepeer overlay tool
+   */
+  public async overlayBrand(options: {
+    sourceUrl: string;
+    imageUrl?: string;
+    position?: 'top-right' | 'bottom-right' | 'bottom-left' | 'top-left' | 'center';
+    scale?: number;
+    opacity?: number;
+    name?: string;
+    title?: string;
+    brandColor?: string;
+  }): Promise<string | null> {
+    try {
+      const args: Record<string, any> = {
+        source_url: options.sourceUrl,
+        position: options.position || 'bottom-right',
+        scale: options.scale ?? 0.18,
+        opacity: options.opacity ?? 0.9,
+      };
+      if (options.imageUrl) args.image_url = options.imageUrl;
+      if (options.name) args.name = options.name;
+      if (options.title) args.title = options.title;
+      if (options.brandColor) args.brand_color = options.brandColor;
+
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'overlay',
+            arguments: args,
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      const finalUrl = content?.url || content?.video_url;
+      if (finalUrl) {
+        return unwrapLivepeerUrl(finalUrl);
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] overlayBrand error:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Tightens spoken video by removing filler words and pauses using Livepeer clean_speech tool
+   */
+  public async cleanSpeech(options: {
+    sourceUrl: string;
+    removeFillers?: boolean;
+    minSilenceSec?: number;
+    fillers?: string[];
+    removePhrases?: string[];
+  }): Promise<string | null> {
+    try {
+      const args: Record<string, any> = {
+        source_url: options.sourceUrl,
+        remove_fillers: options.removeFillers ?? true,
+        min_silence_sec: options.minSilenceSec ?? 0.4,
+      };
+      if (options.fillers) args.fillers = options.fillers;
+      if (options.removePhrases) args.remove_phrases = options.removePhrases;
+
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'clean_speech',
+            arguments: args,
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      const finalUrl = content?.url || content?.video_url;
+      if (finalUrl) {
+        return unwrapLivepeerUrl(finalUrl);
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] cleanSpeech error:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Generates spoken narration voiceover via Livepeer create_media action: 'speech'
+   */
+  public async generateSpeech(options: {
+    text: string;
+    voice?: string;
+    modelOverride?: string;
+  }): Promise<string | null> {
+    try {
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'create_media',
+            arguments: {
+              action: 'speech',
+              text: options.text,
+              voice: options.voice || 'friendly',
+              model_override: options.modelOverride || 'fal-ai/gemini-3.1-flash-tts',
+            },
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      if (content?.url) return unwrapLivepeerUrl(content.url);
+      if (content?.job_id) {
+        const jobId = content.job_id;
+        for (let i = 0; i < 20; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const poll = await this.pollJobStatus(jobId);
+          if (poll.status === 'completed' && poll.url) return poll.url;
+          if (poll.status === 'failed') break;
+        }
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] generateSpeech error:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Places consistent subject/product into lifestyle scenes using Livepeer place_subject tool
+   */
+  public async placeSubject(options: {
+    sourceUrl: string;
+    scenes?: string[];
+    subjectHint?: string;
+  }): Promise<string[] | null> {
+    try {
+      const args: Record<string, any> = { source_url: options.sourceUrl };
+      if (options.scenes) args.scenes = options.scenes;
+      if (options.subjectHint) args.subject_hint = options.subjectHint;
+
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'place_subject',
+            arguments: args,
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      if (Array.isArray(content?.urls)) {
+        return content.urls.map((u: string) => unwrapLivepeerUrl(u));
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] placeSubject error:', err);
+    }
+    return null;
+  }
+
+  /**
+   * Saves a persistent brand identity kit on Livepeer using brand_kit_create
+   */
+  public async createBrandKit(options: {
+    name: string;
+    palette: string[];
+    fonts?: string[];
+    logoUrl?: string;
+    promptKeywords?: string[];
+    forbiddenTerms?: string[];
+  }): Promise<any> {
+    try {
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'brand_kit_create',
+            arguments: options,
+          },
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data.result?.structuredContent;
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] createBrandKit error:', err);
+    }
+    return null;
+  }
+
+  /**
    * Uploads an image (base64 data URL or external URL) to Livepeer storage via MCP upload_image tool
    */
   public async uploadImage(imageSource: string): Promise<string | null> {
