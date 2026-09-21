@@ -36,3 +36,6 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Generated media assets
+/public/generated/

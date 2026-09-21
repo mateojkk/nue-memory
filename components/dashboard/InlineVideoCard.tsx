@@ -94,14 +94,17 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   const videoSrc = resolveMediaUrl(version.mediaUrl);
   // If the audio was muxed into the MP4 container by Livepeer assemble, do NOT play a separate audio element
   // (playing both causes a phase echo / dual-source artifact)
-  const isAudioMuxed = Boolean(
-    version.audioStyle?.isMuxed ||
-    version.livepeerCapability?.includes('assemble') ||
-    version.livepeerCapability?.includes('mux') ||
-    version.agentNotes?.includes('Synchronized') ||
-    (version.scenes && version.scenes.length > 0)
-  );
+  const isAudioMuxed = Boolean(version.audioStyle?.isMuxed);
   const audioSrc = !isAudioMuxed ? resolveMediaUrl(version.audioStyle?.audioUrl) : undefined;
+
+  const hasMultipleScenes = Boolean(version.scenes && version.scenes.length > 1 && !version.audioStyle?.isMuxed);
+  const [currentSceneIdx, setCurrentSceneIdx] = useState(0);
+
+  const activeVideoSrc = hasMultipleScenes && version.scenes?.[currentSceneIdx]?.mediaUrl
+    ? resolveMediaUrl(version.scenes[currentSceneIdx].mediaUrl)
+    : videoSrc;
+
+  const totalDur = version.generationDurationSeconds || (hasMultipleScenes ? (version.scenes?.length || 1) * 15 : 15);
 
   useEffect(() => {
     if (isGloballyPlaying === false && isPlaying && videoRef.current) {
@@ -112,6 +115,12 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
       setIsPlaying(false);
     }
   }, [isGloballyPlaying, isPlaying]);
+
+  useEffect(() => {
+    if (hasMultipleScenes && isPlaying && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [currentSceneIdx, hasMultipleScenes, isPlaying]);
 
   useEffect(() => {
     if (version.aspectRatio) {
@@ -135,6 +144,8 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             setIsPlaying(true);
             if (onGlobalPlay) onGlobalPlay();
             if (!isAudioMuxed && audioRef.current && audioSrc) {
+              const overallTime = hasMultipleScenes ? currentSceneIdx * 15 + (videoRef.current?.currentTime || 0) : (videoRef.current?.currentTime || 0);
+              audioRef.current.currentTime = overallTime;
               audioRef.current.muted = isMuted;
               audioRef.current.play().catch(() => {});
             }
@@ -177,9 +188,9 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
     const current = videoRef.current.currentTime;
-    const duration = videoRef.current.duration || version.generationDurationSeconds || 5;
-    setCurrentTime(current);
-    setProgress((current / duration) * 100);
+    const overallTime = hasMultipleScenes ? currentSceneIdx * 15 + current : current;
+    setCurrentTime(overallTime);
+    setProgress(Math.min(100, (overallTime / totalDur) * 100));
   };
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -189,10 +200,19 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
     const clickX = e.clientX - rect.left;
     const width = rect.width;
     const seekPercent = Math.max(0, Math.min(1, clickX / width));
-    const duration = videoRef.current.duration || version.generationDurationSeconds || 5;
-    const seekTime = seekPercent * duration;
+    const seekTime = seekPercent * totalDur;
 
-    videoRef.current.currentTime = seekTime;
+    if (hasMultipleScenes && version.scenes && version.scenes.length > 0) {
+      const targetScene = Math.min(version.scenes.length - 1, Math.floor(seekTime / 15));
+      const targetOffset = seekTime % 15;
+      if (targetScene !== currentSceneIdx) {
+        setCurrentSceneIdx(targetScene);
+      }
+      videoRef.current.currentTime = targetOffset;
+    } else {
+      videoRef.current.currentTime = seekTime;
+    }
+
     if (audioRef.current) {
       audioRef.current.currentTime = seekTime;
     }
@@ -223,13 +243,13 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
     }
   };
 
-  const dur = version.generationDurationSeconds || 15;
+  const dur = version.generationDurationSeconds || totalDur;
   const cap = version.livepeerCapability || 'seedance-25-t2v';
 
   return (
     <div className="mt-3 rounded-2xl bg-[var(--surface-2)]/80 overflow-hidden shadow-md max-w-2xl w-full">
       {/* Hidden secondary audio player for un-muxed stems */}
-      {audioSrc && <audio ref={audioRef} src={audioSrc} loop />}
+      {audioSrc && <audio ref={audioRef} src={audioSrc} loop={false} />}
 
       {/* Video Viewport Container */}
       <div
@@ -243,7 +263,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
       >
         <video
           ref={videoRef}
-          src={videoSrc}
+          src={activeVideoSrc}
           poster={version.thumbnailUrl}
           playsInline
           preload="auto"
@@ -259,13 +279,18 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
           }}
           onTimeUpdate={handleTimeUpdate}
           onEnded={() => {
-            setIsPlaying(false);
-            setProgress(0);
-            if (audioRef.current) {
-              audioRef.current.pause();
-              audioRef.current.currentTime = 0;
+            if (hasMultipleScenes && currentSceneIdx + 1 < (version.scenes?.length || 0)) {
+              setCurrentSceneIdx((prev) => prev + 1);
+            } else {
+              setIsPlaying(false);
+              setProgress(0);
+              setCurrentSceneIdx(0);
+              if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+              }
+              if (onGlobalPause) onGlobalPause();
             }
-            if (onGlobalPause) onGlobalPause();
           }}
           onClick={(e) => {
             e.stopPropagation();

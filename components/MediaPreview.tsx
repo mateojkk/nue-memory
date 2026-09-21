@@ -100,9 +100,19 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   const [showCaptions, setShowCaptions] = useState(false);
   const [aspectMode, setAspectMode] = useState<'16:9' | '9:16' | '1:1'>('16:9');
   const [displayMode, setDisplayMode] = useState<'video' | 'keyframe'>('video');
+  const [currentSceneIndex, setCurrentSceneIndex] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
+
+  const hasMultipleScenes = Boolean(version?.scenes && version.scenes.length > 1 && !version?.audioStyle?.isMuxed);
+  const activeMediaSrc = hasMultipleScenes && version?.scenes?.[currentSceneIndex]?.mediaUrl
+    ? resolveMediaUrl(version.scenes[currentSceneIndex].mediaUrl)
+    : resolvedMediaUrl;
+
+  const totalDuration = version?.generationDurationSeconds || (hasMultipleScenes ? (version?.scenes?.length || 1) * 15 : 15);
+  const isAudioMuxed = Boolean(version?.audioStyle?.isMuxed);
+  const unMuxedAudioUrl = !isAudioMuxed ? version?.audioStyle?.audioUrl : undefined;
 
   useEffect(() => {
     if (version?.aspectRatio) {
@@ -120,30 +130,20 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
       setDisplayMode(isVid ? 'video' : 'keyframe');
       setIsPlaying(false);
       setProgress(0);
+      setCurrentSceneIndex(0);
     }
-
-    const isAudioMuxed = Boolean(
-      version?.audioStyle?.isMuxed ||
-      version?.livepeerCapability?.includes('assemble') ||
-      version?.livepeerCapability?.includes('mux') ||
-      version?.agentNotes?.includes('Synchronized') ||
-      (version?.scenes && version.scenes.length > 0)
-    );
 
     if (!isAudioMuxed && version?.audioStyle?.audioUrl && audioRef.current) {
       audioRef.current.src = version.audioStyle.audioUrl;
       audioRef.current.currentTime = 0;
     }
-  }, [version]);
+  }, [version, isAudioMuxed]);
 
-  const isAudioMuxed = Boolean(
-    version?.audioStyle?.isMuxed ||
-    version?.livepeerCapability?.includes('assemble') ||
-    version?.livepeerCapability?.includes('mux') ||
-    version?.agentNotes?.includes('Synchronized') ||
-    (version?.scenes && version.scenes.length > 0)
-  );
-  const unMuxedAudioUrl = !isAudioMuxed ? version?.audioStyle?.audioUrl : undefined;
+  useEffect(() => {
+    if (hasMultipleScenes && isPlaying && videoRef.current) {
+      videoRef.current.play().catch(() => {});
+    }
+  }, [currentSceneIndex, hasMultipleScenes, isPlaying]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -156,13 +156,14 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         .then(() => {
           setIsPlaying(true);
           if (!isAudioMuxed && audioRef.current && unMuxedAudioUrl) {
+            const overallTime = hasMultipleScenes ? currentSceneIndex * 15 + (videoRef.current?.currentTime || 0) : (videoRef.current?.currentTime || 0);
+            audioRef.current.currentTime = overallTime;
             audioRef.current.muted = isMuted;
             audioRef.current.play().catch(() => {});
           }
         })
         .catch((err) => {
           console.warn('[MediaPreview] Playback failed or was blocked by browser:', err);
-          // Try playing muted if autoplay policy blocked audio playback
           if (videoRef.current && !videoRef.current.muted) {
             videoRef.current.muted = true;
             setIsMuted(true);
@@ -194,9 +195,10 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
     const curr = videoRef.current.currentTime;
-    const dur = videoRef.current.duration || 1;
-    setCurrentTime(curr);
-    setProgress((curr / dur) * 100);
+    const dur = totalDuration || 1;
+    const overallCurrent = hasMultipleScenes ? currentSceneIndex * 15 + curr : curr;
+    setCurrentTime(overallCurrent);
+    setProgress(Math.min(100, (overallCurrent / dur) * 100));
   };
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -204,12 +206,24 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     const rect = progressBarRef.current.getBoundingClientRect();
     const clickPos = (e.clientX - rect.left) / rect.width;
     const clampedPos = Math.max(0, Math.min(1, clickPos));
-    const dur = videoRef.current.duration || 1;
-    const newTime = clampedPos * dur;
-    videoRef.current.currentTime = newTime;
-    if (audioRef.current) {
-      audioRef.current.currentTime = newTime;
+    const dur = totalDuration || 1;
+    const targetTime = clampedPos * dur;
+
+    if (hasMultipleScenes && version?.scenes && version.scenes.length > 0) {
+      const targetScene = Math.min(version.scenes.length - 1, Math.floor(targetTime / 15));
+      const targetOffset = targetTime % 15;
+      if (targetScene !== currentSceneIndex) {
+        setCurrentSceneIndex(targetScene);
+      }
+      videoRef.current.currentTime = targetOffset;
+    } else {
+      videoRef.current.currentTime = targetTime;
     }
+
+    if (audioRef.current) {
+      audioRef.current.currentTime = targetTime;
+    }
+    setCurrentTime(targetTime);
     setProgress(clampedPos * 100);
   };
 
@@ -428,8 +442,8 @@ ${version.captionStyle.text}
               <>
                 <video
                   ref={videoRef}
-                  src={resolvedMediaUrl}
-                  loop
+                  src={activeMediaSrc}
+                  loop={!hasMultipleScenes}
                   playsInline
                   autoPlay
                   preload="auto"
@@ -437,7 +451,19 @@ ${version.captionStyle.text}
                   muted={isMuted}
                   onPlay={() => setIsPlaying(true)}
                   onPause={() => setIsPlaying(false)}
-                  onEnded={() => setIsPlaying(false)}
+                  onEnded={() => {
+                    if (hasMultipleScenes && currentSceneIndex + 1 < (version?.scenes?.length || 0)) {
+                      setCurrentSceneIndex((prev) => prev + 1);
+                    } else {
+                      setIsPlaying(false);
+                      setCurrentSceneIndex(0);
+                      setProgress(0);
+                      if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current.currentTime = 0;
+                      }
+                    }
+                  }}
                   onError={() => {
                     // If browser fails to decode as video, seamlessly switch to high-res viewer
                     setDisplayMode('keyframe');
@@ -450,7 +476,7 @@ ${version.captionStyle.text}
                   <audio
                     ref={audioRef}
                     src={unMuxedAudioUrl}
-                    loop
+                    loop={false}
                     muted={isMuted}
                     playsInline
                   />

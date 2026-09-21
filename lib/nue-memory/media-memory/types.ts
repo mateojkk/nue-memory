@@ -76,7 +76,7 @@ export interface MediaVersion {
   audioStyle: {
     enabled: boolean;
     style: string;
-    tempo: 'energetic' | 'ambient' | 'none';
+    tempo: 'energetic' | 'ambient' | 'vocal' | 'speech' | 'none';
     audioUrl?: string;
     isMuxed?: boolean;
   };

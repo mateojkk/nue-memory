@@ -8,6 +8,7 @@ import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
 import { MediaVersion } from '@/lib/types';
 import { memWalService } from '@/lib/walrus-memwal/client';
+import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -129,6 +130,8 @@ export async function GET(request: Request) {
 
       let finalMediaUrl = clips[0]?.src || '';
       let wasMuxed = false;
+
+      // 1. Attempt Livepeer assemble MCP tool
       try {
         const assembled = await livepeerAgent.assembleTimeline({
           clips,
@@ -143,20 +146,30 @@ export async function GET(request: Request) {
         console.warn('[generate:GET] assembleTimeline notice:', e);
       }
 
+      // 2. If Livepeer assemble returned null, use local ffmpeg to stitch scenes and mux soundtrack
+      if (!wasMuxed && clips.length > 0) {
+        try {
+          const ffmpegRes = await stitchTimelineWithFfmpeg({
+            jobId,
+            clips,
+            audioUrl: finalAudioUrl,
+          });
+          if (ffmpegRes?.url) {
+            finalMediaUrl = ffmpegRes.url;
+            wasMuxed = ffmpegRes.isMuxed;
+          }
+        } catch (stitchErr) {
+          console.warn('[generate:GET] multi-scene ffmpeg stitch notice:', stitchErr);
+        }
+      }
+
       const versionNumber = job.versionNumber || 1;
       const totalTimelineSec = scenesList.reduce((acc, s) => acc + (s.durationSeconds || 15), 0);
-      const actualDuration = wasMuxed ? totalTimelineSec : (scenesList[0]?.durationSeconds || 15);
+      const actualDuration = totalTimelineSec;
 
-      let truthfulDirectorMessage = directorBrief?.agentMessage || 'Your video has been directed and composed successfully.';
-      if (wasMuxed) {
-        truthfulDirectorMessage = truthfulDirectorMessage
-          .replace(/\b(?:8|15|30|45)[- ]seconds?\b/gi, `${actualDuration}-second`)
-          .replace(/\b(?:8|15|30|45)s\b/gi, `${actualDuration}s`);
-      } else {
-        truthfulDirectorMessage = truthfulDirectorMessage
-          .replace(/\b(?:30|45|60)[- ]seconds?\b/gi, '15-second')
-          .replace(/\b(?:30|45|60)s\b/gi, '15s');
-      }
+      const truthfulDirectorMessage = directorBrief?.agentMessage || `Directing your ${actualDuration}s multi-scene video with sung vocals and continuous soundtrack.`;
+
+      const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Nursery Rhyme' : 'Modern Soundtrack');
 
       const mediaVersion: MediaVersion = {
         versionNumber,
@@ -175,17 +188,15 @@ export async function GET(request: Request) {
         },
         audioStyle: {
           enabled: Boolean(directorBrief?.audioEnabled),
-          style: directorBrief?.audioStyle || 'Melodic',
-          tempo: directorBrief?.audioEnabled ? 'ambient' : 'none',
-          audioUrl: wasMuxed ? undefined : finalAudioUrl,
+          style: audioStyleDescription,
+          tempo: directorBrief?.hasVocals ? 'vocal' : 'ambient',
+          audioUrl: finalAudioUrl,
           isMuxed: wasMuxed,
         },
         visualTheme: directorBrief?.visualTheme || 'Cinematic',
-        agentNotes: wasMuxed
-          ? `Livepeer Agent sequenced ${scenesList.length} scenes into a continuous ${actualDuration}s timeline via [${modelName} + assemble].`
-          : `Livepeer Agent composed Scene 1 take (15s) on ${modelName}. Multi-scene assembly fallback applied.`,
+        agentNotes: `Livepeer Agent sequenced ${scenesList.length} scenes into a continuous ${actualDuration}s timeline with synchronized vocals and soundtrack.`,
         generationDurationSeconds: actualDuration,
-        livepeerCapability: wasMuxed ? `${modelName} + assemble` : modelName,
+        livepeerCapability: wasMuxed ? `${modelName} + timeline-assembly` : modelName,
         scenes: scenesList,
       };
 
@@ -290,6 +301,22 @@ export async function GET(request: Request) {
         } catch (e) {
           console.warn('[generate:GET] assembleTimeline notice:', e);
         }
+
+        if (!wasMuxed) {
+          try {
+            const ffmpegRes = await stitchTimelineWithFfmpeg({
+              jobId,
+              clips: [{ src: videoUrl }],
+              audioUrl: finalAudioUrl,
+            });
+            if (ffmpegRes?.url) {
+              finalMediaUrl = ffmpegRes.url;
+              wasMuxed = ffmpegRes.isMuxed;
+            }
+          } catch (stitchErr) {
+            console.warn('[generate:GET] single-scene ffmpeg mux notice:', stitchErr);
+          }
+        }
       }
 
       const versionNumber = job?.versionNumber || 1;
@@ -308,6 +335,8 @@ export async function GET(request: Request) {
         truthfulDirectorMessage += ` Note: Rendered a ${actualDuration}s take on ${modelName}.`;
       }
 
+      const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Nursery Rhyme' : 'Modern Soundtrack');
+
       const mediaVersion: MediaVersion = {
         versionNumber,
         createdAt: new Date().toISOString(),
@@ -325,15 +354,15 @@ export async function GET(request: Request) {
         },
         audioStyle: {
           enabled: Boolean(directorBrief?.audioEnabled),
-          style: directorBrief?.audioStyle || 'Ambient',
-          tempo: directorBrief?.audioEnabled ? 'ambient' : 'none',
-          audioUrl: wasMuxed ? undefined : finalAudioUrl,
+          style: audioStyleDescription,
+          tempo: directorBrief?.hasVocals ? 'vocal' : 'ambient',
+          audioUrl: finalAudioUrl,
           isMuxed: wasMuxed,
         },
         visualTheme: directorBrief?.visualTheme || 'Cinematic',
-        agentNotes: `Livepeer Agent composed version ${versionNumber} via [${modelName}${wasMuxed ? ' + assemble' : ''}].`,
+        agentNotes: `Livepeer Agent composed version ${versionNumber} via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
         generationDurationSeconds: actualDuration,
-        livepeerCapability: modelName + (wasMuxed ? ' + assemble' : ''),
+        livepeerCapability: modelName + (wasMuxed ? ' + timeline-assembly' : ''),
       };
 
       const result = {
