@@ -12,6 +12,9 @@ import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
+const SEEDANCE_NATIVE_TAKE_SECONDS = 30;
+const FALLBACK_SAFE_TAKE_SECONDS = 15;
+
 function buildMediaVersion(params: {
   versionNumber: number;
   mediaUrl: string;
@@ -291,7 +294,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // SINGLE-SCENE PIPELINE (duration <= 15)
+    // SINGLE-TAKE PIPELINE (native Seedance takes can be up to 30s)
     const livepeerJobId = job?.livepeerJobId || paramLivepeerJobId;
     if (!livepeerJobId) {
       if (job) return NextResponse.json({ success: true, job });
@@ -549,10 +552,12 @@ export async function POST(request: Request) {
     if (preflightOnly) {
       const requestedDuration = directorBrief.duration || 15;
       const sceneCount = !validatedImageUrl && requestedDuration > 15
-        ? Math.min(4, Math.max(2, Math.ceil(requestedDuration / 15)))
+        ? Math.min(2, Math.max(1, Math.ceil(requestedDuration / SEEDANCE_NATIVE_TAKE_SECONDS)))
         : 1;
-      const timelineNote = sceneCount > 1
-        ? `Livepeer renders this as ${sceneCount} sequential 15s takes stitched into one ${sceneCount * 15}s timeline. Nue will enforce the same characters, setting, lighting, camera language, and action continuity across every take.`
+      const timelineNote = !validatedImageUrl && requestedDuration > 15
+        ? sceneCount === 1
+          ? `Nue will request one native ${requestedDuration}s Seedance take, so the shot is generated in a single pass instead of stitched from 15s clips.`
+          : `Nue will request ${sceneCount} sequential native ${SEEDANCE_NATIVE_TAKE_SECONDS}s Seedance takes stitched into one ${Math.min(60, sceneCount * SEEDANCE_NATIVE_TAKE_SECONDS)}s timeline. Each take is directed as a continuation of the same shot, with locked characters, setting, lighting, camera language, and action state.`
         : undefined;
       return NextResponse.json({
         success: true,
@@ -662,8 +667,8 @@ export async function POST(request: Request) {
     const modelToUse: string = isImageToVideo ? 'seedance-25-i2v' : 'seedance-25-t2v';
     const expectedSla = '~4 min';
 
-    const requestedDuration = directorBrief.duration || 15;
-    const isMultiScene = !isImageToVideo && requestedDuration > 15;
+    const requestedDuration = Math.min(60, directorBrief.duration || 15);
+    const isMultiScene = !isImageToVideo && requestedDuration > SEEDANCE_NATIVE_TAKE_SECONDS;
 
     // Dispatch background soundtrack in parallel if requested (with singing vocals / lyrics support)
     let audioJobId: string | undefined;
@@ -712,8 +717,9 @@ export async function POST(request: Request) {
     });
 
     if (isMultiScene) {
-      const numScenes = Math.min(4, Math.max(2, Math.ceil(requestedDuration / 15)));
-      const totalAssembledDuration = numScenes * 15;
+      const nativeTakeDuration = SEEDANCE_NATIVE_TAKE_SECONDS;
+      const numScenes = Math.min(2, Math.max(2, Math.ceil(requestedDuration / nativeTakeDuration)));
+      const totalAssembledDuration = Math.min(60, numScenes * nativeTakeDuration);
 
       // Phase 1: Generate Master Concept Anchor Image (Higgsfield Soul ID & Google Character DNA standard)
       // Creates a canonical visual anchor of characters/environment to condition all downstream takes
@@ -760,7 +766,7 @@ export async function POST(request: Request) {
         scenePromptsToUse.map((scenePrompt, idx) => {
           const charDna = directorBrief.characterBible ? ` Characters: ${directorBrief.characterBible}.` : '';
           const continuityDirective = [
-            `This is take ${idx + 1} of ${numScenes} in one continuous ${totalAssembledDuration}s stitched timeline, not a separate concept.`,
+            `This is native Seedance take ${idx + 1} of ${numScenes} in one continuous ${totalAssembledDuration}s timeline, not a separate concept.`,
             'Maintain the exact same subject identity, wardrobe, props, setting geography, lighting continuity, lens language, scale relationships, and visual rules from the original prompt.',
             idx === 0
               ? 'End this take on an action state that can continue naturally into the next take.'
@@ -773,7 +779,7 @@ export async function POST(request: Request) {
             action: 'generate',
             prompt: fullPrompt,
             model_override: multiSceneModel,
-            duration: 15,
+            duration: nativeTakeDuration,
             async: true,
           });
         })
@@ -787,8 +793,8 @@ export async function POST(request: Request) {
 
       const scenes = sceneDispatches.map((disp, idx) => ({
         sceneNumber: idx + 1,
-        durationSeconds: 15,
-        title: `Scene ${idx + 1}`,
+        durationSeconds: nativeTakeDuration,
+        title: `Continuous Take ${idx + 1}`,
         prompt: scenePromptsToUse[idx],
         jobId: disp.jobId,
         url: disp.url,
@@ -796,7 +802,7 @@ export async function POST(request: Request) {
         characterAnchorUrl,
       }));
 
-      const stageDesc = `Directing ${totalAssembledDuration}s multi-scene sequence (${numScenes} scenes on ${multiSceneModel}${characterAnchorUrl ? ' with Character Anchor' : ''})...`;
+      const stageDesc = `Directing ${totalAssembledDuration}s continuous Seedance timeline (${numScenes} native ${nativeTakeDuration}s takes on ${multiSceneModel}${characterAnchorUrl ? ' with Character Anchor' : ''})...`;
 
       updateJob(jobId, {
         status: 'rendering',
@@ -839,9 +845,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // Single-scene path (duration <= 15)
+    // Single native take path. Seedance 2.5 can produce up to 30s in one pass.
     const singleTakeDuration = modelToUse.includes('seedance')
-      ? Math.min(15, Math.max(5, requestedDuration))
+      ? Math.min(SEEDANCE_NATIVE_TAKE_SECONDS, Math.max(5, requestedDuration))
       : Math.min(8, Math.max(3, requestedDuration >= 7 ? 8 : requestedDuration >= 4 ? 5 : 3));
 
     const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.${recalledMemoryDirective}`;
@@ -855,7 +861,21 @@ export async function POST(request: Request) {
       ...(validatedImageUrl ? { source_url: validatedImageUrl } : {}),
     };
 
-    const videoDispatch = await livepeerAgent.dispatchCreateMedia(dispatchArgs);
+    let videoDispatch = await livepeerAgent.dispatchCreateMedia(dispatchArgs);
+    let effectiveSingleTakeDuration = singleTakeDuration;
+
+    if (
+      videoDispatch.status === 'failed' &&
+      singleTakeDuration > FALLBACK_SAFE_TAKE_SECONDS &&
+      /duration|schema|validation|invalid|<=\s*15|15/i.test(videoDispatch.error || '')
+    ) {
+      effectiveSingleTakeDuration = FALLBACK_SAFE_TAKE_SECONDS;
+      videoDispatch = await livepeerAgent.dispatchCreateMedia({
+        ...dispatchArgs,
+        duration: FALLBACK_SAFE_TAKE_SECONDS,
+        prompt: `${livepeerPrompt} Provider rejected native ${singleTakeDuration}s duration, so render this as the opening continuous take. Preserve exact subject identity, setting, lighting, camera language, and action state for timeline continuation.`,
+      });
+    }
 
     if (videoDispatch.status === 'failed') {
       return NextResponse.json({
@@ -896,21 +916,21 @@ export async function POST(request: Request) {
       const mediaVersion = buildMediaVersion({
         versionNumber: Number(versionNumber) || 1,
         mediaUrl: finalMediaUrl,
-        durationSeconds: singleTakeDuration,
+        durationSeconds: effectiveSingleTakeDuration,
         directorBrief,
         syntheticPreferences,
         modelName,
         finalAudioUrl,
         wasMuxed,
-        agentNotes: `Livepeer Agent returned an immediately completed ${singleTakeDuration}s take via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
+        agentNotes: `Livepeer Agent returned an immediately completed ${effectiveSingleTakeDuration}s take via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
       });
 
       const result = {
         mediaVersion,
         enrichedPrompt: directorBrief.enrichedPrompt,
         appliedMemories: syntheticPreferences,
-        directorMessage: directorBrief.agentMessage || `Here is your ${singleTakeDuration}-second video take!`,
-        summaryTokens: [directorBrief.visualTheme || 'Cinematic', directorBrief.pacing || 'cinematic', `${singleTakeDuration}s`],
+        directorMessage: directorBrief.agentMessage || `Here is your ${effectiveSingleTakeDuration}-second video take!`,
+        summaryTokens: [directorBrief.visualTheme || 'Cinematic', directorBrief.pacing || 'cinematic', `${effectiveSingleTakeDuration}s`],
         retrievalCount: syntheticPreferences.length,
       };
 
@@ -923,8 +943,8 @@ export async function POST(request: Request) {
         directorBrief,
         syntheticPreferences,
         modelToUse: modelName,
-        singleTakeDuration,
-        effectiveDuration: singleTakeDuration,
+        singleTakeDuration: effectiveSingleTakeDuration,
+        effectiveDuration: effectiveSingleTakeDuration,
         expectedSla,
         result,
       });
@@ -954,8 +974,8 @@ export async function POST(request: Request) {
       directorBrief,
       syntheticPreferences,
       modelToUse,
-      singleTakeDuration,
-      effectiveDuration: singleTakeDuration,
+      singleTakeDuration: effectiveSingleTakeDuration,
+      effectiveDuration: effectiveSingleTakeDuration,
       expectedSla,
     });
 

@@ -976,24 +976,23 @@ export class LivepeerMediaAgent {
     // Determine model dispatch strategy:
     // 1. If image provided: Dispatch seedance-25-i2v
     // 2. If explicitly requested ltx: Dispatch ltx-25-t2v-pro
-    // 3. Flagship default: seedance-25-t2v for superior cinematic quality and 15s takes
+    // 3. Flagship default: seedance-25-t2v for superior cinematic quality and native 30s takes
     const modelToUse = isImageToVideo
       ? 'seedance-25-i2v'
       : explicitLtx
       ? 'ltx-25-t2v-pro'
       : 'seedance-25-t2v';
 
-    const maxSingleTake = modelToUse === 'seedance-25-t2v' ? 15 : 10;
+    const maxSingleTake = modelToUse === 'seedance-25-t2v' ? 30 : 10;
     const isLongForm = !isImageToVideo && targetDuration > maxSingleTake;
     const clipCount = isLongForm
       ? (scenePrompts?.length || Math.min(8, Math.max(2, Math.round(targetDuration / maxSingleTake))))
       : 1;
 
-    // Livepeer create_media schema strictly enforces duration <= 15.
-    // For seedance: takes up to 15s (clamped between 5 and 15s).
+    // Seedance 2.5 supports native 30s takes; other video models still use shorter caps.
     // For ltx: takes up to 10s.
     const singleTakeDuration = modelToUse === 'seedance-25-t2v'
-      ? (isLongForm ? 15 : Math.min(15, Math.max(5, targetDuration)))
+      ? (isLongForm ? 30 : Math.min(30, Math.max(5, targetDuration)))
       : Math.min(10, Math.max(3, targetDuration));
 
     // Expected total sequence duration across all assembled scenes
@@ -1022,7 +1021,7 @@ export class LivepeerMediaAgent {
     if (isImageToVideo && hostedImageUrl) {
       mcpArguments.source_url = hostedImageUrl;
     } else {
-      // Pass singleTakeDuration so it strictly adheres to the MCP schema (duration <= 15)
+      // Pass singleTakeDuration using the selected model's native duration cap.
       mcpArguments.duration = singleTakeDuration;
     }
 

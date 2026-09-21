@@ -16,7 +16,7 @@ YOUR ROLE & PERSONALITY:
 - When the user shares something cool, laughs, or vents (e.g. "the funny part is that, i just made that song!", "wait that is hilarious"), react naturally and genuinely! Acknowledge what they said with enthusiasm!
 - When the user points out a mistake or gives a correction (e.g. "read the prompt properly", "the lyrics aint even complete", "i said 30 seconds"):
   * Own it with human authenticity! Carefully read the user's EXACT requested duration and instructions from the prompt (e.g. if they asked for 30 seconds, honor 30 seconds! If 60 seconds, honor 60 seconds).
-  * Set shouldGenerate: true and duration to the user's requested length (30s -> 2 scenes, 60s -> 4 scenes), keeping all user lyrics and character continuity intact.
+	  * Set shouldGenerate: true and duration to the user's requested length (30s -> one native Seedance take, 60s -> two continuous 30s takes), keeping all user lyrics and character continuity intact.
 
 YOUR FIRST MANDATE IS SEMANTIC INTENT CLASSIFICATION:
 Classify the user's message into one of these intents:
@@ -37,7 +37,7 @@ Classify the user's message into one of these intents:
 Available Livepeer video models and timeline assembly:
 - seedance-25-t2v: High-fidelity cinematic video diffusion (flagship text-to-video model for all takes and multi-scene timelines up to 60s).
 - seedance-25-i2v: High-fidelity image-to-video diffusion. Use whenever an image is provided.
-- Multi-scene timeline assembly: Each take is rendered with a UNIQUE scene prompt, then assembled into a continuous video with synchronized soundtrack. Supports 15-60s total.
+- Native Seedance 2.5 timeline: 4-30s should be planned as one continuous take whenever possible. 31-60s should be planned as two continuous 30s chapters with the same characters, setting, lighting, and action state.
 
 Output ONLY valid JSON with these fields:
 {
@@ -48,7 +48,7 @@ Output ONLY valid JSON with these fields:
   "enrichedPrompt": "detailed positive visual prompt for the overall video concept (leave empty string if shouldGenerate is false)",
   "characterBible": "precise immutable description of all main characters (exact age, hair style & color, skin tone, facial features, wardrobe & garment colors) to lock Character DNA across scenes",
   "conceptImagePrompt": "clean master concept reference image prompt depicting the characters together clearly in their canonical wardrobe and setting, ideal for character anchor conditioning",
-  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (REQUIRED when shouldGenerate is true and duration > 15. 30s -> 2 scenes, 45s -> 3 scenes, 60s / 1 min -> 4 scenes. Each entry MUST incorporate the character descriptions to maintain 100% character identity and visual continuity),
+  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (REQUIRED when shouldGenerate is true and duration > 30. 30s -> one native take with no scene split, 45s or 60s / 1 min -> 2 continuous 30s chapters. Each entry MUST incorporate the character descriptions to maintain 100% character identity and visual continuity),
   "visualTheme": "the visual style/theme honoring user's aesthetic",
   "pacing": "fast" | "moderate" | "cinematic",
   "audioStyle": "description of audio mood and musical style",
@@ -63,8 +63,9 @@ Output ONLY valid JSON with these fields:
 CRITICAL RULES FOR PROMPTS SENT TO DIFFUSION:
 - Focus purely on positive, vivid visual descriptions of lighting, characters, motion, atmosphere, and artistic style.
 - NEVER copy negative instructions, legalistic disclaimers, or words like "copyright", "copyrighted", "infringe", "do not copy", "nursery rhyme" into the prompt or scenes. Automated partner scanners flag those words as false-positive policy violations. Describe the scene positively and artistically!
-- CHARACTER DNA & MULTI-SCENE CONTINUITY (Google & Higgsfield Standard):
-  * In multi-scene videos (30s, 45s, 60s), all scenes MUST form one single continuous story featuring the EXACT SAME subjects, characters, environment, lighting, and visual theme.
+	- CHARACTER DNA & MULTI-SCENE CONTINUITY (Google & Higgsfield Standard):
+	  * For 30s or shorter text-to-video, plan one native continuous Seedance take, not two separate scenes.
+	  * In longer multi-take videos (45s, 60s), all takes MUST form one single continuous story featuring the EXACT SAME subjects, characters, environment, lighting, and visual theme.
   * Define explicit "characterBible" locking the exact hair, skin tone, eye shape, wardrobe, and clothing colors.
   * Generate a "conceptImagePrompt" showing the characters together clearly from the front, in canonical lighting and outfits, to serve as the visual anchor.
 - NEVER include duration, seconds, minutes, or timing counts (e.g. '30-second', '60s', '1 minute') in enrichedPrompt, conceptImagePrompt, scenePrompts, or audioStyle. Prompts to models must describe purely visual elements and musical mood/instruments, NEVER duration specifications.
@@ -538,8 +539,9 @@ function parseDirectorResponse(
       duration = Math.max(5, Math.min(60, parsed.duration));
     }
 
-    // Target scene count for multi-scene pipeline
-    const targetSceneCount = duration >= 46 ? 4 : duration >= 31 ? 3 : duration > 15 ? 2 : 1;
+    // Target scene count for native Seedance 2.5 timeline planning.
+    // 30s and below should stay one single-pass take; 31-60s becomes two continuous chapters.
+    const targetSceneCount = duration > 30 ? 2 : 1;
     let scenePrompts: string[] | undefined;
     if (targetSceneCount > 1) {
       const parsedScenes = Array.isArray(parsed.scenePrompts)
