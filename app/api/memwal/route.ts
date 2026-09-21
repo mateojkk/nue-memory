@@ -1,10 +1,15 @@
 import { NextResponse } from 'next/server';
 import { memWalService } from '@/lib/walrus-memwal/client';
-import { evolveMemories } from '@/lib/nue-memory/evolution';
 import { MediaPreference } from '@/lib/types';
 import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
+
+export const runtime = 'nodejs';
+// Walrus recall + tombstone polling can legitimately take over a minute when
+// the relayer is congested. Without this the platform kills the function
+// mid-poll and the browser reports a bare NetworkError instead of JSON.
+export const maxDuration = 120;
 
 /**
  * Maps Walrus configuration failures to an explicit 503 so the UI can render
@@ -94,14 +99,14 @@ export async function POST(request: Request) {
     if (action === 'remember') {
       const itemsToRemember: MediaPreference[] = preferences || (preference ? [preference] : []);
       if (itemsToRemember.length > 0) {
+        // Mem0-style ADD-only persistence: every confirmed rule is appended as
+        // a new fact. Nothing is overwritten or deactivated here - contradictions
+        // resolve at retrieval ranking (recency-weighted), with full history
+        // preserved. Explicit user deletes tombstone via forget.
         const storedItems: { blobId: string; preference: MediaPreference; namespace?: string }[] = [];
-        let allSuperseded: MediaPreference[] = [];
-        const warnings: string[] = [];
 
         for (const item of itemsToRemember) {
           const itemUserId = item.userId || effectiveUserId || 'default_user';
-          const currentPreferences = memWalService.getAllPreferences(itemUserId, true);
-          const evolution = evolveMemories(currentPreferences, item);
           const newId = item.id || `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
           const preferenceToPersist: MediaPreference = {
@@ -111,29 +116,11 @@ export async function POST(request: Request) {
             createdAt: item.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             isActive: true,
-            supersedesId: evolution.supersededMemories.length > 0 ? evolution.supersededMemories[0].id : undefined,
+            supersedesId: undefined,
           };
 
-          // Persist the new memory first so a throttled supersede marker
-          // cannot fail the whole remember - the replaced rule is retired
-          // best-effort afterwards and any miss is reported, not hidden.
           const result = await memWalService.rememberPreference(preferenceToPersist);
           storedItems.push(result);
-
-          for (const superseded of evolution.supersededMemories) {
-            const updatedSuperseded: MediaPreference = {
-              ...superseded,
-              userId: itemUserId,
-              isActive: false,
-              updatedAt: new Date().toISOString(),
-            };
-            try {
-              await memWalService.updatePreference(updatedSuperseded);
-              allSuperseded.push(updatedSuperseded);
-            } catch (e) {
-              warnings.push(`Saved the new rule but could not retire replaced memory ${superseded.id} (Walrus throttled) - it may still show until the next sync.`);
-            }
-          }
         }
 
         const activeList = memWalService.getAllPreferences(effectiveUserId, false);
@@ -145,8 +132,8 @@ export async function POST(request: Request) {
           blobId: storedItems[storedItems.length - 1]?.blobId,
           blobIds: storedItems.map((s) => s.blobId),
           namespace: storedItems[storedItems.length - 1]?.namespace,
-          superseded: allSuperseded,
-          warnings,
+          superseded: [],
+          warnings: [],
           totalActiveCount: activeList.length,
         });
       }

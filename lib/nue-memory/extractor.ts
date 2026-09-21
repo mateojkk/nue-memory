@@ -5,4 +5,4 @@
  */
 
 export { extractMemories } from './engine/extractor';
-export { classifyFeedback } from './media-memory/extractor';
+export { classifyFeedback, classifyFeedbackAuto } from './media-memory/extractor';

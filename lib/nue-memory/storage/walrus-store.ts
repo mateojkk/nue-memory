@@ -64,14 +64,17 @@ async function rememberWithRetry(
   for (let attempt = 1; attempt <= attempts; attempt++) {
     try {
       return await client.rememberAndWait(text, namespace, {
-        timeoutMs: 30000,
+        // Capped per attempt: a stalled relayer must fail fast so the route
+        // stays under the serverless execution limit (see maxDuration in the
+        // memwal route). Total worst case ~53s, never an open-ended hang.
+        timeoutMs: 25000,
         idempotencyKey,
       });
     } catch (err) {
       lastError = err;
       if (attempt < attempts) {
         console.warn(`[WalrusStore] Remember attempt ${attempt} throttled, retrying once with same idempotency key:`, err instanceof Error ? err.message : err);
-        await new Promise((r) => setTimeout(r, 4000));
+        await new Promise((r) => setTimeout(r, 3000));
       }
     }
   }

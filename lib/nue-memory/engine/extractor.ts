@@ -186,6 +186,20 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     }),
   },
   {
+    category: 'music',
+    type: 'preference',
+    domain: 'media',
+    pattern: /(?:(?:music|sound|soundtrack|audio|song)\s+.*?fade\s*-?\s*out|fade\s*-?\s*out\s+.*?(?:music|sound|soundtrack|audio|song)|fadeout)/i,
+    extract: (text) => {
+      const durMatch = text.match(/\b(\d+)\s*(?:-|–)?\s*(?:seconds?|secs?|s)\b/i);
+      const secs = durMatch ? Math.max(1, Math.min(10, parseInt(durMatch[1], 10))) : 2;
+      return {
+        value: `Fade out soundtrack over the final ${secs} seconds rather than cutting abruptly`,
+        confidence: 0.94,
+      };
+    },
+  },
+  {
     category: 'audio',
     type: 'preference',
     domain: 'media',
@@ -231,12 +245,12 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
       };
     },
   },
-  // 6. Video Duration / Length
+  // 6. Video Duration / Length (numbers in fade/outro context are fade lengths, not video lengths)
   {
     category: 'duration',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:(?:prefer|like|want|make|generate|use|standard is|keep|set|told you)\s+.*?\b(\d+)\s*(?:seconds?|secs?|s)\b)|(?:(\d+)\s*(?:seconds?|secs?|s)\b)/i,
+    pattern: /(?:(?:prefer|like|want|make|generate|use|standard is|keep|set|told you)\s+.*?\b(\d+)\s*(?:seconds?|secs?|s)\b(?!\s+fade))|(?:(?<!fade\s)(?<!fade\sout\s)(?<!fadeout\s)(?<!over\s)(?<!final\s)(?<!last\s)(\d+)\s*(?:seconds?|secs?|s)\b(?!\s+fade))/i,
     extract: (text, match) => {
       const numStr = match[1] || match[2];
       const sec = parseInt(numStr, 10);
@@ -397,4 +411,132 @@ export function candidateToStructuredMemory(
     updatedAt: now,
     isActive: true,
   };
+}
+
+/**
+ * Durable creative-preference taxonomy. The LLM extractor must pick from
+ * these categories so stored memories stay routable to render enrichment.
+ */
+export const MEMORY_CATEGORIES = [
+  'pacing',
+  'visual_style',
+  'captions',
+  'typography',
+  'music',
+  'voice',
+  'color',
+  'transitions',
+  'length',
+  'aspect_ratio',
+  'branding',
+  'composition',
+] as const;
+
+const EXTRACTION_SYSTEM_PROMPT = `You extract durable creative preferences from a single user message for an AI video studio. Return ONLY valid JSON, no prose, no code fences.
+
+Schema:
+{"classification": "persistent_memory" | "temporary_edit", "candidates": [{"category": "<one of: pacing, visual_style, captions, typography, music, voice, color, transitions, length, aspect_ratio, branding, composition>", "value": "<one crisp standing rule, e.g. 'Fade out soundtrack over the final 2 seconds rather than cutting abruptly'>", "confidence": 0.0 - 1.0}]}
+
+Rules:
+- Extract ONLY standing taste that should apply to future videos (likes, dislikes, always/never, from-now-on rules).
+- One-off instructions about the current video ("fix this take", "move the logo up here") are temporary_edit with zero candidates.
+- Each candidate value must be a reusable rule, never a quote of the current scene.
+- Skip anything already stated in EXISTING MEMORIES (dedupe). If the message merely repeats a listed memory, return zero candidates.
+- "audio"/"sound" maps to category "music". On-screen text maps to "captions". Speed/rhythm maps to "pacing".
+- At most 4 candidates. Confidence above 0.9 only for explicit statements ("I like", "always", "from now on").`;
+
+export interface AutoExtractionContext extends ExtractionContext {
+  /** Active memories for Mem0-style context-lookup dedupe. */
+  existingMemories?: Array<{ category: string; value: string }>;
+}
+
+/**
+ * Mem0-style extraction: a single LLM pass over the message with existing
+ * memories as dedupe context (lookup -> extract -> dedupe in one call).
+ * Falls back to the deterministic rule engine when Groq is unavailable, so
+ * learning degrades instead of breaking.
+ */
+export async function extractMemoriesAuto(
+  input: string,
+  context: AutoExtractionContext = {}
+): Promise<MemoryExtractionResult> {
+  const text = input.trim();
+  if (!text) {
+    return { classification: 'temporary_edit', confidence: 1, reasoning: 'Empty input.', candidates: [], temporaryInstructions: [] };
+  }
+
+  try {
+    if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY not set');
+    const { generateText } = await import('ai');
+    const { createGroq } = await import('@ai-sdk/groq');
+    const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+    const modelName = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+
+    const existingBlock =
+      context.existingMemories && context.existingMemories.length > 0
+        ? `EXISTING MEMORIES (do not re-extract these):\n${context.existingMemories
+            .slice(0, 20)
+            .map((m) => `- [${m.category}] ${m.value}`)
+            .join('\n')}\n\n`
+        : '';
+
+    const { text: out } = await generateText({
+      model: groq(modelName),
+      system: EXTRACTION_SYSTEM_PROMPT,
+      prompt: `${existingBlock}USER MESSAGE: "${text}"`,
+    });
+
+    const parsed = parseExtractionJson(out);
+    if (!parsed) throw new Error('Unparseable extractor output');
+
+    const candidates: ExtractedMemoryCandidate[] = [];
+    for (const c of parsed.candidates.slice(0, 4)) {
+      const category = String(c.category || '').toLowerCase();
+      const value = String(c.value || '').trim();
+      if (!MEMORY_CATEGORIES.includes(category as (typeof MEMORY_CATEGORIES)[number])) continue;
+      if (value.length < 8) continue;
+      const confidence = Math.max(0.4, Math.min(0.99, Number(c.confidence) || 0.8));
+      candidates.push({
+        type: 'preference',
+        category,
+        value: value.slice(0, 240),
+        confidence,
+        scope: 'domain',
+        domain: context.domain || 'media',
+        rationale: 'LLM-extracted standing preference with dedupe context.',
+        sourceText: text,
+      });
+    }
+
+    const classification: MemoryExtractionResult['classification'] =
+      candidates.length > 0 ? 'persistent_memory' : 'temporary_edit';
+    return {
+      classification,
+      confidence: candidates.length > 0 ? candidates.reduce((a, c) => a + c.confidence, 0) / candidates.length : 0.9,
+      reasoning: `LLM extraction: ${candidates.length} durable preference(s).`,
+      candidates,
+      temporaryInstructions: candidates.length > 0 ? [] : [text],
+    };
+  } catch (err) {
+    console.warn('[extractor] LLM extraction unavailable, falling back to rules:', err instanceof Error ? err.message : err);
+    return extractMemories(text, context);
+  }
+}
+
+function parseExtractionJson(out: string): { classification: string; candidates: Array<{ category?: unknown; value?: unknown; confidence?: unknown }> } | null {
+  try {
+    let jsonStr = out.trim();
+    const fenced = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenced) jsonStr = fenced[1].trim();
+    else {
+      const first = jsonStr.indexOf('{');
+      const last = jsonStr.lastIndexOf('}');
+      if (first !== -1 && last !== -1 && last > first) jsonStr = jsonStr.slice(first, last + 1);
+    }
+    const parsed = JSON.parse(jsonStr);
+    if (!parsed || !Array.isArray(parsed.candidates)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
 }

@@ -265,8 +265,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   };
 
-  const proposeMemoriesFromFeedback = async (feedback: string, project: CreativeProject | null) => {
-    if (!feedback.trim()) return;
+  const proposeMemoriesFromFeedback = async (feedback: string, project: CreativeProject | null): Promise<number> => {
+    if (!feedback.trim()) return 0;
     try {
       const res = await fetch('/api/classify', {
         method: 'POST',
@@ -280,35 +280,117 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
             '',
           email: email || undefined,
           userId: email || undefined,
+          // Mem0-style dedupe context: active rules so repeats aren't re-extracted.
+          existingMemories: activeMemories.map((m) => ({ category: m.category, preference: m.preference })),
         }),
       });
-      if (!res.ok) return;
+      if (!res.ok) return 0;
       const data = await res.json();
       const extracted = data?.classification?.extractedPreferences;
-      if (!Array.isArray(extracted) || extracted.length === 0) return;
+      if (!Array.isArray(extracted) || extracted.length === 0) return 0;
 
-      setPendingPreferences((prev) => {
-        const existingKeys = new Set([
-          ...prev.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
-          ...activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
-        ]);
-        const next = extracted
-          .map((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
-            ...pref,
-            projectId: project?.id,
-            projectTitle: project?.title || pref.projectTitle,
-            userId: email || pref.userId,
-          }))
-          .filter((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
-            const key = `${pref.category}:${pref.preference}`.toLowerCase();
-            if (existingKeys.has(key)) return false;
-            existingKeys.add(key);
-            return true;
-          });
-        return next.length > 0 ? [...prev, ...next].slice(-6) : prev;
-      });
+      // Compute synchronously against the current snapshot (state updaters run
+      // async, so the count cannot be derived inside setPendingPreferences).
+      const existingKeys = new Set([
+        ...pendingPreferences.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
+        ...activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
+      ]);
+      const next = extracted
+        .map((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
+          ...pref,
+          projectId: project?.id,
+          projectTitle: project?.title || pref.projectTitle,
+          userId: email || pref.userId,
+        }))
+        .filter((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
+          const key = `${pref.category}:${pref.preference}`.toLowerCase();
+          if (existingKeys.has(key)) return false;
+          existingKeys.add(key);
+          return true;
+        });
+      if (next.length > 0) {
+        setPendingPreferences((prev) => [...prev, ...next].slice(-6));
+      }
+      return next.length;
     } catch (e) {
       console.warn('Failed to classify feedback for memory:', e);
+      return 0;
+    }
+  };
+
+  // Mem0-style auto-save: an explicit standing preference is self-confirming,
+  // so it persists immediately (toast + undo in the Memory tab) instead of
+  // waiting on a Remember click. Returns the saved preference texts.
+  const rememberNow = async (text: string, project: CreativeProject | null): Promise<string[]> => {
+    if (!text.trim()) return [];
+    setIsSavingMemory(true);
+    try {
+      const res = await fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback: text,
+          projectTitle: project?.title,
+          currentBrief:
+            project?.versions?.[project.currentVersionIndex]?.brief ||
+            project?.initialPrompt ||
+            '',
+          email: email || undefined,
+          userId: email || undefined,
+          existingMemories: activeMemories.map((m) => ({ category: m.category, preference: m.preference })),
+        }),
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      const extracted = data?.classification?.extractedPreferences;
+      if (!Array.isArray(extracted) || extracted.length === 0) return [];
+
+      const existingKeys = new Set(
+        activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase())
+      );
+      const fresh = extracted
+        .map((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
+          ...pref,
+          projectId: project?.id,
+          projectTitle: project?.title || pref.projectTitle,
+          userId: email || pref.userId,
+        }))
+        .filter((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
+          const key = `${pref.category}:${pref.preference}`.toLowerCase();
+          if (existingKeys.has(key)) return false;
+          existingKeys.add(key);
+          return true;
+        });
+      if (fresh.length === 0) return [];
+
+      const saveRes = await fetch('/api/memwal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'remember',
+          preferences: fresh,
+          email: email || undefined,
+          userId: email || undefined,
+        }),
+      });
+      const saveData = await saveRes.json().catch(() => null);
+      if (!saveRes.ok || !saveData?.success) return [];
+
+      if (email) await fetchMemories(email);
+      else {
+        const stored: MediaPreference[] = (saveData.storedPreferences || []).map((p: any, i: number) => ({
+          ...fresh[i],
+          ...p,
+          isActive: true,
+        }));
+        setActiveMemories((prev) => [...prev, ...stored]);
+      }
+      return fresh.map((p: { preference: string }) => p.preference);
+    } catch (e) {
+      console.warn('Failed to auto-save memory:', e);
+      return [];
+    } finally {
+      setIsSavingMemory(false);
     }
   };
 
@@ -546,6 +628,30 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           timestamp: new Date().toISOString(),
         };
 
+        // Server-side memory-intent backstop: the director distilled a standing
+        // preference instead of rendering. Surface it in the same Remember UI.
+        const pm = data.pendingMemory;
+        if (pm && typeof pm.preference === 'string' && pm.preference.trim().length > 0) {
+          const candidate = {
+            type: 'media_preference' as const,
+            category: typeof pm.category === 'string' && pm.category ? pm.category : 'visual_style',
+            preference: pm.preference.trim(),
+            strength: 'high' as const,
+            scope: 'media' as const,
+            source: 'user_feedback' as const,
+            projectId: activeProject?.id,
+            projectTitle: activeProject?.title,
+            userId: email || undefined,
+          };
+          const key = `${candidate.category}:${candidate.preference}`.toLowerCase();
+          const already = [...pendingPreferences, ...activeMemories].some(
+            (p) => `${p.category}:${p.preference}`.toLowerCase() === key
+          );
+          if (!already) {
+            setPendingPreferences((prev) => [...prev, candidate].slice(-6));
+          }
+        }
+
         setProjects((prev) => {
           const updated = [...prev];
           if (updated[targetIndex]) {
@@ -660,6 +766,35 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       setProjects([newProj]);
       setCurrentProjectIndex(0);
       persistProjectToDb(newProj);
+      // A standing preference as the very first message is still a memory, not
+      // a brief - auto-save it and stop instead of burning a render on it.
+      if (
+        !/\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(text.trim().toLowerCase()) &&
+        /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default|in all (my |future )|for (all |future ))/i.test(text)
+      ) {
+        const saved = await rememberNow(text, newProj);
+        const note: ChatMessage = {
+          id: `msg-mem-${Date.now()}`,
+          sender: 'agent',
+          content:
+            saved.length > 0
+              ? `Remembered: "${saved.join(', ')}" - applies to future renders. Undo anytime in the Memory tab. No video rendered.`
+              : `I hear you, but I couldn't distill that into a lasting rule. Tell me a video idea whenever you're ready. No video rendered.`,
+          timestamp: new Date().toISOString(),
+        };
+        setProjects((prev) => {
+          const updated = [...prev];
+          if (updated[0]) {
+            const proj = { ...updated[0] };
+            proj.messages = [...(proj.messages || []), note];
+            updated[0] = proj;
+            persistProjectToDb(proj);
+          }
+          return updated;
+        });
+        setMessages((prev) => [...prev, note]);
+        return;
+      }
       await handleGenerate(text, 1, undefined, 0, newProj.title, imageUrl, [{ role: 'user', content: text }]);
       return;
     }
@@ -726,6 +861,35 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         imageUrl,
         chatHistory
       );
+    } else if (
+      !hasCreationIntent &&
+      /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default|in all (my |future )|for (all |future ))/i.test(text)
+    ) {
+      // Standing taste statement, not a render request: auto-save it as memory
+      // (explicit preferences are self-confirming) and stop here. Never spend
+      // a GPU render on a preference sentence.
+      const saved = await rememberNow(text, currentProj);
+      const note: ChatMessage = {
+        id: `msg-mem-${Date.now()}`,
+        sender: 'agent',
+        content:
+          saved.length > 0
+            ? `Remembered: "${saved.join(', ')}" - applies to future renders. Undo anytime in the Memory tab. No video rendered.`
+            : `I hear you, but I couldn't distill that into a lasting rule${email ? '' : ' (sign in so I can persist it)'}. Phrase it as one (e.g. "always fade the music out over 2s") or tell me to apply it to this video and I'll re-render. No video rendered.`,
+        timestamp: new Date().toISOString(),
+      };
+      setProjects((prev) => {
+        const updated = [...prev];
+        if (updated[targetIndex]) {
+          const proj = { ...updated[targetIndex] };
+          proj.messages = [...(proj.messages || []), note];
+          updated[targetIndex] = proj;
+          persistProjectToDb(proj);
+        }
+        return updated;
+      });
+      setMessages((prev) => [...prev, note]);
+      return;
     } else {
       // Fresh creative prompt: always use the user's new prompt text
       await handleGenerate(

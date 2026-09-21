@@ -41,6 +41,11 @@ Classify the user's message into one of these intents:
    -> Set "shouldGenerate": true.
 5. "revision": The user provides a correction, adjustment, or continuation of the active project (e.g. "make it 60s", "fix the lyrics", "change to night").
    -> Set "shouldGenerate": true.
+   EXCEPTION: a standing taste statement ("I like...", "I prefer...", "I always/never...", "from now on...", "remember that...") with NO imperative to re-render the current video is NOT a revision. It is "memory" below, even mid-project.
+6. "memory": The user states a standing preference or asks to save one (e.g. "i like having the sound fade out at the end", "always fade the music out", "remember that I prefer vertical", "from now on no ambient music"), without asking for a new render.
+   -> MUST set "shouldGenerate": false.
+   -> "agentMessage": Confirm the rule back crisply and say it is up for confirmation to Remember (no render started).
+   -> "memoryCandidate": {"category": "<one of: pacing, visual_style, captions, typography, music, voice, color, transitions, length, aspect_ratio, branding, composition>", "preference": "<one crisp standing rule distilled from their words>"}.
 
 Available Livepeer video models and timeline assembly:
 - seedance-25-t2v: High-fidelity cinematic video diffusion (flagship text-to-video model for the single continuous take of every render).
@@ -53,6 +58,7 @@ Output ONLY valid JSON with these fields:
   "intentReasoning": "1 concise sentence explaining why this intent was chosen",
   "shouldGenerate": true | false,
   "agentMessage": "a natural, warm, human-like response matching your studio buddy persona",
+  "memoryCandidate": {"category": "music", "preference": "Fade out soundtrack over the final 2 seconds"} | null (set ONLY for the "memory" intent, else null),
   "enrichedPrompt": "detailed positive visual prompt for the overall video concept (leave empty string if shouldGenerate is false)",
   "characterBible": "precise immutable description of all main characters (exact age, hair style & color, skin tone, facial features, wardrobe & garment colors) to lock Character DNA across scenes",
   "conceptImagePrompt": "clean master concept reference image prompt depicting the characters together clearly in their canonical wardrobe and setting, ideal for character anchor conditioning",
@@ -80,9 +86,10 @@ CRITICAL RULES FOR PROMPTS SENT TO DIFFUSION:
 - Do NOT use em dashes anywhere. Use standard hyphens only.`;
 
 export interface DirectorResult {
-  userIntent?: 'inquiry' | 'chat' | 'clarify' | 'generate' | 'revision';
+  userIntent?: 'inquiry' | 'chat' | 'clarify' | 'generate' | 'revision' | 'memory';
   intentReasoning?: string;
   shouldGenerate: boolean;
+  memoryCandidate?: { category: string; preference: string } | null;
   enrichedPrompt: string;
   scenePrompts?: string[];
   characterBible?: string;
@@ -582,19 +589,37 @@ function parseDirectorResponse(
 
   try {
     const parsed = JSON.parse(jsonStr);
-    const userIntent = parsed.userIntent as 'inquiry' | 'chat' | 'clarify' | 'generate' | 'revision' | undefined;
-    const isNonGeneratingIntent = userIntent === 'inquiry' || userIntent === 'chat' || userIntent === 'clarify';
+    const userIntent = parsed.userIntent as 'inquiry' | 'chat' | 'clarify' | 'generate' | 'revision' | 'memory' | undefined;
+    const isNonGeneratingIntent = userIntent === 'inquiry' || userIntent === 'chat' || userIntent === 'clarify' || userIntent === 'memory';
     const shouldGen = isNonGeneratingIntent
       ? false
       : parsed.shouldGenerate !== undefined
       ? Boolean(parsed.shouldGenerate)
       : true;
 
+    // Standing preference distilled by the LLM (memory intent only). Validated
+    // against the memory taxonomy so junk - and off-taxonomy labels that would
+    // break cross-path dedupe - never reach the Remember UI.
+    const MEMORY_CATEGORY_SET = new Set([
+      'pacing', 'visual_style', 'captions', 'typography', 'music', 'voice',
+      'color', 'transitions', 'length', 'aspect_ratio', 'branding', 'composition',
+    ]);
+    const rawCandidate = parsed.memoryCandidate;
+    const rawCategory = typeof rawCandidate?.category === 'string' ? rawCandidate.category.toLowerCase() : '';
+    const memoryCandidate =
+      rawCandidate && typeof rawCandidate.preference === 'string' && rawCandidate.preference.trim().length > 3
+        ? {
+            category: MEMORY_CATEGORY_SET.has(rawCategory) ? rawCategory : 'visual_style',
+            preference: rawCandidate.preference.trim().slice(0, 240),
+          }
+        : null;
+
     if (!shouldGen) {
       return {
         userIntent: userIntent || 'chat',
         intentReasoning: parsed.intentReasoning,
         shouldGenerate: false,
+        memoryCandidate,
         enrichedPrompt: '',
         scenePrompts: undefined,
         characterBible: undefined,
@@ -691,6 +716,41 @@ function parseDirectorResponse(
     };
   } catch (err) {
     console.warn('[nue-director] Could not parse JSON from director output:', err, text);
+    // Last-resort backstop: a standing preference sentence must never become a
+    // render just because the LLM reply was unparseable.
+    if (
+      /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default)\b/i.test(userMessage) &&
+      !/\b(create|generate|render|film|produce|animate)\s+(a|an|the|me)?\s*(video|clip|scene|take|animation|footage)\b/i.test(userMessage)
+    ) {
+      const lower = userMessage.toLowerCase();
+      const category = /sound|music|audio|song|fade|volume/.test(lower)
+        ? 'music'
+        : /caption|subtitle|text on screen/.test(lower)
+        ? 'captions'
+        : /pac(e|ing)|intro|fast|slow/.test(lower)
+        ? 'pacing'
+        : /color|light|grading|neon|monochrome/.test(lower)
+        ? 'color'
+        : 'visual_style';
+      return {
+        userIntent: 'memory',
+        shouldGenerate: false,
+        memoryCandidate: { category, preference: userMessage.trim().slice(0, 240) },
+        enrichedPrompt: '',
+        scenePrompts: undefined,
+        characterBible: undefined,
+        conceptImagePrompt: undefined,
+        visualTheme: 'Creative Direction',
+        pacing: 'moderate',
+        audioStyle: 'Ambient modern electronic',
+        audioEnabled: false,
+        duration: 0,
+        model: 'seedance-25-t2v',
+        aspectRatio: '16:9',
+        recalledMemories,
+        agentMessage: `Noted - "${userMessage.trim().slice(0, 120)}" is up as a memory to confirm. Hit Remember to lock it in. No video rendered.`,
+      };
+    }
     const hasVisualCues = /\b(scene \d|camera movement|establishing shot|cinematic lighting)\b/i.test(text);
     const looksConversational = !hasVisualCues || /^(hi|hello|hey|yes|sure|absolutely|we can|i can|great question)\b/i.test(text.trim());
 

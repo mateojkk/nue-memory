@@ -566,6 +566,7 @@ export async function POST(request: Request) {
         result: {
           mediaVersion: null,
           directorMessage: directorBrief.agentMessage,
+          pendingMemory: directorBrief.memoryCandidate || null,
           appliedMemories: [],
           summaryTokens: [],
           retrievalCount: 0,
