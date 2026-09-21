@@ -70,6 +70,7 @@ export function connectionIndicator(state: string, isLoading: boolean) {
   switch (state) {
     case 'connected':
     case 'configured':
+    case 'demo_tier':
       return { dotClass: 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse', label: 'Connected' };
     case 'missing_keys':
     case 'not_configured':

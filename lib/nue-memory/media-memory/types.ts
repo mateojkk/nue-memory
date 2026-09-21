@@ -53,8 +53,11 @@ export interface StoryboardScene {
   title: string;
   durationSeconds: number;
   prompt: string;
-  mediaUrl: string;
+  mediaUrl?: string;
+  url?: string;
+  jobId?: string;
   model: string;
+  characterAnchorUrl?: string;
 }
 
 export interface MediaVersion {

@@ -177,6 +177,16 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
   // 4. Audio & Soundtrack
   {
     category: 'audio',
+    type: 'constraint',
+    domain: 'media',
+    pattern: /(?:lyrics?|vocals?|sing(?:ing)?)\s+.*(?:repeat|repeating|loop|abandon|missing|skip|complete|full|every word|all (?:the )?words|synchroniz|sync)|(?:repeat|repeating|loop|abandon|missing|skip)\s+.*(?:lyrics?|vocals?|sing(?:ing)?)/i,
+    extract: () => ({
+      value: 'Sing every supplied lyric exactly once in order, with clear synchronized vocals and no looping of opening lines',
+      confidence: 0.97,
+    }),
+  },
+  {
+    category: 'audio',
     type: 'preference',
     domain: 'media',
     pattern: /(?:(?:ambient|atmospheric|electronic|upbeat|lo-fi|synth)\s+(?:audio|sound|music|soundtrack))|(?:(?:audio|music|soundtrack|sound)\s*.*?(?:ambient|atmospheric|electronic|upbeat|lo-fi|strings|dramatic))|(?:(?:with|some|add|need|where is the)\s+(?:ambient\s+)?(?:audio|music|soundtrack))|(?:(?:remove|avoid|no|don't like)\s+(?:the\s+)?(?:dramatic\s+)?(?:music|soundtrack|audio|strings))/i,

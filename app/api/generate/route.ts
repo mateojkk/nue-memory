@@ -6,12 +6,59 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText, validateImageSource } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
-import { MediaVersion } from '@/lib/types';
+import { MediaPreference, MediaVersion } from '@/lib/types';
 import { memWalService } from '@/lib/walrus-memwal/client';
 import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
+
+function buildMediaVersion(params: {
+  versionNumber: number;
+  mediaUrl: string;
+  durationSeconds: number;
+  directorBrief?: any;
+  syntheticPreferences?: any[];
+  modelName: string;
+  finalAudioUrl?: string;
+  wasMuxed?: boolean;
+  agentNotes: string;
+  scenes?: MediaVersion['scenes'];
+}): MediaVersion {
+  const directorBrief = params.directorBrief;
+  const hasVocals = Boolean(directorBrief?.hasVocals);
+  const audioStyleDescription = directorBrief?.audioStyle || (hasVocals ? 'Sung Vocals & Melodic Audio' : 'Original Soundtrack');
+
+  return {
+    versionNumber: params.versionNumber,
+    createdAt: new Date().toISOString(),
+    brief: directorBrief?.enrichedPrompt || `${params.durationSeconds}s AI Video`,
+    enrichedBrief: directorBrief?.enrichedPrompt || `${params.durationSeconds}s AI Video`,
+    appliedPreferences: params.syntheticPreferences || [],
+    mediaUrl: params.mediaUrl,
+    aspectRatio: directorBrief?.aspectRatio || '16:9',
+    pacing: directorBrief?.pacing || 'cinematic',
+    captionStyle: {
+      enabled: true,
+      size: 'medium',
+      highlight: 'NUE MOTION',
+      text: directorBrief?.enrichedPrompt?.slice(0, 48) || 'Nue Motion',
+    },
+    audioStyle: {
+      enabled: Boolean(directorBrief?.audioEnabled && params.finalAudioUrl),
+      style: audioStyleDescription,
+      tempo: hasVocals ? 'vocal' : 'ambient',
+      audioUrl: params.finalAudioUrl,
+      isMuxed: Boolean(params.wasMuxed),
+    },
+    visualTheme: directorBrief?.visualTheme || 'Cinematic',
+    agentNotes: params.agentNotes,
+    generationDurationSeconds: params.durationSeconds,
+    livepeerCapability: params.modelName + (params.wasMuxed ? ' + timeline-assembly' : ''),
+    characterAnchorUrl: directorBrief?.characterAnchorUrl,
+    scenes: params.scenes,
+  };
+}
 
 // GET: Check status of an asynchronous video generation job via live Livepeer polling
 export async function GET(request: Request) {
@@ -172,7 +219,6 @@ export async function GET(request: Request) {
       const actualDuration = totalTimelineSec;
 
       const truthfulDirectorMessage = directorBrief?.agentMessage || `Directing your ${actualDuration}s multi-scene video with sung vocals and continuous soundtrack.`;
-
       const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Audio' : 'Original Soundtrack');
 
       const mediaVersion: MediaVersion = {
@@ -202,7 +248,20 @@ export async function GET(request: Request) {
         generationDurationSeconds: actualDuration,
         livepeerCapability: wasMuxed ? `${modelName} + timeline-assembly` : modelName,
         characterAnchorUrl: job.characterAnchorUrl,
-        scenes: scenesList,
+        scenes: scenesList.map((s, idx) => {
+          const mediaUrl = s.url || s.mediaUrl || '';
+          return {
+            sceneNumber: s.sceneNumber || idx + 1,
+            durationSeconds: s.durationSeconds || 15,
+            title: s.title || `Scene ${idx + 1}`,
+            prompt: s.prompt,
+            jobId: s.jobId,
+            mediaUrl,
+            url: mediaUrl,
+            model: s.model || modelName,
+            characterAnchorUrl: s.characterAnchorUrl || job.characterAnchorUrl,
+          };
+        }),
       };
 
       const result = {
@@ -341,35 +400,17 @@ export async function GET(request: Request) {
         truthfulDirectorMessage += ` Note: Rendered a ${actualDuration}s take on ${modelName}.`;
       }
 
-      const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Audio' : 'Original Soundtrack');
-
-      const mediaVersion: MediaVersion = {
+      const mediaVersion = buildMediaVersion({
         versionNumber,
-        createdAt: new Date().toISOString(),
-        brief: directorBrief?.enrichedPrompt || 'AI Video Take',
-        enrichedBrief: directorBrief?.enrichedPrompt || 'AI Video Take',
-        appliedPreferences: syntheticPreferences,
         mediaUrl: finalMediaUrl,
-        aspectRatio: directorBrief?.aspectRatio || '16:9',
-        pacing: directorBrief?.pacing || 'cinematic',
-        captionStyle: {
-          enabled: true,
-          size: 'medium',
-          highlight: 'NUE MOTION',
-          text: directorBrief?.enrichedPrompt?.slice(0, 48) || 'Nue Motion',
-        },
-        audioStyle: {
-          enabled: Boolean(directorBrief?.audioEnabled),
-          style: audioStyleDescription,
-          tempo: directorBrief?.hasVocals ? 'vocal' : 'ambient',
-          audioUrl: finalAudioUrl,
-          isMuxed: wasMuxed,
-        },
-        visualTheme: directorBrief?.visualTheme || 'Cinematic',
+        durationSeconds: actualDuration,
+        directorBrief,
+        syntheticPreferences,
+        modelName,
+        finalAudioUrl,
+        wasMuxed,
         agentNotes: `Livepeer Agent composed version ${versionNumber} via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
-        generationDurationSeconds: actualDuration,
-        livepeerCapability: modelName + (wasMuxed ? ' + timeline-assembly' : ''),
-      };
+      });
 
       const result = {
         mediaVersion,
@@ -550,7 +591,21 @@ export async function POST(request: Request) {
     }
 
     // Build synthetic preferences
-    const syntheticPreferences = [];
+    const syntheticPreferences: MediaPreference[] = [];
+    const recalledPreferences = Array.isArray(directorBrief.recalledMemories)
+      ? directorBrief.recalledMemories.map((memory: any, idx: number) => ({
+          id: `recall-${idx}-${String(memory.category || 'memory')}-${Date.now()}`,
+          type: 'media_preference' as const,
+          category: memory.category || 'visual_style',
+          preference: memory.preference,
+          strength: 'high' as const,
+          scope: 'media' as const,
+          source: 'user_feedback' as const,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          isActive: true,
+        })).filter((memory: any) => typeof memory.preference === 'string' && memory.preference.trim().length > 0)
+      : [];
     if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Creative Direction') {
       syntheticPreferences.push({
         id: `dir-visual-${Date.now()}`,
@@ -579,6 +634,15 @@ export async function POST(request: Request) {
         isActive: true,
       });
     }
+    for (const recalled of recalledPreferences) {
+      const duplicate = syntheticPreferences.some((pref) =>
+        pref.category === recalled.category &&
+        pref.preference.toLowerCase() === recalled.preference.toLowerCase()
+      );
+      if (!duplicate) {
+        syntheticPreferences.push(recalled);
+      }
+    }
 
     // Step 7: Dispatch media generation to Livepeer (<3s synchronous)
     const isImageToVideo = Boolean(validatedImageUrl);
@@ -594,7 +658,7 @@ export async function POST(request: Request) {
     if (directorBrief.audioEnabled && directorBrief.audioStyle) {
       const isVocal = Boolean(directorBrief.hasVocals || directorBrief.lyricsPrompt);
       const audioPrompt = isVocal
-        ? `${directorBrief.audioStyle}, expressive melodic vocals singing the lyrics continuously from start to finish across the full ${requestedDuration}s song, clear musical cadence`
+        ? `${directorBrief.audioStyle}, expressive melodic vocals. Sing the provided lyrics exactly once, from first line to last line, in order. Do not repeat the opening lines. Keep the pace energetic and clear so every word fits.`
         : `${directorBrief.audioStyle} soundtrack, ${directorBrief.pacing === 'fast' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation`;
 
       const audioArgs: Record<string, any> = {
@@ -611,9 +675,18 @@ export async function POST(request: Request) {
         }
       }
 
-      const audioDispatch = await livepeerAgent.dispatchCreateMedia(audioArgs);
-      if (audioDispatch.url) audioUrl = audioDispatch.url;
-      else if (audioDispatch.jobId) audioJobId = audioDispatch.jobId;
+      try {
+        const audioDispatch = await livepeerAgent.dispatchCreateMedia(audioArgs);
+        if (audioDispatch.status === 'failed') {
+          console.warn('[generate:POST] audio dispatch notice:', audioDispatch.error);
+        } else if (audioDispatch.url) {
+          audioUrl = audioDispatch.url;
+        } else if (audioDispatch.jobId) {
+          audioJobId = audioDispatch.jobId;
+        }
+      } catch (audioErr) {
+        console.warn('[generate:POST] audio dispatch notice:', audioErr);
+      }
     }
 
     const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -768,6 +841,86 @@ export async function POST(request: Request) {
         success: false,
         error: humanizeUpstreamError(videoDispatch.error || 'Failed to dispatch media generation to Livepeer.'),
       }, { status: 500 });
+    }
+
+    if (videoDispatch.status === 'completed' && videoDispatch.url) {
+      const modelName = videoDispatch.capability || modelToUse;
+      let finalMediaUrl = videoDispatch.url;
+      let finalAudioUrl = audioUrl;
+      let wasMuxed = false;
+
+      if (!finalAudioUrl && audioJobId) {
+        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId);
+        if (audioPoll.status === 'completed' && audioPoll.url) {
+          finalAudioUrl = audioPoll.url;
+        }
+      }
+
+      if (finalAudioUrl) {
+        try {
+          const assembled = await livepeerAgent.assembleTimeline({
+            clips: [{ src: videoDispatch.url }],
+            audioUrl: finalAudioUrl,
+            transition: 'cut',
+          });
+          if (assembled) {
+            finalMediaUrl = assembled;
+            wasMuxed = true;
+          }
+        } catch (e) {
+          console.warn('[generate:POST] immediate assembleTimeline notice:', e);
+        }
+      }
+
+      const mediaVersion = buildMediaVersion({
+        versionNumber: Number(versionNumber) || 1,
+        mediaUrl: finalMediaUrl,
+        durationSeconds: singleTakeDuration,
+        directorBrief,
+        syntheticPreferences,
+        modelName,
+        finalAudioUrl,
+        wasMuxed,
+        agentNotes: `Livepeer Agent returned an immediately completed ${singleTakeDuration}s take via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
+      });
+
+      const result = {
+        mediaVersion,
+        enrichedPrompt: directorBrief.enrichedPrompt,
+        appliedMemories: syntheticPreferences,
+        directorMessage: directorBrief.agentMessage || `Here is your ${singleTakeDuration}-second video take!`,
+        summaryTokens: [directorBrief.visualTheme || 'Cinematic', directorBrief.pacing || 'cinematic', `${singleTakeDuration}s`],
+        retrievalCount: syntheticPreferences.length,
+      };
+
+      updateJob(jobId, {
+        status: 'completed',
+        progress: 100,
+        stageDescription: 'Video generation complete',
+        audioJobId,
+        audioUrl: finalAudioUrl,
+        directorBrief,
+        syntheticPreferences,
+        modelToUse: modelName,
+        singleTakeDuration,
+        effectiveDuration: singleTakeDuration,
+        expectedSla,
+        result,
+      });
+
+      return NextResponse.json({
+        success: true,
+        jobId,
+        status: 'completed',
+        result,
+      });
+    }
+
+    if (!videoDispatch.jobId) {
+      return NextResponse.json({
+        success: false,
+        error: 'Livepeer did not return a job id for polling. Please try again.',
+      }, { status: 502 });
     }
 
     updateJob(jobId, {

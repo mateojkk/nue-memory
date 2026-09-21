@@ -6,6 +6,7 @@ import { MediaMemoryWorkspace } from './MediaMemoryWorkspace';
 import { ProjectsView } from './ProjectsView';
 import { ApiKeysView } from './ApiKeysView';
 import { GalleryView } from './GalleryView';
+import { MemoriesView } from './MemoriesView';
 import { UsageView } from './OverviewView';
 import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
 import { NueLogo } from '../NueLogo';
@@ -16,6 +17,7 @@ import {
   Video,
   Film,
   Layers,
+  Brain,
   Key,
   CreditCard,
 } from 'lucide-react';
@@ -25,10 +27,10 @@ export type DashboardTab =
   | 'gallery'
   | 'projects'
   | 'usage'
-  | 'api-keys'
-  | 'memories';
+  | 'memories'
+  | 'api-keys';
 
-const VALID_TABS: DashboardTab[] = ['media-memory', 'gallery', 'projects', 'usage', 'api-keys'];
+const VALID_TABS: DashboardTab[] = ['media-memory', 'gallery', 'projects', 'usage', 'memories', 'api-keys'];
 
 function getResolvedTab(initialTab?: DashboardTab): DashboardTab {
   if (typeof window !== 'undefined') {
@@ -186,6 +188,7 @@ export function NueDashboard({
     { id: 'media-memory' as DashboardTab, label: 'Motion', icon: Video, highlight: true },
     { id: 'gallery' as DashboardTab, label: 'Gallery', icon: Film, badge: totalVideos },
     { id: 'projects' as DashboardTab, label: 'Projects', icon: Layers, badge: projects.length },
+    { id: 'memories' as DashboardTab, label: 'Memory', icon: Brain, badge: activeMemories.filter((m) => m.isActive).length },
     { id: 'usage' as DashboardTab, label: 'Credits', icon: CreditCard },
     { id: 'api-keys' as DashboardTab, label: 'API Keys', icon: Key },
   ];
@@ -307,6 +310,16 @@ export function NueDashboard({
           <UsageView
             versions={projects.flatMap((p) => p.versions || [])}
             onOpenStudio={() => handleTabChange('media-memory')}
+          />
+        )}
+
+        {activeTab === 'memories' && (
+          <MemoriesView
+            memories={activeMemories}
+            onForget={onForgetMemory}
+            onOpenStudio={() => handleTabChange('media-memory')}
+            userNamespace={userNamespace}
+            userEmail={userEmail}
           />
         )}
 

@@ -387,6 +387,7 @@ export function MediaMemoryWorkspace({
   };
 
   const activeModelName = serverModel || 'seedance-25-t2v';
+  const activeMemoryPreview = activeMemories.filter((m) => m.isActive).slice(0, 4);
 
   const cookingProgress = {
     step: currentStep,
@@ -520,6 +521,44 @@ export function MediaMemoryWorkspace({
             <Plus className="w-3.5 h-3.5" />
             <span>New Chat</span>
           </button>
+        </div>
+      </div>
+
+      {/* Persistent Memory Stack */}
+      <div className="my-3 p-3 rounded-xl bg-[var(--surface)] text-xs text-[var(--fg)] flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-xs shrink-0">
+        <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0">
+            <Brain className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-medium text-[var(--fg)]">Nue Memory Stack</span>
+              <span className="font-mono text-[10px] text-emerald-500">
+                {activeMemoryPreview.length > 0 ? `${activeMemories.filter((m) => m.isActive).length} active memories ready` : 'learning starts from feedback'}
+              </span>
+            </div>
+            <p className="text-[11px] text-[var(--fg-muted)] mt-0.5">
+              These cross-project creative rules are recalled before each render.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap lg:justify-end">
+          {activeMemoryPreview.length > 0 ? (
+            activeMemoryPreview.map((memory) => (
+              <span
+                key={memory.id}
+                className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--fg)] text-[11px] max-w-[220px] truncate"
+                title={memory.preference}
+              >
+                {memory.category}: {memory.preference}
+              </span>
+            ))
+          ) : (
+            <span className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--fg-muted)] text-[11px]">
+              Give feedback like "always use louder vocals" to teach Nue.
+            </span>
+          )}
         </div>
       </div>
 

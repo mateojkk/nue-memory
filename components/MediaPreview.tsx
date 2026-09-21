@@ -106,8 +106,10 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   const progressBarRef = useRef<HTMLDivElement | null>(null);
 
   const hasMultipleScenes = Boolean(version?.scenes && version.scenes.length > 1 && !version?.audioStyle?.isMuxed);
-  const activeMediaSrc = hasMultipleScenes && version?.scenes?.[currentSceneIndex]?.mediaUrl
-    ? resolveMediaUrl(version.scenes[currentSceneIndex].mediaUrl)
+  const currentScene = version?.scenes?.[currentSceneIndex];
+  const sceneUrl = currentScene?.mediaUrl || (currentScene as any)?.url;
+  const activeMediaSrc = hasMultipleScenes && sceneUrl
+    ? resolveMediaUrl(sceneUrl)
     : resolvedMediaUrl;
 
   const totalDuration = version?.generationDurationSeconds || (hasMultipleScenes ? (version?.scenes?.length || 1) * 15 : 15);
@@ -443,7 +445,7 @@ ${version.captionStyle.text}
                 <video
                   ref={videoRef}
                   src={activeMediaSrc}
-                  loop={!hasMultipleScenes}
+                  loop={false}
                   playsInline
                   autoPlay
                   preload="auto"

@@ -13,14 +13,14 @@ export async function GET(request: Request) {
   const userId = searchParams.get('userId') || searchParams.get('email') || undefined;
   const walrus = await memWalService.getConnectionState(userId);
 
-  const livepeerConfigured = Boolean(
+  const hasLivepeerBearer = Boolean(
     process.env.LIVEPEER_API_KEY || process.env.LIVEPEER_AGENT_KEY
   );
   const livepeer = {
-    state: livepeerConfigured ? 'configured' : 'missing_keys',
-    message: livepeerConfigured
-      ? 'Livepeer API key configured - remote MCP media synthesis available.'
-      : 'Missing LIVEPEER_API_KEY - media generation is disabled until a key is set.',
+    state: hasLivepeerBearer ? 'configured' : 'demo_tier',
+    message: hasLivepeerBearer
+      ? 'Livepeer bearer configured - remote MCP media synthesis available.'
+      : 'Livepeer keyless hackathon demo tier available - no API key required.',
   };
 
   return NextResponse.json({

@@ -14,9 +14,9 @@ YOUR ROLE & PERSONALITY:
 - You are an enthusiastic, perceptive peer and creative friend in the studio—warm, witty, collaborative, encouraging, and deeply knowledgeable about filmmaking, music, and animation.
 - Talk like a real human collaborator in the room, NEVER a cold corporate bot. Use natural phrasing, banter, and creative energy.
 - When the user shares something cool, laughs, or vents (e.g. "the funny part is that, i just made that song!", "wait that is hilarious"), react naturally and genuinely! Acknowledge what they said with enthusiasm!
-- When the user points out a mistake or gives a correction (e.g. "but i said 60 seconds, the lyrics aint even complete"):
-  * Own it with human authenticity! No defensive corporate jargon: "Ah man, my bad! You're 100% right, you asked for the full 60 seconds and all your lyrics, and I left you hanging with just a short take. Let's make it right: I'm rolling the full 60-second multi-scene cut with your complete lyrics right now!"
-  * Set shouldGenerate: true and duration: 60, providing 4 continuous scene prompts that tell the full story.
+- When the user points out a mistake or gives a correction (e.g. "read the prompt properly", "the lyrics aint even complete", "i said 30 seconds"):
+  * Own it with human authenticity! Carefully read the user's EXACT requested duration and instructions from the prompt (e.g. if they asked for 30 seconds, honor 30 seconds! If 60 seconds, honor 60 seconds).
+  * Set shouldGenerate: true and duration to the user's requested length (30s -> 2 scenes, 60s -> 4 scenes), keeping all user lyrics and character continuity intact.
 
 YOUR FIRST MANDATE IS SEMANTIC INTENT CLASSIFICATION:
 Classify the user's message into one of these intents:
@@ -53,7 +53,7 @@ Output ONLY valid JSON with these fields:
   "pacing": "fast" | "moderate" | "cinematic",
   "audioStyle": "description of audio mood and musical style",
   "audioEnabled": true | false,
-  "lyricsPrompt": "[Verse 1]\\nLine 1\\n\\n[Chorus]..." (verbatim user lyrics only, without extra prompt instructions or headers),
+  "lyricsPrompt": "Line 1\\nLine 2\\n..." (verbatim user lyrics only, exactly as supplied by the user, without verse/chorus headers unless the user wrote those headers),
   "hasVocals": true | false,
   "duration": number (seconds: 60 for 1 minute, 45, 30, 15, or 5-15 for single takes),
   "model": "seedance-25-t2v" | "seedance-25-i2v",
@@ -67,7 +67,7 @@ CRITICAL RULES FOR PROMPTS SENT TO DIFFUSION:
   * In multi-scene videos (30s, 45s, 60s), all scenes MUST form one single continuous story featuring the EXACT SAME subjects, characters, environment, lighting, and visual theme.
   * Define explicit "characterBible" locking the exact hair, skin tone, eye shape, wardrobe, and clothing colors.
   * Generate a "conceptImagePrompt" showing the characters together clearly from the front, in canonical lighting and outfits, to serve as the visual anchor.
-  * Scene 1 establishes the setting and characters. Scene 2 continues their actions smoothly. Scene 3 develops the peak narrative movement. Scene 4 resolves the story with a satisfying closing shot.
+- NEVER include duration, seconds, minutes, or timing counts (e.g. '30-second', '60s', '1 minute') in enrichedPrompt, conceptImagePrompt, scenePrompts, or audioStyle. Prompts to models must describe purely visual elements and musical mood/instruments, NEVER duration specifications.
 - Do NOT use em dashes anywhere. Use standard hyphens only.`;
 
 export interface DirectorResult {
@@ -87,6 +87,7 @@ export interface DirectorResult {
   duration: number;
   model: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
+  recalledMemories?: Array<{ category: string; preference: string }>;
   agentMessage: string;
 }
 
@@ -118,7 +119,9 @@ export function sanitizePromptForDiffusion(prompt: string): string {
     // Strip audio-specific timing phrases that confuse video diffusion models and trigger audio validation
     .replace(/\b(?:as the music\s+(?:softens|plays|starts|swells|ends|fades))\b/gi, '')
     .replace(/\b(?:as the song\s+(?:ends|starts|plays|softens))\b/gi, '')
-    .replace(/\b(?:synchronize\s+(?:the\s+)?(?:actions|movement|children|characters)\s+with\s+(?:the\s+)?lyrics)\b/gi, '')
+    // Strip duration phrases from diffusion visual prompts (models describe visuals, not timing constraints)
+    .replace(/\b(?:create\s+(?:a|an)\s+)?\b\d+\s*(?:-|–)?\s*(?:seconds?|secs?|s|minutes?|mins?)\s+(?:original\s+)?(?:animated\s+)?(?:children['']s\s+)?(?:music\s+)?(?:video|clip|scene|animation|movie)?\b/gi, '')
+    .replace(/\b\d+\s*(?:-|–)?\s*(?:seconds?|secs?|s|minutes?|mins?)\b/gi, '')
     .replace(/\b(?:music:\s*[^.]*(?:\.|$))/gi, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
@@ -246,7 +249,7 @@ export function extractUserLyrics(text: string): string | null {
     .map(m => m[1].trim())
     .filter(s => s.length > 20 && s.includes('\n'));
   if (curvedMatches.length > 0) {
-    return formatLyrics(curvedMatches[0]);
+    return normalizeLyricBlock(curvedMatches[0]);
   }
 
   // 2. Explicit lyrics block: "lyrics:", "song:", "lyrics -", "sing these original lyrics:", etc.
@@ -254,7 +257,7 @@ export function extractUserLyrics(text: string): string | null {
   if (blockMatch && blockMatch[1].trim().length > 10) {
     let raw = blockMatch[1].trim();
     raw = raw.replace(/^[“"']+|[”"']+$/g, '').trim();
-    return formatLyrics(raw);
+    return normalizeLyricBlock(raw);
   }
 
   // 3. Multi-line stanza in prompt
@@ -264,9 +267,33 @@ export function extractUserLyrics(text: string): string | null {
     l.length > 6 && l.length < 120
   );
   if (lyricLines.length >= 2 && /\b(sing|song|lyrics?|rhyme|melody|cadence)\b/i.test(text)) {
-    return formatLyrics(lyricLines.join('\n'));
+    return normalizeLyricBlock(lyricLines.join('\n'));
   }
 
+  return null;
+}
+
+function extractExplicitDuration(text: string): number | null {
+  const oneMin = /\b(?:1\s*min(?:ute)?|one\s*minute)\b/i.test(text);
+  if (oneMin) return 60;
+
+  const match = text.match(/\b(5|6|7|8|9|10|11|12|13|14|15|30|45|60)\s*(?:s(?:econds?)?|secs?|seconds?|-second)\b/i);
+  if (!match) return null;
+  return Math.max(5, Math.min(60, parseInt(match[1], 10)));
+}
+
+function findLatestCreativeUserMessage(history?: ChatHistoryMessage[]): string | null {
+  if (!history) return null;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const msg = history[i];
+    if (msg.role !== 'user') continue;
+    if (
+      extractUserLyrics(msg.content) ||
+      /\b(create|generate|make|render|animate|video|children|lyrics|song|music)\b/i.test(msg.content)
+    ) {
+      return msg.content;
+    }
+  }
   return null;
 }
 
@@ -281,21 +308,9 @@ function extractLyricsFromHistory(history?: ChatHistoryMessage[]): string | null
   return null;
 }
 
-function formatLyrics(raw: string): string {
-  if (/\[(Verse|Chorus|Bridge|Outro)/i.test(raw)) {
-    return raw;
-  }
+function normalizeLyricBlock(raw: string): string {
   const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length <= 4) {
-    return `[Verse]\n${lines.join('\n')}`;
-  }
-  const v1 = lines.slice(0, 4);
-  const ch = lines.slice(4, 8);
-  const v2 = lines.slice(8);
-  let out = `[Verse 1]\n${v1.join('\n')}`;
-  if (ch.length > 0) out += `\n\n[Chorus]\n${ch.join('\n')}`;
-  if (v2.length > 0) out += `\n\n[Verse 2]\n${v2.join('\n')}`;
-  return out;
+  return lines.join('\n');
 }
 
 export async function directCreativeBrief(
@@ -408,7 +423,7 @@ export async function directCreativeBrief(
   }
 
   // Parse the JSON response from the LLM
-  const parsed = parseDirectorResponse(text, userMessage, context);
+  const parsed = parseDirectorResponse(text, userMessage, context, activeUserMemories);
 
   // Flush any pending auto-save writes so they complete before the serverless handler exits
   if (typeof (wrappedModel as any).flush === 'function') {
@@ -421,7 +436,12 @@ export async function directCreativeBrief(
 /**
  * Parses the LLM's JSON response, with fallback defaults for robustness.
  */
-function parseDirectorResponse(text: string, userMessage = '', context?: DirectorContext): DirectorResult {
+function parseDirectorResponse(
+  text: string,
+  userMessage = '',
+  context?: DirectorContext,
+  recalledMemories: Array<{ category: string; preference: string }> = []
+): DirectorResult {
   let jsonStr = text.trim();
   const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (jsonMatch) {
@@ -456,26 +476,31 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
         visualTheme: 'Creative Direction',
         pacing: 'moderate',
         audioStyle: 'Ambient modern electronic',
-        audioEnabled: false,
-        duration: 0,
-        model: 'seedance-25-t2v',
-        aspectRatio: '16:9',
-        agentMessage: parsed.agentMessage || "Hey! I'm right here with you. What are we thinking for our next take?",
-      };
+      audioEnabled: false,
+      duration: 0,
+      model: 'seedance-25-t2v',
+      aspectRatio: '16:9',
+      recalledMemories,
+      agentMessage: parsed.agentMessage || "Hey! I'm right here with you. What are we thinking for our next take?",
+    };
     }
 
-    // Detect exact duration intent from message or history
-    let duration = typeof parsed.duration === 'number' ? Math.max(3, Math.min(60, parsed.duration)) : 5;
-    const isOneMin = /\b(?:1\s*min(?:ute)?|60\s*s(?:econds?)?)\b/i.test(userMessage) ||
-      Boolean(context?.chatHistory && context.chatHistory.some(m => /\b(?:1\s*min(?:ute)?|60\s*s(?:econds?)?)\b/i.test(m.content)));
-    if (isOneMin) {
-      duration = 60;
-    } else if (/\b(?:45\s*s(?:econds?)?)\b/i.test(userMessage)) {
-      duration = 45;
-    } else if (/\b(?:30\s*s(?:econds?)?)\b/i.test(userMessage)) {
-      duration = 30;
-    } else if (/\b(?:15\s*s(?:econds?)?)\b/i.test(userMessage)) {
-      duration = 15;
+    // Detect exact duration intent from message or history.
+    // Explicit duration in the current user prompt takes absolute precedence over past chat history.
+    const latestCreativeMessage = findLatestCreativeUserMessage(context?.chatHistory);
+    let duration = typeof parsed.duration === 'number' ? Math.max(3, Math.min(60, parsed.duration)) : 15;
+    const userDuration = extractExplicitDuration(userMessage);
+    const feedbackDuration = context?.feedbackContext ? extractExplicitDuration(context.feedbackContext) : null;
+    const latestCreativeDuration = latestCreativeMessage ? extractExplicitDuration(latestCreativeMessage) : null;
+
+    if (feedbackDuration) {
+      duration = feedbackDuration;
+    } else if (userDuration) {
+      duration = userDuration;
+    } else if (latestCreativeDuration && context?.feedbackContext) {
+      duration = latestCreativeDuration;
+    } else if (typeof parsed.duration === 'number' && parsed.duration >= 5) {
+      duration = Math.max(5, Math.min(60, parsed.duration));
     }
 
     // Target scene count for multi-scene pipeline
@@ -529,6 +554,7 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
       duration,
       model,
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
+      recalledMemories,
       agentMessage: parsed.agentMessage || (shouldGen
         ? `Love it! Rolling your ${duration}-second multi-scene video now.`
         : "Hey there! I'm Nue, your creative co-director. What are we making today?"),
@@ -553,13 +579,17 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
         duration: 0,
         model: 'seedance-25-t2v',
         aspectRatio: '16:9',
+        recalledMemories,
         agentMessage: text.trim() || "Hey! What kind of video concept should we dive into?",
       };
     }
 
-    const isOneMin = /\b(?:1\s*min(?:ute)?|60\s*s(?:econds?)?)\b/i.test(userMessage);
-    const durMatch = userMessage.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
-    const parsedDur = isOneMin ? 60 : durMatch ? parseInt(durMatch[1], 10) : 15;
+    const latestCreativeMessage = findLatestCreativeUserMessage(context?.chatHistory);
+    const parsedDur =
+      (context?.feedbackContext ? extractExplicitDuration(context.feedbackContext) : null) ||
+      extractExplicitDuration(userMessage) ||
+      (context?.feedbackContext && latestCreativeMessage ? extractExplicitDuration(latestCreativeMessage) : null) ||
+      15;
     const dur = Math.max(5, Math.min(60, parsedDur));
     const model = context?.imageUrl ? 'seedance-25-i2v' : 'seedance-25-t2v';
 
@@ -595,6 +625,7 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
       duration: dur,
       model,
       aspectRatio: '16:9',
+      recalledMemories,
       agentMessage: `Got you covered! Directing your ${dur}-second take now.`,
     };
   }

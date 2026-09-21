@@ -100,8 +100,10 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   const hasMultipleScenes = Boolean(version.scenes && version.scenes.length > 1 && !version.audioStyle?.isMuxed);
   const [currentSceneIdx, setCurrentSceneIdx] = useState(0);
 
-  const activeVideoSrc = hasMultipleScenes && version.scenes?.[currentSceneIdx]?.mediaUrl
-    ? resolveMediaUrl(version.scenes[currentSceneIdx].mediaUrl)
+  const currentScene = version.scenes?.[currentSceneIdx];
+  const sceneUrl = currentScene?.mediaUrl || (currentScene as any)?.url;
+  const activeVideoSrc = hasMultipleScenes && sceneUrl
+    ? resolveMediaUrl(sceneUrl)
     : videoSrc;
 
   const totalDur = version.generationDurationSeconds || (hasMultipleScenes ? (version.scenes?.length || 1) * 15 : 15);

@@ -183,6 +183,53 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   };
 
+  const proposeMemoriesFromFeedback = async (feedback: string, project: CreativeProject | null) => {
+    if (!feedback.trim()) return;
+    try {
+      const res = await fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          feedback,
+          projectTitle: project?.title,
+          currentBrief:
+            project?.versions?.[project.currentVersionIndex]?.brief ||
+            project?.initialPrompt ||
+            '',
+          email: email || undefined,
+          userId: email || undefined,
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const extracted = data?.classification?.extractedPreferences;
+      if (!Array.isArray(extracted) || extracted.length === 0) return;
+
+      setPendingPreferences((prev) => {
+        const existingKeys = new Set([
+          ...prev.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
+          ...activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
+        ]);
+        const next = extracted
+          .map((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
+            ...pref,
+            projectId: project?.id,
+            projectTitle: project?.title || pref.projectTitle,
+            userId: email || pref.userId,
+          }))
+          .filter((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
+            const key = `${pref.category}:${pref.preference}`.toLowerCase();
+            if (existingKeys.has(key)) return false;
+            existingKeys.add(key);
+            return true;
+          });
+        return next.length > 0 ? [...prev, ...next].slice(-6) : prev;
+      });
+    } catch (e) {
+      console.warn('Failed to classify feedback for memory:', e);
+    }
+  };
+
   // Load memories directly from MemWal on Walrus for the current user's namespace
   useEffect(() => {
     if (email) {
@@ -524,6 +571,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
        (/\b(?:60\s*s|30\s*s|minute|lyrics?|full|complete)\b/i.test(cleanLower) && cleanLower.length < 90));
 
     if (isCorrectionOrRevision) {
+      proposeMemoriesFromFeedback(text, currentProj);
       const activeBrief = currentProj.versions[currentProj.currentVersionIndex]?.brief || currentProj.initialPrompt || text;
       await handleGenerate(
         activeBrief,
