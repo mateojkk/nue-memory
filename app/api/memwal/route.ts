@@ -110,7 +110,7 @@ export async function POST(request: Request) {
               isActive: false,
               updatedAt: new Date().toISOString(),
             };
-            memWalService.updatePreference(updatedSuperseded);
+            await memWalService.updatePreference(updatedSuperseded);
             allSuperseded.push(updatedSuperseded);
           }
 
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
     }
 
     if (action === 'reset') {
-      memWalService.clearAll();
+      await memWalService.clearAll();
       return NextResponse.json({ success: true, message: 'All memories cleared' });
     }
 

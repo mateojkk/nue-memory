@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { directCreativeBrief, humanizeUpstreamError } from '@/lib/ai/nue-director';
+import { directCreativeBrief, extractExplicitDuration, humanizeUpstreamError, isPolicyRejection, sanitizePromptForDiffusion, simplifyVideoPromptForRetry, stripLyricTextFromVideoPrompt } from '@/lib/ai/nue-director';
 import { livepeerAgent } from '@/lib/livepeer/agent';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
@@ -12,8 +12,31 @@ import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 export const runtime = 'nodejs';
 export const maxDuration = 300;
 
-const SEEDANCE_NATIVE_TAKE_SECONDS = 30;
-const FALLBACK_SAFE_TAKE_SECONDS = 15;
+/**
+ * Hard ceiling for ONE Livepeer `create_media` render, enforced by the provider schema:
+ *   duration: { type: 'integer', minimum: 3, maximum: 15 }
+ * Livepeer refuses anything above it before dispatch (issue_code `too_big`,
+ * billing_note `not_billed_pre_dispatch`), and the only route to a longer single pass
+ * (`run_capability` with a string duration) lives on /api/mcp/raw, which this creative
+ * surface does not expose. So one take is at most MAX_TAKE_SECONDS and any longer
+ * request has to be assembled from several of them.
+ */
+const MAX_TAKE_SECONDS = 15;
+/** Defensive re-dispatch length, used only if the provider rejects a MAX_TAKE_SECONDS request. */
+const FALLBACK_SAFE_TAKE_SECONDS = 10;
+
+/**
+ * True when the provider refused the requested clip LENGTH rather than failing mid-render.
+ * These are reported before dispatch, so retrying shorter is safe and cannot double-bill a
+ * job that already rendered. Kept deliberately narrow so an unrelated upstream error that
+ * merely contains the digits "15" cannot trigger a paid re-dispatch.
+ */
+function isDurationRejection(message?: string): boolean {
+  if (!message) return false;
+  return /too_big|must be at most|duration[^.]{0,60}(?:invalid|not match|maximum|max|cap|exceed|unsupported)|does not match the tool schema|validation_failed/i.test(
+    message
+  );
+}
 
 function buildMediaVersion(params: {
   versionNumber: number;
@@ -387,19 +410,12 @@ export async function GET(request: Request) {
       }
 
       const versionNumber = job?.versionNumber || 1;
-      const actualDuration = job?.singleTakeDuration || 15;
-      const requestedDuration = directorBrief?.duration || actualDuration;
+      const actualDuration = job?.singleTakeDuration || MAX_TAKE_SECONDS;
+      const requestedDuration = Math.max(5, Math.min(MAX_TAKE_SECONDS, directorBrief?.duration || actualDuration));
       let truthfulDirectorMessage = directorBrief?.agentMessage || `Here is your ${actualDuration}-second video take!`;
 
-      if (actualDuration >= 24 || actualDuration >= requestedDuration) {
-        truthfulDirectorMessage = truthfulDirectorMessage
-          .replace(/\b8[- ]seconds?\b/gi, `${actualDuration}-second`)
-          .replace(/\b8s\b/gi, `${actualDuration}s`);
-      } else if (requestedDuration > actualDuration) {
-        truthfulDirectorMessage = truthfulDirectorMessage
-          .replace(/\b\d+[- ]seconds?\b/gi, `${actualDuration}-second`)
-          .replace(/\b\d+s\b/gi, `${actualDuration}s`);
-        truthfulDirectorMessage += ` Note: Rendered a ${actualDuration}s take on ${modelName}.`;
+      if (requestedDuration > actualDuration) {
+        truthfulDirectorMessage += ` Note: this render landed at ${actualDuration}s on ${modelName}, because a single Livepeer take caps at ${MAX_TAKE_SECONDS}s.`;
       }
 
       const mediaVersion = buildMediaVersion({
@@ -510,6 +526,14 @@ export async function POST(request: Request) {
       }
     }
 
+    // What the user literally asked for, read from their own words rather than from the
+    // director's reply (which is already clamped to a single take). Used to explain the
+    // delivered length honestly in the preflight plan and in the agent's final message.
+    const askedFromPrompt =
+      extractExplicitDuration(sanitizedBrief) ||
+      (sanitizedFeedback ? extractExplicitDuration(sanitizedFeedback) : null) ||
+      null;
+
     // Step 4: Strict image payload validation
     let validatedImageUrl: string | undefined;
     if (imageUrl) {
@@ -550,14 +574,11 @@ export async function POST(request: Request) {
     }
 
     if (preflightOnly) {
-      const requestedDuration = directorBrief.duration || 15;
-      const sceneCount = !validatedImageUrl && requestedDuration > 15
-        ? Math.min(2, Math.max(1, Math.ceil(requestedDuration / SEEDANCE_NATIVE_TAKE_SECONDS)))
-        : 1;
-      const timelineNote = !validatedImageUrl && requestedDuration > 15
-        ? sceneCount === 1
-          ? `Nue will request one native ${requestedDuration}s Seedance take, so the shot is generated in a single pass instead of stitched from 15s clips.`
-          : `Nue will request ${sceneCount} sequential native ${SEEDANCE_NATIVE_TAKE_SECONDS}s Seedance takes stitched into one ${Math.min(60, sceneCount * SEEDANCE_NATIVE_TAKE_SECONDS)}s timeline. Each take is directed as a continuation of the same shot, with locked characters, setting, lighting, camera language, and action state.`
+      const requestedDuration = Math.max(5, Math.min(MAX_TAKE_SECONDS, directorBrief.duration || MAX_TAKE_SECONDS));
+      const sceneCount = 1;
+      const askedDuration = Math.max(askedFromPrompt || 0, requestedDuration);
+      const timelineNote = askedDuration > MAX_TAKE_SECONDS
+        ? `Livepeer caps a single render at ${MAX_TAKE_SECONDS}s on this surface, so Nue will deliver one continuous ${requestedDuration}s take now. The remaining beats can be directed as follow-up takes that continue the same shot, characters, setting, lighting, and action state.`
         : undefined;
       return NextResponse.json({
         success: true,
@@ -667,8 +688,19 @@ export async function POST(request: Request) {
     const modelToUse: string = isImageToVideo ? 'seedance-25-i2v' : 'seedance-25-t2v';
     const expectedSla = '~4 min';
 
-    const requestedDuration = Math.min(60, directorBrief.duration || 15);
-    const isMultiScene = !isImageToVideo && requestedDuration > SEEDANCE_NATIVE_TAKE_SECONDS;
+    const rawRequestedDuration = Math.min(60, directorBrief.duration || MAX_TAKE_SECONDS);
+    // One take is capped by the provider, so this is the only duration we ever dispatch.
+    const requestedDuration = Math.max(5, Math.min(MAX_TAKE_SECONDS, rawRequestedDuration));
+    // With the cap at a single take this is never true; it stays so the timeline branch below
+    // activates by itself if the provider ever raises the per-call duration limit.
+    const isMultiScene = !isImageToVideo && requestedDuration > MAX_TAKE_SECONDS;
+
+    // Never let the reply imply a length we cannot render. If the user asked for more than one
+    // take and the director did not already explain the limit, say it once here.
+    const askedDuration = Math.max(askedFromPrompt || 0, rawRequestedDuration);
+    if (askedDuration > MAX_TAKE_SECONDS && !/\b15\s*(?:s\b|sec|second)/i.test(directorBrief.agentMessage || '')) {
+      directorBrief.agentMessage = `${directorBrief.agentMessage || ''} Heads up: a single Livepeer render caps at ${MAX_TAKE_SECONDS}s, so this delivers one continuous ${requestedDuration}s chapter. The next beats can be directed as follow-up takes that continue the same shot, characters, and lighting.`.trim();
+    }
 
     // Dispatch background soundtrack in parallel if requested (with singing vocals / lyrics support)
     let audioJobId: string | undefined;
@@ -682,7 +714,7 @@ export async function POST(request: Request) {
       const audioArgs: Record<string, any> = {
         action: 'music',
         prompt: audioPrompt,
-        duration: Math.min(60, Math.max(15, requestedDuration)),
+        duration: Math.min(MAX_TAKE_SECONDS, Math.max(15, requestedDuration)),
         async: true,
       };
 
@@ -717,9 +749,11 @@ export async function POST(request: Request) {
     });
 
     if (isMultiScene) {
-      const nativeTakeDuration = SEEDANCE_NATIVE_TAKE_SECONDS;
-      const numScenes = Math.min(2, Math.max(2, Math.ceil(requestedDuration / nativeTakeDuration)));
-      const totalAssembledDuration = Math.min(60, numScenes * nativeTakeDuration);
+      // Reachable only if the provider cap rises above one take. Builds the timeline out of
+      // whole MAX_TAKE_SECONDS takes, which is what makes the assembled length exact.
+      const nativeTakeDuration = MAX_TAKE_SECONDS;
+      const numScenes = Math.min(4, Math.max(2, Math.ceil(rawRequestedDuration / nativeTakeDuration)));
+      const totalAssembledDuration = numScenes * nativeTakeDuration;
 
       // Phase 1: Generate Master Concept Anchor Image (Higgsfield Soul ID & Google Character DNA standard)
       // Creates a canonical visual anchor of characters/environment to condition all downstream takes
@@ -845,16 +879,25 @@ export async function POST(request: Request) {
       });
     }
 
-    // Single native take path. Seedance 2.5 can produce up to 30s in one pass.
+    // Single take path. This is the path every render takes while the provider cap is
+    // MAX_TAKE_SECONDS, so the requested length is dispatched as-is rather than inflated.
     const singleTakeDuration = modelToUse.includes('seedance')
-      ? Math.min(SEEDANCE_NATIVE_TAKE_SECONDS, Math.max(5, requestedDuration))
+      ? Math.min(MAX_TAKE_SECONDS, Math.max(5, requestedDuration))
       : Math.min(8, Math.max(3, requestedDuration >= 7 ? 8 : requestedDuration >= 4 ? 5 : 3));
 
     const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.${recalledMemoryDirective}`;
 
+    // Stage 1 sanitizer: the video model renders frames and never sings, so any lyric or
+    // dialogue text the director echoed into the visual prompt is dead weight that the
+    // partner safety scanner reads as copyrighted material. Removing it up front avoids
+    // burning a whole refused render. sanitizePromptForDiffusion also drops negative
+    // constraints (No dialogue/text/subtitles/logos) and Sound:/Audio: clauses, which
+    // carry zero visual signal and trip keyword filters.
+    const videoPrompt = stripLyricTextFromVideoPrompt(sanitizePromptForDiffusion(livepeerPrompt), directorBrief.lyricsPrompt);
+
     const dispatchArgs: Record<string, any> = {
       action: isImageToVideo ? 'animate' : 'generate',
-      prompt: livepeerPrompt,
+      prompt: videoPrompt,
       model_override: modelToUse,
       duration: singleTakeDuration,
       async: true,
@@ -867,14 +910,28 @@ export async function POST(request: Request) {
     if (
       videoDispatch.status === 'failed' &&
       singleTakeDuration > FALLBACK_SAFE_TAKE_SECONDS &&
-      /duration|schema|validation|invalid|<=\s*15|15/i.test(videoDispatch.error || '')
+      isDurationRejection(videoDispatch.error)
     ) {
       effectiveSingleTakeDuration = FALLBACK_SAFE_TAKE_SECONDS;
       videoDispatch = await livepeerAgent.dispatchCreateMedia({
         ...dispatchArgs,
         duration: FALLBACK_SAFE_TAKE_SECONDS,
-        prompt: `${livepeerPrompt} Provider rejected native ${singleTakeDuration}s duration, so render this as the opening continuous take. Preserve exact subject identity, setting, lighting, camera language, and action state for timeline continuation.`,
+        prompt: `${videoPrompt} The provider refused a ${singleTakeDuration}s clip length, so render this as a shorter continuous take. Preserve exact subject identity, setting, lighting, camera language, and action state.`,
       });
+    }
+
+    // Self-healing retry for safety-scanner false positives. A retry only has a chance if the
+    // payload actually changes, so this strips the remaining quoted text and audio direction
+    // instead of re-sending the prompt that was just refused.
+    if (videoDispatch.status === 'failed' && isPolicyRejection(videoDispatch.error)) {
+      const retryPrompt = simplifyVideoPromptForRetry(videoPrompt);
+      if (retryPrompt && retryPrompt !== videoPrompt) {
+        console.warn('[generate:POST] Safety scanner refused the prompt. Retrying once with quoted lyric text and audio direction stripped.');
+        videoDispatch = await livepeerAgent.dispatchCreateMedia({
+          ...dispatchArgs,
+          prompt: retryPrompt,
+        });
+      }
     }
 
     if (videoDispatch.status === 'failed') {

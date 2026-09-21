@@ -30,6 +30,21 @@ export class WalrusConfigError extends Error {
 
 const META_DELIMITER = '__NUE_META__';
 
+function isHardDeleted(mem: StructuredMemory): boolean {
+  return mem.metadata?.deleted === true;
+}
+
+function pickLatestById(mems: StructuredMemory[]): Map<string, StructuredMemory> {
+  const byId = new Map<string, StructuredMemory>();
+  for (const mem of mems) {
+    const prev = byId.get(mem.id);
+    if (!prev || new Date(mem.updatedAt).getTime() >= new Date(prev.updatedAt).getTime()) {
+      byId.set(mem.id, mem);
+    }
+  }
+  return byId;
+}
+
 /**
  * Deterministically derives a MemWal namespace for a given user.
  * Each signed up user gets their own dedicated namespace under the master account key.
@@ -374,27 +389,33 @@ export class WalrusMemWalStore implements MemoryStore {
     }
 
     const candidateMemories: Array<{ memory: StructuredMemory; distance: number }> = [];
-    const seenIds = new Set<string>();
 
-    // Process recalled blobs
+    // Decode every recalled blob, then deduplicate by id (latest updatedAt wins)
+    // so a tombstone or supersession marker overrides the original active blob.
+    const decodedById = new Map<string, { memory: StructuredMemory; distance: number }>();
     for (const item of recalledBlobs) {
-      const existingId = this.blobToMemoryId.get(item.blob_id);
-      let mem = existingId ? this.memoryCache.get(existingId) : null;
-
-      if (!mem) {
-        mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, query.userId || 'default_user');
-        this.memoryCache.set(mem.id, mem);
-        this.blobToMemoryId.set(item.blob_id, mem.id);
+      const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, query.userId || 'default_user');
+      this.blobToMemoryId.set(item.blob_id, mem.id);
+      const prev = decodedById.get(mem.id);
+      if (!prev || new Date(mem.updatedAt).getTime() >= new Date(prev.memory.updatedAt).getTime()) {
+        decodedById.set(mem.id, { memory: mem, distance: item.distance });
       }
-
-      if (mem && !seenIds.has(mem.id)) {
-        seenIds.add(mem.id);
-        candidateMemories.push({ memory: mem, distance: item.distance });
+    }
+    for (const { memory } of decodedById.values()) {
+      this.memoryCache.set(memory.id, memory);
+    }
+    const seenIds = new Set<string>();
+    for (const { memory, distance } of decodedById.values()) {
+      if (isHardDeleted(memory)) continue;
+      if (!seenIds.has(memory.id)) {
+        seenIds.add(memory.id);
+        candidateMemories.push({ memory, distance });
       }
     }
 
     // Fallback: Check cached memories belonging to this user for keyword overlap
     for (const mem of Array.from(this.memoryCache.values())) {
+      if (isHardDeleted(mem)) continue;
       if (query.userId && mem.userId !== query.userId && mem.userId !== 'default_user') {
         continue;
       }
@@ -417,6 +438,10 @@ export class WalrusMemWalStore implements MemoryStore {
     const filtered: MemorySearchResult[] = [];
 
     for (const { memory, distance } of candidateMemories) {
+      // Hard-deleted tombstones never surface, in any mode.
+      if (isHardDeleted(memory)) {
+        continue;
+      }
       // 1. Active vs Superseded filter
       if (!query.includeSuperseded && !memory.isActive) {
         continue;
@@ -473,7 +498,10 @@ export class WalrusMemWalStore implements MemoryStore {
   }
 
   /**
-   * Updates an existing memory
+   * Updates an existing memory. Lifecycle changes (deactivation / supersession
+   * pointers) are persisted back to Walrus as a new blob version with the same
+   * id, because the live MemWal surface is append-only (no update/delete API).
+   * Without this, a superseded memory comes back as active on the next recall.
    */
   public async update(
     id: string,
@@ -490,12 +518,39 @@ export class WalrusMemWalStore implements MemoryStore {
       updatedAt: new Date().toISOString(),
     };
 
+    const persistsLifecycle =
+      updates.isActive !== undefined ||
+      updates.supersededById !== undefined ||
+      updates.supersedesId !== undefined;
+
+    if (persistsLifecycle && !isHardDeleted(updated)) {
+      try {
+        const userNamespace = getUserNamespace(updated.userId);
+        const client = await this.getClientForNamespace(userNamespace);
+        const res = await client.rememberAndWait(encodeMemoryPayload(updated), userNamespace);
+        const returnedId = res?.blob_id || res?.id;
+        if (returnedId) {
+          updated.storageBlobId = returnedId;
+          this.blobToMemoryId.set(returnedId, updated.id);
+        }
+      } catch (err) {
+        console.error(`[WalrusStore] Lifecycle persist failed for ${id}:`, err);
+        throw err instanceof Error ? err : new Error(String(err));
+      }
+    }
+
     this.memoryCache.set(id, updated);
     return updated;
   }
 
   /**
-   * Forgets/deletes a memory record
+   * Hard-deletes a memory record. The live MemWal client exposes no
+   * forget/delete call (only the in-memory mock does), and Walrus blobs are
+   * append-only, so deletion is implemented as a durable tombstone blob with
+   * the same id, `isActive: false` and `metadata.deleted: true`. Future
+   * recalls deduplicate by id (latest updatedAt wins) and drop tombstoned ids
+   * entirely, so a deleted memory stays deleted across restarts instead of
+   * reappearing from the next recall.
    */
   public async delete(id: string): Promise<boolean> {
     await this.initialize();
@@ -503,17 +558,26 @@ export class WalrusMemWalStore implements MemoryStore {
     const existing = this.memoryCache.get(id);
     if (!existing) return false;
 
-    if (existing.storageBlobId) {
-      const userNamespace = getUserNamespace(existing.userId);
+    const now = new Date().toISOString();
+    const tombstone: StructuredMemory = {
+      ...existing,
+      isActive: false,
+      updatedAt: now,
+      metadata: { ...(existing.metadata || {}), deleted: true, deletedAt: now },
+    };
+
+    try {
+      const userNamespace = getUserNamespace(tombstone.userId);
       const client = await this.getClientForNamespace(userNamespace);
-      if (client?.forget) {
-        try {
-          await client.forget(existing.storageBlobId);
-        } catch (err) {
-          console.error(`[WalrusStore] Forget failed for ${existing.storageBlobId}:`, err);
-          throw err instanceof Error ? err : new Error(String(err));
-        }
+      const res = await client.rememberAndWait(encodeMemoryPayload(tombstone), userNamespace);
+      const returnedId = res?.blob_id || res?.id;
+      if (!returnedId) {
+        throw new Error('Walrus MemWal did not confirm tombstone persistence.');
       }
+      this.blobToMemoryId.set(returnedId, tombstone.id);
+    } catch (err) {
+      console.error(`[WalrusStore] Tombstone persist failed for ${id}:`, err);
+      throw err instanceof Error ? err : new Error(String(err));
     }
 
     this.memoryCache.delete(id);
@@ -525,14 +589,18 @@ export class WalrusMemWalStore implements MemoryStore {
   }
 
   /**
-   * Synchronously returns cached memories according to filters
+   * Synchronously returns cached memories according to filters.
+   * Hard-deleted tombstones (metadata.deleted) are excluded from every view,
+   * including "All" — a user-deleted memory stays deleted.
    */
   public listSynchronous(filter?: {
     userId?: string;
     domain?: string;
     activeOnly?: boolean;
   }): StructuredMemory[] {
-    let all = Array.from(this.memoryCache.values());
+    let all = Array.from(pickLatestById(Array.from(this.memoryCache.values())).values()).filter(
+      (m) => !isHardDeleted(m)
+    );
 
     if (filter?.activeOnly) {
       all = all.filter((m) => m.isActive);
@@ -565,13 +633,17 @@ export class WalrusMemWalStore implements MemoryStore {
   }
 
   /**
-   * Lists memories according to filters, querying live MemWal storage via recall in user's namespace
+   * Lists memories according to filters, querying live MemWal storage via recall in user's namespace.
+   * Recalled blobs are deduplicated by id (latest updatedAt wins) so a tombstone
+   * or supersession marker written later overrides the original active blob.
+   * Hard-deleted ids are dropped from the cache so they cannot reappear.
    */
   public async list(filter?: {
     userId?: string;
     domain?: string;
     activeOnly?: boolean;
   }): Promise<StructuredMemory[]> {
+    const recalled: StructuredMemory[] = [];
     for (const targetNamespace of getUserNamespaceAliases(filter?.userId)) {
       try {
         const client = await this.getClientForNamespace(targetNamespace);
@@ -584,7 +656,7 @@ export class WalrusMemWalStore implements MemoryStore {
         if (recallRes?.results) {
           for (const item of recallRes.results) {
             const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, targetNamespace);
-            this.memoryCache.set(mem.id, mem);
+            recalled.push(mem);
             if (item.blob_id) {
               this.blobToMemoryId.set(item.blob_id, mem.id);
             }
@@ -593,6 +665,13 @@ export class WalrusMemWalStore implements MemoryStore {
       } catch (err) {
         console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
       }
+    }
+    if (recalled.length > 0) {
+      // Merge recalled blobs over the local cache, latest updatedAt per id wins,
+      // so tombstones and supersession markers override the original active blob.
+      // Tombstones stay in the cache; listSynchronous filters them from every view.
+      const merged = pickLatestById([...Array.from(this.memoryCache.values()), ...recalled]);
+      this.memoryCache = merged as Map<string, StructuredMemory>;
     }
     return this.listSynchronous(filter);
   }

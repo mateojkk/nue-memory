@@ -13,7 +13,7 @@ AI media generation has historically suffered from severe **session amnesia**. E
 
 **Nue** solves this by introducing a continuous, decentralized memory layer for AI agents. Rather than dumping raw chat histories into the context window (which inflates token costs and degrades LLM reasoning), Nue observes creator interactions, extracts structured aesthetic preferences, resolves contradictions through autonomous evolution, and cryptographically persists them to **Sui Walrus (MemWal)**.
 
-**Nue Motion** is the flagship generative video studio built on top of Nue Memory and the **Livepeer Agent Network**. In Nue Motion, creators do not write prompts for a cold, robotic dispatcher—they collaborate with an AI co-director that acts like a true creative partner ("buddy"), remembers their artistic taste across projects, sequences multi-scene 60-second video timelines, and shields creators from upstream GPU errors.
+**Nue Motion** is the flagship generative video studio built on top of Nue Memory and the **Livepeer Agent Network**. In Nue Motion, creators do not write prompts for a cold, robotic dispatcher—they collaborate with an AI co-director that acts like a true creative partner ("buddy"), remembers their artistic taste across projects, directs single continuous Seedance 2.5 takes, and shields creators from upstream GPU errors.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -71,12 +71,12 @@ AI media generation has historically suffered from severe **session amnesia**. E
   - Livepeer music generation action producing synchronized audio tracks.
   - Singing vocals support: Preserves verbatim user-provided lyrics and feeds them into melodic vocal synthesis.
 
-#### 2. Multi-Scene Timeline Sequencing & Stitching (`lib/media/timeline-stitcher.ts`)
-- **Dynamic Duration Engine**:
-  - 15s → Single take on Seedance 2.5.
-  - 30s → 2 distinct continuous scenes rendered in parallel.
-  - 45s → 3 distinct continuous scenes rendered in parallel.
-  - 60s → 4 distinct continuous scenes rendered in parallel.
+#### 2. Take Sequencing & Timeline Stitching (`lib/media/timeline-stitcher.ts`)
+- **Provider Duration Ceiling (verified against the live MCP surface, 2026-09-21)**:
+  - Livepeer's creative surface validates `create_media.duration` as `{ type: 'integer', minimum: 3, maximum: 15 }` and refuses anything larger **before dispatch** (`issue_code: too_big`, `billing_note: not_billed_pre_dispatch`). Nothing renders and nothing is charged on a refusal.
+  - Seedance 2.5 does reach 30s per pass, but only through `run_capability` with a **string** `inputs.duration` of `"4".."30"`. That tool is exposed on `/api/mcp/raw` and **not** on `/api/mcp/creative`, which is the surface Nue Motion is wired to. Livepeer's own `submit_creative_job.target_duration_sec` confirms the design: runtime is *"clamped to what capabilities accept (3-15s per shot), so ~60s over 6 scenes becomes 10s each."*
+  - **Nue Motion therefore ships one continuous 5-15s take per render** and states that limit honestly in the director's reply, instead of promising a length it cannot deliver.
+- **Multi-Take Assembly (dormant)**: the timeline branch still stitches N takes via Livepeer `assemble` (1-60 clips) or the local `ffmpeg` fallback, and re-activates automatically if the per-call cap ever rises above a single take.
 - **Narrative Continuity & Character DNA (Google & Higgsfield Standard)**:
   - **Google-Style Character DNA**: Groq extracts an immutable `characterBible` locking exact facial features, hair, wardrobe, and colors across all scene prompts so diffusion attention never drifts.
   - **Higgsfield-Style Soul ID / Character Anchoring**: When recurring characters are identified, Nue Motion generates a canonical Master Concept Anchor image (`flux-schnell`, ~2s). The anchor image URL is stored with the job for UI display; downstream scene takes use `seedance-25-t2v` with the full `characterBible` injected into every scene prompt for visual continuity. (`seedance-25-ref2v` retired 2026-09-19 — 69% success rate, $49.08 wasted in 7 days, provider-attributed failures.)
@@ -113,7 +113,7 @@ AI media generation has historically suffered from severe **session amnesia**. E
 #### 3. Creative Studio "Buddy" Persona
 - Treats the creator like a peer and friend in a music/film studio—witty, encouraging, collaborative, and sharp.
 - Celebrates user creativity (e.g., reacting enthusiastically when a user writes their own lyrics).
-- Acknowledges mistakes transparently without bureaucratic corporate apologies (*"Ah man, my bad! You asked for the full 60s and I only gave you a 15s snippet. Let's make it right: rolling the full 4-scene cut right now!"*).
+- Acknowledges mistakes transparently without bureaucratic corporate apologies, and never promises a length it cannot render (*"Ah man, my bad! A single Livepeer take caps at 15s, so here is the strongest 15s chapter of that story - say the word and I will keep the same shot rolling as a follow-up take."*).
 
 #### 4. Contextual Revision & Correction Engine
 - In `components/AppShell.tsx`, messages starting with *"but i said..."*, *"wait"*, *"actually"*, *"change the..."* are automatically linked to the active take brief as feedback context, rather than erasing the project's characters and setting.
@@ -161,10 +161,10 @@ AI media generation has historically suffered from severe **session amnesia**. E
 
 1. **Decentralized Memory Layer**: Built live Sui Walrus MemWal client with zero mock fallbacks, Ed25519 cryptographic signing, and namespace isolation.
 2. **Livepeer Agent MCP Pipeline**: Connected directly to Livepeer Creative MCP (`https://agent.livepeer.org/api/mcp/creative`) powering Seedance 2.5 video diffusion and AI audio generation.
-3. **Multi-Scene Assembly Engine**: Engineered 15s to 60s timeline sequencing (up to 4 scenes) with Livepeer assemble and local FFmpeg fallback stitching.
+3. **Honest Duration Policy**: Traced a silent 30s-to-15s downgrade to Livepeer's `create_media` schema (`duration` is an integer capped at 15, refusing anything larger pre-dispatch with `too_big`), then clamped every dispatch path to that ceiling and made the director state the delivered length instead of promising a longer one. The timeline branch that stitches N takes remains dormant and re-activates if the cap rises.
 4. **Conversational "Buddy" Director**: Revamped Nue from a rigid command parser into a warm, witty creative studio partner that can banter, answer questions, and brainstorm without burning GPU credits.
 5. **Diffusion Prompt Sanitizer**: Stripped negative disclaimers to eliminate false-positive partner copyright errors on original user songs and concepts.
-6. **Robust Job State Persistence**: Bound in-memory job tracking to `globalThis`, eliminating timeline degradation from 60s down to 15s.
+6. **Robust Job State Persistence**: Bound in-memory job tracking to `globalThis`, so long-running take state survives the asynchronous polling cycles instead of degrading to the route's fallback duration.
 7. **Empathetic Error Shielding**: Replaced raw technical stack traces with human explanations and one-click recovery.
 8. **Restrained Design System**: Built clean, mem0-inspired dark/light design system with zero vendor noise.
 

@@ -159,21 +159,37 @@ export class MemWalService {
   }
 
   /**
-   * Updates an existing preference
+   * Updates an existing preference. Lifecycle changes are persisted back to
+   * Walrus (see WalrusMemWalStore.update); the promise resolves once the
+   * marker blob is confirmed so callers can await durability.
    */
-  public updatePreference(pref: MediaPreference): void {
+  public async updatePreference(pref: MediaPreference): Promise<void> {
     this.memoryCache.set(pref.id, pref);
-    this.store.update(pref.id, {
-      isActive: pref.isActive,
-      supersedesId: pref.supersedesId,
-      updatedAt: pref.updatedAt,
-    }).catch((err) => console.warn('[MemWalService] Update notice:', err));
+    try {
+      await this.store.update(pref.id, {
+        isActive: pref.isActive,
+        supersedesId: pref.supersedesId,
+        updatedAt: pref.updatedAt,
+      });
+    } catch (err) {
+      console.warn('[MemWalService] Update notice:', err);
+      throw err;
+    }
   }
 
   /**
-   * Clears stored memory cache
+   * Clears stored memory cache. Durable version: tombstones every cached id
+   * in Walrus first so a later recall cannot resurrect cleared memories.
    */
-  public clearAll(): void {
+  public async clearAll(): Promise<void> {
+    const ids = this.store.listSynchronous().map((m) => m.id);
+    for (const id of ids) {
+      try {
+        await this.store.delete(id);
+      } catch (err) {
+        console.warn('[MemWalService] Reset tombstone notice:', id, err);
+      }
+    }
     this.memoryCache.clear();
     this.store.clearAll();
   }

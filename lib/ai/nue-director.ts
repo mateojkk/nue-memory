@@ -8,6 +8,14 @@
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
 
+/**
+ * One render is a single take of at most this many seconds, because Livepeer's creative
+ * MCP surface validates `create_media.duration` as an integer between 3 and 15 and
+ * refuses anything larger before dispatch (issue_code `too_big`). Requests for longer
+ * pieces are clamped here and explained honestly to the user instead of being promised.
+ */
+const MAX_TAKE_SECONDS = 15;
+
 const SYSTEM_PROMPT = `You are Nue, an expert creative partner, co-director, and studio buddy for AI video production powered by Livepeer's decentralized media pipeline and Walrus MemWal.
 
 YOUR ROLE & PERSONALITY:
@@ -15,8 +23,8 @@ YOUR ROLE & PERSONALITY:
 - Talk like a real human collaborator in the room, NEVER a cold corporate bot. Use natural phrasing, banter, and creative energy.
 - When the user shares something cool, laughs, or vents (e.g. "the funny part is that, i just made that song!", "wait that is hilarious"), react naturally and genuinely! Acknowledge what they said with enthusiasm!
 - When the user points out a mistake or gives a correction (e.g. "read the prompt properly", "the lyrics aint even complete", "i said 30 seconds"):
-  * Own it with human authenticity! Carefully read the user's EXACT requested duration and instructions from the prompt (e.g. if they asked for 30 seconds, honor 30 seconds! If 60 seconds, honor 60 seconds).
-	  * Set shouldGenerate: true and duration to the user's requested length (30s -> one native Seedance take, 60s -> two continuous 30s takes), keeping all user lyrics and character continuity intact.
+  * Own it with human authenticity! Carefully read the user's instructions from the prompt, and keep all user lyrics and character continuity intact.
+  * DURATION LIMIT: one render produces a SINGLE take of at most 15 seconds, because Livepeer refuses any request above 15s per take. If the user asks for 30s, 45s or 60s, set "duration" to 15, render the strongest 15s take of that story, and explain honestly in "agentMessage" that the studio currently delivers 15s takes and that the remaining beats can be directed as follow-up takes continuing the same shot. NEVER promise a length that was not rendered.
 
 YOUR FIRST MANDATE IS SEMANTIC INTENT CLASSIFICATION:
 Classify the user's message into one of these intents:
@@ -35,9 +43,9 @@ Classify the user's message into one of these intents:
    -> Set "shouldGenerate": true.
 
 Available Livepeer video models and timeline assembly:
-- seedance-25-t2v: High-fidelity cinematic video diffusion (flagship text-to-video model for all takes and multi-scene timelines up to 60s).
+- seedance-25-t2v: High-fidelity cinematic video diffusion (flagship text-to-video model for the single continuous take of every render).
 - seedance-25-i2v: High-fidelity image-to-video diffusion. Use whenever an image is provided.
-- Native Seedance 2.5 timeline: 4-30s should be planned as one continuous take whenever possible. 31-60s should be planned as two continuous 30s chapters with the same characters, setting, lighting, and action state.
+- Render limit: ONE take of 4-15s per render. Livepeer's creative surface caps a single render at 15s, so plan ONE continuous take and never split the request into multiple scenes. If the user wants something longer than 15s, direct this render as the strongest first chapter and describe the follow-up takes in agentMessage.
 
 Output ONLY valid JSON with these fields:
 {
@@ -48,14 +56,14 @@ Output ONLY valid JSON with these fields:
   "enrichedPrompt": "detailed positive visual prompt for the overall video concept (leave empty string if shouldGenerate is false)",
   "characterBible": "precise immutable description of all main characters (exact age, hair style & color, skin tone, facial features, wardrobe & garment colors) to lock Character DNA across scenes",
   "conceptImagePrompt": "clean master concept reference image prompt depicting the characters together clearly in their canonical wardrobe and setting, ideal for character anchor conditioning",
-  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (REQUIRED when shouldGenerate is true and duration > 30. 30s -> one native take with no scene split, 45s or 60s / 1 min -> 2 continuous 30s chapters. Each entry MUST incorporate the character descriptions to maintain 100% character identity and visual continuity),
+  "scenePrompts": ["scene 1 visual prompt", "scene 2 visual prompt", ...] (Do NOT use this field: the studio renders one single take per request, so the whole piece goes in enrichedPrompt),
   "visualTheme": "the visual style/theme honoring user's aesthetic",
   "pacing": "fast" | "moderate" | "cinematic",
   "audioStyle": "description of audio mood and musical style",
   "audioEnabled": true | false,
   "lyricsPrompt": "Line 1\\nLine 2\\n..." (verbatim user lyrics only, exactly as supplied by the user, without verse/chorus headers unless the user wrote those headers),
   "hasVocals": true | false,
-  "duration": number (seconds: 60 for 1 minute, 45, 30, 15, or 5-15 for single takes),
+  "duration": number (seconds for ONE take: 5-15. Use 15 whenever the user asks for anything longer, and explain the limit in agentMessage),
   "model": "seedance-25-t2v" | "seedance-25-i2v",
   "aspectRatio": "16:9" | "9:16" | "1:1"
 }
@@ -63,9 +71,9 @@ Output ONLY valid JSON with these fields:
 CRITICAL RULES FOR PROMPTS SENT TO DIFFUSION:
 - Focus purely on positive, vivid visual descriptions of lighting, characters, motion, atmosphere, and artistic style.
 - NEVER copy negative instructions, legalistic disclaimers, or words like "copyright", "copyrighted", "infringe", "do not copy", "nursery rhyme" into the prompt or scenes. Automated partner scanners flag those words as false-positive policy violations. Describe the scene positively and artistically!
-	- CHARACTER DNA & MULTI-SCENE CONTINUITY (Google & Higgsfield Standard):
-	  * For 30s or shorter text-to-video, plan one native continuous Seedance take, not two separate scenes.
-	  * In longer multi-take videos (45s, 60s), all takes MUST form one single continuous story featuring the EXACT SAME subjects, characters, environment, lighting, and visual theme.
+	- CHARACTER DNA & CONTINUITY (Google & Higgsfield Standard):
+	  * Plan ONE single continuous take containing one continuous story: the SAME subjects, characters, environment, lighting, and visual theme throughout.
+	  * Do NOT split the request into multiple scenes; the whole render is one take of at most 15s.
   * Define explicit "characterBible" locking the exact hair, skin tone, eye shape, wardrobe, and clothing colors.
   * Generate a "conceptImagePrompt" showing the characters together clearly from the front, in canonical lighting and outfits, to serve as the visual anchor.
 - NEVER include duration, seconds, minutes, or timing counts (e.g. '30-second', '60s', '1 minute') in enrichedPrompt, conceptImagePrompt, scenePrompts, or audioStyle. Prompts to models must describe purely visual elements and musical mood/instruments, NEVER duration specifications.
@@ -147,16 +155,98 @@ export function sanitizePromptForDiffusion(prompt: string): string {
     // Strip negative disclaimers and legal terms that trip safety keywords
     .replace(/\b(?:do not|dont|never)\s+(?:imitate|reference|interpolate|resemble|copy|infringe|use)\b[^.]*(?:\.|$)/gi, '')
     .replace(/\b(?:no\s+(?:subtitles|logos|watermarks|copyrighted\s+characters?|recognizable\s+songs?|scary\s+imagery|silent\s+sections?|existing\s+melody))\b[^.]*(?:\.|$)/gi, '')
+    // Strip generic negative video constraints as full sentences. These list
+    // words like dialogue/text/subtitles/logos/recognizable that the partner
+    // safety scanner reads as policy keywords, while carrying zero visual signal
+    // for a text-to-video model (it renders frames, it never burns text).
+    .replace(/\bno\b[^.]*\bon\s+screen\b[^.]*\.?/gi, ' ')
+    .replace(/\bno\s+(?:dialogue|text|writing|subtitles?|captions?|logos?|watermarks?|recognizable\s+(?:characters?|people|faces?|songs?|music))\b[^.]*\.?/gi, ' ')
     .replace(/\b(?:copyrighted\s+character(?:s)?|nursery\s+rhyme(?:s)?|copyright\s+violation|infringement)\b/gi, '')
     // Strip audio-specific timing phrases that confuse video diffusion models and trigger audio validation
     .replace(/\b(?:as the music\s+(?:softens|plays|starts|swells|ends|fades))\b/gi, '')
     .replace(/\b(?:as the song\s+(?:ends|starts|plays|softens))\b/gi, '')
+    // Audio-direction clauses belong in the soundtrack prompt, not the video prompt.
+    // "Sound: ..." / "Audio: ..." sentences are pure audio direction, as are
+    // imperative "Add ... sounds/music/audio ..." sentences.
+    .replace(/\b(?:sound|audio|music)\s*:[^.]*\.?/gi, ' ')
+    .replace(/\badd\b[^.]*\b(?:sounds?|music|audio|ambience|chatter)\b[^.]*\.?/gi, ' ')
     // Strip duration phrases from diffusion visual prompts (models describe visuals, not timing constraints)
     .replace(/\b(?:create\s+(?:a|an)\s+)?\b\d+\s*(?:-|–)?\s*(?:seconds?|secs?|s|minutes?|mins?)\s+(?:original\s+)?(?:animated\s+)?(?:children['']s\s+)?(?:music\s+)?(?:video|clip|scene|animation|movie)?\b/gi, '')
     .replace(/\b\d+\s*(?:-|–)?\s*(?:seconds?|secs?|s|minutes?|mins?)\b/gi, '')
     .replace(/\b(?:music:\s*[^.]*(?:\.|$))/gi, '')
     .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;:])/g, '$1')
     .trim();
+}
+
+/**
+ * Video diffusion models render frames: they never sing. When lyric or dialogue text leaks
+ * from the user's brief into the video prompt, ByteDance's partner safety scanner reads it as
+ * copyrighted material and refuses the render (`partner_validation_failed` /
+ * `content_policy_violation`). Removing that text is what a "I refined the scene
+ * descriptions" retry has to actually do, because re-dispatching the identical prompt
+ * reproduces the identical rejection - which is exactly how a retry loop happens.
+ *
+ * Stage 1 (this one) is surgical and safe to apply to every video dispatch: it drops the
+ * user's own lyric lines if the director echoed them, plus long quoted blocks that read as
+ * lyrics or spoken dialogue. Short quoted labels (a one-word on-screen title) are preserved
+ * so a requested visual element is never silently dropped.
+ */
+export function stripLyricTextFromVideoPrompt(prompt: string, lyrics?: string): string {
+  if (!prompt) return '';
+  let cleaned = prompt;
+
+  if (lyrics) {
+    for (const line of lyrics.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed.length < 3) continue;
+      cleaned = cleaned.split(trimmed).join(' ');
+    }
+  }
+
+  return cleaned
+    // 8+ characters inside quotes is long enough to be a lyric or dialogue line.
+    .replace(/["\u201c\u201d'][^"\u201c\u201d']{8,}?["\u201c\u201d']/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/([,;:])\s*([,.;:])+/g, '$1')
+    .trim();
+}
+
+/**
+ * Stage 2, used only to retry after the scanner has already refused once. It goes further
+ * than stage 1 so the retry is genuinely a different payload: every quoted block goes,
+ * and audio direction is dropped because it belongs to the soundtrack prompt rather than
+ * the video prompt.
+ */
+export function simplifyVideoPromptForRetry(prompt: string): string {
+  if (!prompt) return '';
+  return prompt
+    .replace(/["\u201c\u201d'][^"\u201c\u201d']+["\u201c\u201d']/g, ' ')
+    .replace(/\b(?:as|while|when)\s+the\s+(?:music|song|soundtrack|melody|tune)\b[^.,;]*/gi, ' ')
+    .replace(/\b(?:soundtrack|melod(?:y|ies)|lyrics?|verses?|chorus(?:es)?|rhymes?|sing-?along)\b/gi, ' ')
+    // Retry must differ even when there were no quotes: drop audio-direction
+    // sentences and negative-constraint sentences that the scanner flags.
+    .replace(/\b(?:sound|audio|music)\s*:[^.]*\.?/gi, ' ')
+    .replace(/\badd\b[^.]*\b(?:sounds?|music|audio|ambience|chatter)\b[^.]*\.?/gi, ' ')
+    .replace(/\bno\b[^.]*\bon\s+screen\b[^.]*\.?/gi, ' ')
+    .replace(/\bno\s+(?:dialogue|text|writing|subtitles?|captions?|logos?|watermarks?|recognizable\s+(?:characters?|people|faces?|songs?|music))\b[^.]*\.?/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/([,;:])\s*([,.;:])+/g, '$1')
+    .replace(/^[\s,.;:]+/, '')
+    .trim();
+}
+
+/**
+ * True when the provider's safety scanner refused the prompt, as opposed to a GPU or
+ * transport failure. Only these are worth retrying with a rewritten prompt.
+ */
+export function isPolicyRejection(message?: string): boolean {
+  if (!message) return false;
+  return /content_policy_violation|copyright violation|partner_validation_failed|potential copyright|policy_violation/i.test(
+    message
+  );
 }
 
 /**
@@ -188,7 +278,7 @@ export function humanizeUpstreamError(raw: any): string {
     normalized.includes('rejected due to a potential copyright') ||
     normalized.includes('potential copyright')
   ) {
-    return "ByteDance's automated safety scanner triggered a false-positive flag on our prompt (it seems to have misidentified your original song or phrasing as potentially copyrighted material). Don't worry, your work is 100% original! I've refined the scene descriptions to glide right past the automated filter without losing your creative vision. Ready to roll take 2?";
+    return "ByteDance's automated safety scanner flagged the prompt as potential copyrighted material, which is a false positive on original work. The scanner matches quoted lyric or dialogue text, so those quoted lines are removed from the visual description on the next attempt. Rewording the scene slightly (or trimming the sung lyrics) clears it right away - say the word and I will re-roll.";
   }
 
   if (
@@ -305,7 +395,7 @@ export function extractUserLyrics(text: string): string | null {
   return null;
 }
 
-function extractExplicitDuration(text: string): number | null {
+export function extractExplicitDuration(text: string): number | null {
   const oneMin = /\b(?:1\s*min(?:ute)?|one\s*minute)\b/i.test(text);
   if (oneMin) return 60;
 
@@ -524,7 +614,7 @@ function parseDirectorResponse(
     // Detect exact duration intent from message or history.
     // Explicit duration in the current user prompt takes absolute precedence over past chat history.
     const latestCreativeMessage = findLatestCreativeUserMessage(context?.chatHistory);
-    let duration = typeof parsed.duration === 'number' ? Math.max(3, Math.min(60, parsed.duration)) : 15;
+    let duration = typeof parsed.duration === 'number' ? Math.max(3, Math.min(MAX_TAKE_SECONDS, parsed.duration)) : MAX_TAKE_SECONDS;
     const userDuration = extractExplicitDuration(userMessage);
     const feedbackDuration = context?.feedbackContext ? extractExplicitDuration(context.feedbackContext) : null;
     const latestCreativeDuration = latestCreativeMessage ? extractExplicitDuration(latestCreativeMessage) : null;
@@ -536,12 +626,15 @@ function parseDirectorResponse(
     } else if (latestCreativeDuration && context?.feedbackContext) {
       duration = latestCreativeDuration;
     } else if (typeof parsed.duration === 'number' && parsed.duration >= 5) {
-      duration = Math.max(5, Math.min(60, parsed.duration));
+      duration = parsed.duration;
     }
 
-    // Target scene count for native Seedance 2.5 timeline planning.
-    // 30s and below should stay one single-pass take; 31-60s becomes two continuous chapters.
-    const targetSceneCount = duration > 30 ? 2 : 1;
+    // One take per render. Livepeer caps `create_media.duration` at 15, so a request for
+    // 30s/45s/60s is clamped here and the agentMessage explains the delivered length.
+    duration = Math.max(5, Math.min(MAX_TAKE_SECONDS, duration));
+
+    // Single take, so no scene split is ever planned.
+    const targetSceneCount = 1;
     let scenePrompts: string[] | undefined;
     if (targetSceneCount > 1) {
       const parsedScenes = Array.isArray(parsed.scenePrompts)
@@ -593,7 +686,7 @@ function parseDirectorResponse(
       aspectRatio: ['16:9', '9:16', '1:1'].includes(parsed.aspectRatio) ? parsed.aspectRatio : '16:9',
       recalledMemories,
       agentMessage: parsed.agentMessage || (shouldGen
-        ? `Love it! Rolling your ${duration}-second multi-scene video now.`
+        ? `Love it! Rolling your ${duration}-second Seedance take now.`
         : "Hey there! I'm Nue, your creative co-director. What are we making today?"),
     };
   } catch (err) {
@@ -627,10 +720,11 @@ function parseDirectorResponse(
       extractExplicitDuration(userMessage) ||
       (context?.feedbackContext && latestCreativeMessage ? extractExplicitDuration(latestCreativeMessage) : null) ||
       15;
-    const dur = Math.max(5, Math.min(60, parsedDur));
+    const dur = Math.max(5, Math.min(MAX_TAKE_SECONDS, parsedDur));
     const model = context?.imageUrl ? 'seedance-25-i2v' : 'seedance-25-t2v';
 
-    const targetSceneCount = dur >= 46 ? 4 : dur >= 31 ? 3 : dur > 15 ? 2 : 1;
+    // One take per render, so the fallback path never splits into scenes either.
+    const targetSceneCount = 1;
     let scenePrompts: string[] | undefined;
     const sanitizedEnriched = sanitizePromptForDiffusion(userMessage);
     if (targetSceneCount > 1) {

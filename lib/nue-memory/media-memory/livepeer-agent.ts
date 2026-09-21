@@ -1,6 +1,13 @@
 import { MediaPreference, MediaVersion, GenerateMediaRequest } from './types';
 
 /**
+ * Provider-enforced ceiling for a single Livepeer `create_media` render: the tool validates
+ * `duration` as an integer in [3, 15] and refuses larger values before dispatch
+ * (issue_code `too_big`). Anything longer has to be built as several takes.
+ */
+const MAX_TAKE_SECONDS = 15;
+
+/**
  * Unwraps Livepeer proxy URLs (https://agent.livepeer.org/a/...) to direct cloud storage URLs
  * (https://storage.googleapis.com/...) so browsers can perform byte-range requests and seamless playback.
  */
@@ -275,9 +282,20 @@ export class LivepeerMediaAgent {
       const data = await res.json();
       const content = data.result?.structuredContent;
       if (data.result?.isError || data.error || content?.error) {
+        // Livepeer puts the generic message in `structuredContent.error.message` and the
+        // actionable detail (e.g. "`duration` must be at most 15") in the text content
+        // blocks. Keep both so callers can act on the real reason instead of guessing.
+        const textDetail = Array.isArray(data.result?.content)
+          ? data.result.content
+              .map((block: any) => (typeof block?.text === 'string' ? block.text : ''))
+              .filter(Boolean)
+              .join(' ')
+              .trim()
+          : '';
+        const structuredDetail = content?.error?.message || data.error?.message;
         return {
           status: 'failed',
-          error: content?.error?.message || data.error?.message || 'Livepeer dispatch failed',
+          error: [structuredDetail, textDetail].filter(Boolean).join(' ') || 'Livepeer dispatch failed',
         };
       }
 
@@ -983,16 +1001,16 @@ export class LivepeerMediaAgent {
       ? 'ltx-25-t2v-pro'
       : 'seedance-25-t2v';
 
-    const maxSingleTake = modelToUse === 'seedance-25-t2v' ? 30 : 10;
+    // `create_media` caps one take at MAX_TAKE_SECONDS, so longer briefs are split into
+    // several takes (ltx takes up to 10s).
+    const maxSingleTake = modelToUse === 'seedance-25-t2v' ? MAX_TAKE_SECONDS : 10;
     const isLongForm = !isImageToVideo && targetDuration > maxSingleTake;
     const clipCount = isLongForm
       ? (scenePrompts?.length || Math.min(8, Math.max(2, Math.round(targetDuration / maxSingleTake))))
       : 1;
 
-    // Seedance 2.5 supports native 30s takes; other video models still use shorter caps.
-    // For ltx: takes up to 10s.
     const singleTakeDuration = modelToUse === 'seedance-25-t2v'
-      ? (isLongForm ? 30 : Math.min(30, Math.max(5, targetDuration)))
+      ? Math.min(MAX_TAKE_SECONDS, Math.max(5, targetDuration))
       : Math.min(10, Math.max(3, targetDuration));
 
     // Expected total sequence duration across all assembled scenes
