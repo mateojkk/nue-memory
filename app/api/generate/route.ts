@@ -169,7 +169,7 @@ export async function GET(request: Request) {
 
       const truthfulDirectorMessage = directorBrief?.agentMessage || `Directing your ${actualDuration}s multi-scene video with sung vocals and continuous soundtrack.`;
 
-      const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Nursery Rhyme' : 'Modern Soundtrack');
+      const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Audio' : 'Original Soundtrack');
 
       const mediaVersion: MediaVersion = {
         versionNumber,
@@ -335,7 +335,7 @@ export async function GET(request: Request) {
         truthfulDirectorMessage += ` Note: Rendered a ${actualDuration}s take on ${modelName}.`;
       }
 
-      const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Nursery Rhyme' : 'Modern Soundtrack');
+      const audioStyleDescription = directorBrief?.audioStyle || (directorBrief?.hasVocals ? 'Sung Vocals & Melodic Audio' : 'Original Soundtrack');
 
       const mediaVersion: MediaVersion = {
         versionNumber,
