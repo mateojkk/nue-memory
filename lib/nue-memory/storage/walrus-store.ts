@@ -46,6 +46,39 @@ function pickLatestById(mems: StructuredMemory[]): Map<string, StructuredMemory>
 }
 
 /**
+ * Walrus relayer writes are throttled under load (Too Many Requests on seal
+ * encrypt, or accepted jobs that stall past the poll timeout). Both are
+ * transient: the same write usually succeeds seconds later. This retries once
+ * with the same idempotency key, so a retry collapses onto the original paid
+ * job instead of double-writing. Per-attempt timeout is capped so a
+ * persistently degraded relayer still fails fast and honestly.
+ */
+async function rememberWithRetry(
+  client: any,
+  text: string,
+  namespace: string,
+  idempotencyKey: string,
+  attempts = 2
+): Promise<any> {
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      return await client.rememberAndWait(text, namespace, {
+        timeoutMs: 30000,
+        idempotencyKey,
+      });
+    } catch (err) {
+      lastError = err;
+      if (attempt < attempts) {
+        console.warn(`[WalrusStore] Remember attempt ${attempt} throttled, retrying once with same idempotency key:`, err instanceof Error ? err.message : err);
+        await new Promise((r) => setTimeout(r, 4000));
+      }
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+/**
  * Deterministically derives a MemWal namespace for a given user.
  * Each signed up user gets their own dedicated namespace under the master account key.
  *
@@ -319,7 +352,10 @@ export class WalrusMemWalStore implements MemoryStore {
   }
 
   /**
-   * Persists a StructuredMemory into Walrus MemWal under the user's specific namespace
+   * Persists a StructuredMemory into Walrus MemWal under the user's specific namespace.
+   * Transient relayer throttle (Too Many Requests / stalled jobs) is retried once
+   * with the same idempotency key, which collapses onto the original paid job
+   * instead of double-writing. First-try success costs zero extra latency.
    */
   public async save(
     memory: StructuredMemory
@@ -331,7 +367,7 @@ export class WalrusMemWalStore implements MemoryStore {
 
     let blobId: string;
     try {
-      const res = await client.rememberAndWait(payloadText, userNamespace);
+      const res = await rememberWithRetry(client, payloadText, userNamespace, `nue-save-${memory.id}`);
       const returnedId = res?.blob_id || res?.id;
       if (!returnedId) {
         throw new Error('Walrus MemWal did not return a blob ID: persistence not confirmed.');
@@ -531,7 +567,7 @@ export class WalrusMemWalStore implements MemoryStore {
       try {
         const userNamespace = getUserNamespace(updated.userId);
         const client = await this.getClientForNamespace(userNamespace);
-        const res = await client.rememberAndWait(encodeMemoryPayload(updated), userNamespace);
+        const res = await rememberWithRetry(client, encodeMemoryPayload(updated), userNamespace, `nue-lifecycle-${updated.id}-${updated.updatedAt}`);
         const returnedId = res?.blob_id || res?.id;
         if (returnedId) {
           updated.storageBlobId = returnedId;
@@ -573,7 +609,7 @@ export class WalrusMemWalStore implements MemoryStore {
     try {
       const userNamespace = getUserNamespace(tombstone.userId);
       const client = await this.getClientForNamespace(userNamespace);
-      const res = await client.rememberAndWait(encodeMemoryPayload(tombstone), userNamespace);
+      const res = await rememberWithRetry(client, encodeMemoryPayload(tombstone), userNamespace, `nue-tombstone-${tombstone.id}-${tombstone.updatedAt}`);
       const returnedId = res?.blob_id || res?.id;
       if (!returnedId) {
         throw new Error('Walrus MemWal did not confirm tombstone persistence.');
