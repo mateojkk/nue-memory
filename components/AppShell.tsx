@@ -364,7 +364,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     overrideProjectTitle?: string,
     imageUrl?: string,
     chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>,
-    options?: { bypassPreflight?: boolean; approvedDirectorBrief?: any }
+    options?: { bypassPreflight?: boolean; approvedDirectorBrief?: any; applyRecalledMemories?: boolean }
   ) => {
     setIsGenerating(true);
     setGenerationStage('thinking');
@@ -387,6 +387,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           imageUrl: imageUrl || undefined,
           preflightOnly: !options?.bypassPreflight,
           approvedDirectorBrief: options?.approvedDirectorBrief,
+          applyRecalledMemories: Boolean(options?.applyRecalledMemories),
         }),
       });
 
@@ -604,7 +605,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   };
 
-  const handleApprovePreflight = async () => {
+  const handleApprovePreflight = async (applyRecalledMemories = false) => {
     const pending = pendingPreflight;
     if (!pending) return;
     setPendingPreflight(null);
@@ -616,7 +617,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       pending.overrideProjectTitle,
       pending.imageUrl,
       pending.chatHistory,
-      { bypassPreflight: true, approvedDirectorBrief: pending.directorBrief }
+      { bypassPreflight: true, approvedDirectorBrief: pending.directorBrief, applyRecalledMemories }
     );
   };
 

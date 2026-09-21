@@ -461,6 +461,7 @@ export async function POST(request: Request) {
       imageUrl,
       preflightOnly,
       approvedDirectorBrief,
+      applyRecalledMemories,
     } = body;
 
     // Step 1: Authenticate caller identity
@@ -526,6 +527,7 @@ export async function POST(request: Request) {
           projectTitle: sanitizedTitle,
           imageUrl: validatedImageUrl,
           chatHistory: Array.isArray(chatHistory) ? chatHistory : undefined,
+          applyMemories: false,
         });
 
     // Handle conversational messages immediately without requiring credits or dispatching media
@@ -594,8 +596,9 @@ export async function POST(request: Request) {
 
     // Build render trace preferences. These explain what shaped this render,
     // but are not durable memories unless the user confirms feedback.
+    const shouldApplyRecalledMemories = Boolean(applyRecalledMemories);
     const syntheticPreferences: MediaPreference[] = [];
-    const recalledPreferences = Array.isArray(directorBrief.recalledMemories)
+    const recalledPreferences: MediaPreference[] = shouldApplyRecalledMemories && Array.isArray(directorBrief.recalledMemories)
       ? directorBrief.recalledMemories.map((memory: any, idx: number) => ({
           id: `recall-${idx}-${String(memory.category || 'memory')}-${Date.now()}`,
           type: 'media_preference' as const,
@@ -646,6 +649,9 @@ export async function POST(request: Request) {
         syntheticPreferences.push(recalled);
       }
     }
+    const recalledMemoryDirective = shouldApplyRecalledMemories && recalledPreferences.length > 0
+      ? ` Approved Nue Memory rules for this render: ${recalledPreferences.map((memory) => `[${memory.category}] ${memory.preference}`).join('; ')}. Apply these only when they do not conflict with explicit instructions in the current user prompt. If there is any conflict, the current prompt wins.`
+      : '';
 
     // Step 7: Dispatch media generation to Livepeer (<3s synchronous)
     const isImageToVideo = Boolean(validatedImageUrl);
@@ -749,7 +755,7 @@ export async function POST(request: Request) {
       const sceneDispatches = await Promise.all(
         scenePromptsToUse.map((scenePrompt) => {
           const charDna = directorBrief.characterBible ? ` Characters: ${directorBrief.characterBible}.` : '';
-          const fullPrompt = `${scenePrompt}.${charDna} Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
+          const fullPrompt = `${scenePrompt}.${charDna} Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.${recalledMemoryDirective}`;
 
           return livepeerAgent.dispatchCreateMedia({
             action: 'generate',
@@ -826,7 +832,7 @@ export async function POST(request: Request) {
       ? Math.min(15, Math.max(5, requestedDuration))
       : Math.min(8, Math.max(3, requestedDuration >= 7 ? 8 : requestedDuration >= 4 ? 5 : 3));
 
-    const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
+    const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.${recalledMemoryDirective}`;
 
     const dispatchArgs: Record<string, any> = {
       action: isImageToVideo ? 'animate' : 'generate',

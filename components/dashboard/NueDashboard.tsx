@@ -88,7 +88,7 @@ interface NueDashboardProps {
   } | null;
   onConfirmRemember: () => void;
   onDismissPending: () => void;
-  onConfirmPreflight?: () => void;
+  onConfirmPreflight?: (applyRecalledMemories?: boolean) => void;
   onCancelPreflight?: () => void;
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;

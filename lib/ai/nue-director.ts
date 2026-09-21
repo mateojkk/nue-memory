@@ -103,6 +103,7 @@ interface DirectorContext {
   projectTitle?: string;
   imageUrl?: string;
   chatHistory?: ChatHistoryMessage[];
+  applyMemories?: boolean;
 }
 
 const ACTIONABLE_MEMORY_CATEGORIES = new Set([
@@ -388,12 +389,18 @@ export async function directCreativeBrief(
   // 2. Build fullMessage with conversation history and active memories
   let fullMessage = '';
 
-  if (activeUserMemories.length > 0) {
-    fullMessage += `=== ACTIVE USER CREATIVE MEMORIES (DECENTRALIZED WALRUS MEMWAL) ===\n`;
+  if (activeUserMemories.length > 0 && context.applyMemories) {
+    fullMessage += `=== APPROVED USER CREATIVE MEMORIES (DECENTRALIZED WALRUS MEMWAL) ===\n`;
     for (const mem of activeUserMemories) {
       fullMessage += `- [${mem.category.toUpperCase()}]: ${mem.preference}\n`;
     }
     fullMessage += `MANDATORY: Honor and incorporate the user's active decentralized creative memories into the visual style, pacing, and audio mood unless the user explicitly overrides them.\n\n`;
+  } else if (activeUserMemories.length > 0) {
+    fullMessage += `=== AVAILABLE USER CREATIVE MEMORIES (NOT YET APPROVED FOR THIS RENDER) ===\n`;
+    for (const mem of activeUserMemories) {
+      fullMessage += `- [${mem.category.toUpperCase()}]: ${mem.preference}\n`;
+    }
+    fullMessage += `Do NOT blend these memories into the render plan yet. Only expose them as recalledMemories so the user can explicitly approve or ignore them before rendering.\n\n`;
   }
 
   if (context.chatHistory && context.chatHistory.length > 0) {
