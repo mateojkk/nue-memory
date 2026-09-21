@@ -7,6 +7,7 @@ import { useSystemHealth, connectionIndicator } from '@/lib/hooks/useSystemHealt
 
 interface MemoriesViewProps {
   memories: MediaPreference[];
+  isLoading?: boolean;
   onForget: (id: string) => void;
   onOpenStudio?: () => void;
   userNamespace?: string;
@@ -35,6 +36,7 @@ function getResolvedFilter(): 'all' | 'active' | 'superseded' {
 
 export function MemoriesView({
   memories,
+  isLoading = false,
   onForget,
   onOpenStudio,
   userNamespace,
@@ -42,8 +44,8 @@ export function MemoriesView({
 }: MemoriesViewProps) {
   const [selectedMemory, setSelectedMemory] = useState<MediaPreference | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'superseded'>(getResolvedFilter);
-  const { health, isLoading } = useSystemHealth();
-  const walrusIndicator = connectionIndicator(health.walrus.state, isLoading);
+  const { health, isLoading: isHealthLoading } = useSystemHealth();
+  const walrusIndicator = connectionIndicator(health.walrus.state, isHealthLoading);
 
   const handleFilterChange = (filter: 'all' | 'active' | 'superseded') => {
     setActiveTab(filter);
@@ -124,7 +126,21 @@ export function MemoriesView({
       </div>
 
       {/* Memory Cards Grid */}
-      {displayedMemories.length === 0 ? (
+      {isLoading && displayedMemories.length === 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" aria-live="polite" aria-busy="true">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="p-5 rounded-xl bg-[var(--surface)] shadow-lg space-y-3 animate-pulse">
+              <div className="h-4 w-24 rounded bg-[var(--surface-2)]" />
+              <div className="h-3 w-full rounded bg-[var(--surface-2)]" />
+              <div className="h-3 w-2/3 rounded bg-[var(--surface-2)]" />
+              <div className="pt-4 mt-4 flex items-center justify-between">
+                <div className="h-3 w-20 rounded bg-[var(--surface-2)]" />
+                <div className="h-3 w-12 rounded bg-[var(--surface-2)]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : displayedMemories.length === 0 ? (
         <div className="text-center py-16 px-4 rounded-xl bg-[var(--surface)] space-y-3">
           <Database className="w-8 h-8 text-[var(--accent)] mx-auto opacity-40" />
           <h3 className="text-base font-medium text-[var(--fg-soft)] font-sans">No preferences learned yet</h3>

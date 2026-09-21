@@ -170,6 +170,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
   // Memory & Confirmation State
   const [activeMemories, setActiveMemories] = useState<MediaPreference[]>([]);
+  const [isLoadingMemories, setIsLoadingMemories] = useState(false);
   const [activeNamespace, setActiveNamespace] = useState<string>('');
   const [pendingPreferences, setPendingPreferences] = useState<
     Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[]
@@ -322,6 +323,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   }, [email]);
 
   const fetchMemories = async (userEmail: string) => {
+    setIsLoadingMemories(true);
     try {
       const url = `/api/memwal?email=${encodeURIComponent(userEmail)}`;
       const res = await fetch(url);
@@ -334,6 +336,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       }
     } catch (e) {
       console.warn('Failed to load memories from MemWal:', e);
+    } finally {
+      setIsLoadingMemories(false);
     }
   };
 
@@ -1133,6 +1137,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           onResetProject={handleResetProject}
           onDeleteVersion={handleDeleteVersion}
           activeMemories={activeMemories}
+          isLoadingMemories={isLoadingMemories}
           onForgetMemory={handleForgetMemory}
           projects={projects}
           currentProjectIndex={currentProjectIndex}

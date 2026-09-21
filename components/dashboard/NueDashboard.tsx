@@ -100,6 +100,7 @@ interface NueDashboardProps {
   onResetProject?: (projectId: string) => void;
   onDeleteVersion?: (projectId: string, versionIndex: number) => void;
   activeMemories: MediaPreference[];
+  isLoadingMemories?: boolean;
   onForgetMemory: (id: string) => void;
   projects: CreativeProject[];
   currentProjectIndex: number;
@@ -141,6 +142,7 @@ export function NueDashboard({
   onResetProject,
   onDeleteVersion,
   activeMemories,
+  isLoadingMemories = false,
   onForgetMemory,
   projects,
   currentProjectIndex,
@@ -340,6 +342,7 @@ export function NueDashboard({
         {activeTab === 'memories' && (
           <MemoriesView
             memories={activeMemories}
+            isLoading={isLoadingMemories}
             onForget={onForgetMemory}
             onOpenStudio={() => handleTabChange('media-memory')}
             userNamespace={userNamespace}

@@ -368,24 +368,28 @@ export class WalrusMemWalStore implements MemoryStore {
   public async search(query: MemoryQuery): Promise<MemorySearchResult[]> {
     let recalledBlobs: Array<{ blob_id: string; text: string; distance: number; created_at?: string }> = [];
 
-    for (const targetNamespace of getUserNamespaceAliases(query.userId)) {
-      try {
-        const client = await this.getClientForNamespace(targetNamespace);
-        if (client?.recall) {
-          const recallRes = await client.recall({
-            query: query.query,
-            namespace: targetNamespace,
-            topK: (query.limit || 10) * 2, // oversample to allow filtering
-            maxDistance: 1.5,
-          });
-
-          if (recallRes?.results) {
-            recalledBlobs = recalledBlobs.concat(recallRes.results);
+    // Alias namespaces (current + legacy) are independent - recall in parallel.
+    const recallResults = await Promise.all(
+      getUserNamespaceAliases(query.userId).map(async (targetNamespace) => {
+        try {
+          const client = await this.getClientForNamespace(targetNamespace);
+          if (client?.recall) {
+            const recallRes = await client.recall({
+              query: query.query,
+              namespace: targetNamespace,
+              topK: (query.limit || 10) * 2, // oversample to allow filtering
+              maxDistance: 1.5,
+            });
+            return recallRes?.results || [];
           }
+        } catch (err) {
+          console.warn(`[WalrusStore] Error during MemWal recall for namespace ${targetNamespace}:`, err);
         }
-      } catch (err) {
-        console.warn(`[WalrusStore] Error during MemWal recall for namespace ${targetNamespace}:`, err);
-      }
+        return [];
+      })
+    );
+    for (const results of recallResults) {
+      recalledBlobs = recalledBlobs.concat(results);
     }
 
     const candidateMemories: Array<{ memory: StructuredMemory; distance: number }> = [];
@@ -644,26 +648,35 @@ export class WalrusMemWalStore implements MemoryStore {
     activeOnly?: boolean;
   }): Promise<StructuredMemory[]> {
     const recalled: StructuredMemory[] = [];
-    for (const targetNamespace of getUserNamespaceAliases(filter?.userId)) {
-      try {
-        const client = await this.getClientForNamespace(targetNamespace);
-        const recallRes = await client.recall({
-          query: 'preference video visual style pacing duration captions audio model layout lyrics vocals soundtrack',
-          namespace: targetNamespace,
-          topK: 50,
-          limit: 50,
-        });
-        if (recallRes?.results) {
-          for (const item of recallRes.results) {
-            const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, targetNamespace);
-            recalled.push(mem);
-            if (item.blob_id) {
-              this.blobToMemoryId.set(item.blob_id, mem.id);
+    // Alias namespaces (current + legacy) are independent - recall in parallel.
+    const listResults = await Promise.all(
+      getUserNamespaceAliases(filter?.userId).map(async (targetNamespace) => {
+        const mems: Array<{ mem: StructuredMemory; blobId: string }> = [];
+        try {
+          const client = await this.getClientForNamespace(targetNamespace);
+          const recallRes = await client.recall({
+            query: 'preference video visual style pacing duration captions audio model layout lyrics vocals soundtrack',
+            namespace: targetNamespace,
+            topK: 50,
+            limit: 50,
+          });
+          if (recallRes?.results) {
+            for (const item of recallRes.results) {
+              mems.push({ mem: decodeMemoryPayload(item.text, item.blob_id, item.created_at, targetNamespace), blobId: item.blob_id });
             }
           }
+        } catch (err) {
+          console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
         }
-      } catch (err) {
-        console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
+        return mems;
+      })
+    );
+    for (const mems of listResults) {
+      for (const { mem, blobId } of mems) {
+        recalled.push(mem);
+        if (blobId) {
+          this.blobToMemoryId.set(blobId, mem.id);
+        }
       }
     }
     if (recalled.length > 0) {
