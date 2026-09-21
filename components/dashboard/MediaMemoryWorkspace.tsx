@@ -828,7 +828,7 @@ export function MediaMemoryWorkspace({
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
-                placeholder="Ask anything"
+                placeholder="Describe the video you want to make"
                 className="flex-1 bg-transparent text-sm sm:text-base text-[var(--fg)] placeholder-[var(--fg-muted)] focus:outline-none"
                 autoFocus
               />
@@ -864,42 +864,43 @@ export function MediaMemoryWorkspace({
               </button>
             </form>
 
-            {/* Suggestions List (exact ChatGPT layout) */}
+            {/* Product-true starter prompts */}
             <div className="space-y-1 pt-1 max-w-lg mx-auto sm:mx-0">
               <button
                 type="button"
                 onClick={() => {
-                  setInputText('Create a 15-second cinematic cyberpunk scene on seedance with ambient audio');
+                  setInputText('Create a 15-second cinematic product video with smooth camera motion and ambient audio');
                   centerInputRef.current?.focus();
+                }}
+                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-[var(--surface-2)]/60 text-xs sm:text-sm text-[var(--fg-soft)] hover:text-[var(--fg)] transition text-left group"
+              >
+                <Film className="w-4 h-4 text-[var(--fg-faint)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
+                <span>Create a video</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setInputText('Animate this image into a short cinematic video with depth, motion, and matching audio');
+                  centerInputRef.current?.focus();
+                  centerFileInputRef.current?.click();
                 }}
                 className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-[var(--surface-2)]/60 text-xs sm:text-sm text-[var(--fg-soft)] hover:text-[var(--fg)] transition text-left group"
               >
                 <ImageIcon className="w-4 h-4 text-[var(--fg-faint)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
-                <span>Create an image or sticker</span>
+                <span>Animate an image</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => {
-                  setInputText('Direct a monochrome noir teaser with ambient audio soundtrack and high-contrast visuals');
+                  setInputText('Show my remembered creative preferences before I render');
                   centerInputRef.current?.focus();
                 }}
                 className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-[var(--surface-2)]/60 text-xs sm:text-sm text-[var(--fg-soft)] hover:text-[var(--fg)] transition text-left group"
               >
-                <Pencil className="w-4 h-4 text-[var(--fg-faint)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
-                <span>Write or edit</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setInputText('Recall my remembered style preferences and direct a modern product promo take');
-                  centerInputRef.current?.focus();
-                }}
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl hover:bg-[var(--surface-2)]/60 text-xs sm:text-sm text-[var(--fg-soft)] hover:text-[var(--fg)] transition text-left group"
-              >
-                <Globe className="w-4 h-4 text-[var(--fg-faint)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
-                <span>Search the web</span>
+                <Brain className="w-4 h-4 text-[var(--fg-faint)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
+                <span>Review memory</span>
               </button>
             </div>
           </div>
@@ -1282,7 +1283,7 @@ export function MediaMemoryWorkspace({
                       ? generationStage === 'cooking'
                         ? 'cooking...'
                         : 'thinking...'
-                      : 'Ask anything or direct revision...'
+                      : 'Describe a video or direct a revision...'
                   }
                   rows={1}
                   disabled={isGenerating}
