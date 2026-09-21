@@ -237,9 +237,9 @@ export async function GET(request: Request) {
 
     if (pollResult.status === 'running') {
       const elapsedSec = job ? Math.max(1, Math.round((Date.now() - new Date(job.createdAt).getTime()) / 1000)) : 10;
-      const modelName = job?.modelToUse || 'pixverse-t2v';
-      const expectedSla = modelName.includes('seedance') ? '~4 min' : '~45s';
-      const maxEstimatedSec = modelName.includes('seedance') ? 240 : 45;
+      const modelName = job?.modelToUse || 'seedance-25-t2v';
+      const expectedSla = '~4 min';
+      const maxEstimatedSec = 240;
       const progress = Math.min(88, 25 + Math.round((elapsedSec / maxEstimatedSec) * 60));
       const stageDescription = `Rendering on ${modelName} (${elapsedSec}s / ${expectedSla})...`;
 
@@ -547,16 +547,10 @@ export async function POST(request: Request) {
 
     // Step 7: Dispatch media generation to Livepeer (<3s synchronous)
     const isImageToVideo = Boolean(validatedImageUrl);
-    const rawRequestedDuration = directorBrief.duration || (directorBrief.model?.includes('seedance') ? 15 : 5);
-    let modelToUse: string = isImageToVideo
-      ? (directorBrief.model?.includes('pixverse') ? 'pixverse-i2v' : 'seedance-25-i2v')
-      : ((rawRequestedDuration > 8 || directorBrief.model?.includes('seedance')) ? 'seedance-25-t2v' : (directorBrief.model || 'pixverse-t2v'));
-    if (!isImageToVideo && rawRequestedDuration > 8) {
-      modelToUse = 'seedance-25-t2v';
-    }
-    const expectedSla = modelToUse.includes('seedance') ? '~4 min' : '~45s';
+    const modelToUse: string = isImageToVideo ? 'seedance-25-i2v' : 'seedance-25-t2v';
+    const expectedSla = '~4 min';
 
-    const requestedDuration = directorBrief.duration || (modelToUse.includes('seedance') ? 15 : 5);
+    const requestedDuration = directorBrief.duration || 15;
     const isMultiScene = !isImageToVideo && requestedDuration > 15;
 
     // Dispatch background soundtrack in parallel if requested (with singing vocals / lyrics support)

@@ -69,8 +69,8 @@ export async function GET(request: Request) {
         if (Array.isArray(p.versions)) {
           p.versions.forEach((v: any, idx: number) => {
             const vNum = v.versionNumber || idx + 1;
-            const dur = v.generationDurationSeconds || 5;
-            const cap = v.livepeerCapability || 'pixverse-t2v';
+            const dur = v.generationDurationSeconds || 15;
+            const cap = v.livepeerCapability || 'seedance-25-t2v';
             const pacing = v.pacing || 'moderate';
             const captions = v.captionStyle?.size || 'medium';
             const audio = v.audioStyle?.style || 'modern electronic';

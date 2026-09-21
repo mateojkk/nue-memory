@@ -94,12 +94,10 @@ export function retrieveAndEnrichBrief(
         isRelevant = true;
         summaryTokens.push(memory.preference);
         const lower = memory.preference.toLowerCase();
-        if (lower.includes('seedance')) {
-          creativeDirectives.model = 'seedance-25-t2v';
-        } else if (lower.includes('ltx')) {
+        if (lower.includes('ltx')) {
           creativeDirectives.model = 'ltx-25-t2v-pro';
-        } else if (lower.includes('pixverse')) {
-          creativeDirectives.model = 'pixverse-t2v';
+        } else {
+          creativeDirectives.model = 'seedance-25-t2v';
         }
         break;
       }

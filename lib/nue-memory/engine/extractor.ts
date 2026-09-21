@@ -241,14 +241,12 @@ const SEMANTIC_PATTERNS: SemanticPattern[] = [
     category: 'model',
     type: 'preference',
     domain: 'media',
-    pattern: /(?:prefer|use|switch to|render with|on)\s+(seedance(?:-25-t2v)?|pixverse(?:-t2v)?|ltx(?:-25-t2v-pro)?)/i,
+    pattern: /(?:prefer|use|switch to|render with|on)\s+(seedance(?:-25-t2v)?|ltx(?:-25-t2v-pro)?)/i,
     extract: (text, match) => {
       const raw = match[1].toLowerCase();
-      const model = raw.includes('seedance')
-        ? 'seedance-25-t2v'
-        : raw.includes('ltx')
+      const model = raw.includes('ltx')
         ? 'ltx-25-t2v-pro'
-        : 'pixverse-t2v';
+        : 'seedance-25-t2v';
       return {
         value: `Prefer ${model} generative video model`,
         confidence: 0.96,

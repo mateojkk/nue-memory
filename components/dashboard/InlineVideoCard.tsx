@@ -223,8 +223,8 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
     }
   };
 
-  const dur = version.generationDurationSeconds || 5;
-  const cap = version.livepeerCapability || 'pixverse-t2v';
+  const dur = version.generationDurationSeconds || 15;
+  const cap = version.livepeerCapability || 'seedance-25-t2v';
 
   return (
     <div className="mt-3 rounded-2xl bg-[var(--surface-2)]/80 overflow-hidden shadow-md max-w-2xl w-full">

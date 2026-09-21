@@ -905,16 +905,12 @@ export class LivepeerMediaAgent {
       }
     }
 
-    // Check if user explicitly requested a specific model (e.g. "use seedance", "seedance", "pixverse", "ltx")
+    // Check if user explicitly requested a specific model (e.g. "use seedance", "seedance", "ltx")
     const preferredModel = creativeDirectives?.model?.toLowerCase();
     const explicitSeedance =
       preferredModel?.includes('seedance') ||
       (feedbackContext && feedbackContext.toLowerCase().includes('seedance')) ||
       brief.toLowerCase().includes('seedance');
-    const explicitPixverse =
-      preferredModel?.includes('pixverse') ||
-      (feedbackContext && feedbackContext.toLowerCase().includes('pixverse')) ||
-      brief.toLowerCase().includes('pixverse');
     const explicitLtx =
       preferredModel?.includes('ltx') ||
       (feedbackContext && feedbackContext.toLowerCase().includes('ltx')) ||
@@ -933,19 +929,16 @@ export class LivepeerMediaAgent {
     const isImageToVideo = Boolean(hostedImageUrl);
 
     // Determine model dispatch strategy:
-    // 1. If image provided: Dispatch seedance-25-i2v (or pixverse-i2v if explicit)
-    // 2. If explicitly requested pixverse: Dispatch pixverse-t2v
-    // 3. If explicitly requested ltx: Dispatch ltx-25-t2v-pro
-    // 4. Default: seedance-25-t2v for superior visual quality and up to 15s takes
+    // 1. If image provided: Dispatch seedance-25-i2v
+    // 2. If explicitly requested ltx: Dispatch ltx-25-t2v-pro
+    // 3. Flagship default: seedance-25-t2v for superior cinematic quality and 15s takes
     const modelToUse = isImageToVideo
-      ? (explicitPixverse ? 'pixverse-i2v' : 'seedance-25-i2v')
-      : explicitPixverse
-      ? 'pixverse-t2v'
+      ? 'seedance-25-i2v'
       : explicitLtx
       ? 'ltx-25-t2v-pro'
       : 'seedance-25-t2v';
 
-    const maxSingleTake = modelToUse === 'seedance-25-t2v' ? 15 : modelToUse === 'ltx-25-t2v-pro' ? 10 : 8;
+    const maxSingleTake = modelToUse === 'seedance-25-t2v' ? 15 : 10;
     const isLongForm = !isImageToVideo && targetDuration > maxSingleTake;
     const clipCount = isLongForm
       ? (scenePrompts?.length || Math.min(8, Math.max(2, Math.round(targetDuration / maxSingleTake))))
@@ -953,12 +946,10 @@ export class LivepeerMediaAgent {
 
     // Livepeer create_media schema strictly enforces duration <= 15.
     // For seedance: takes up to 15s (clamped between 5 and 15s).
-    // For ltx: takes up to 10s. For pixverse: takes up to 8s.
+    // For ltx: takes up to 10s.
     const singleTakeDuration = modelToUse === 'seedance-25-t2v'
       ? (isLongForm ? 15 : Math.min(15, Math.max(5, targetDuration)))
-      : modelToUse === 'ltx-25-t2v-pro'
-      ? Math.min(10, Math.max(3, targetDuration))
-      : Math.min(8, Math.max(3, targetDuration >= 7 ? 8 : targetDuration >= 4 ? 5 : 3));
+      : Math.min(10, Math.max(3, targetDuration));
 
     // Expected total sequence duration across all assembled scenes
     const effectiveDuration = isLongForm ? clipCount * singleTakeDuration : singleTakeDuration;
@@ -1084,47 +1075,7 @@ export class LivepeerMediaAgent {
       console.error(`[LivepeerAgent] MCP ${modelToUse} call failed:`, err);
     }
 
-    // Secondary attempt: if seedance-25-t2v was tried and failed, fallback to pixverse-t2v (8s)
-    if (!realMediaUrl && isLongForm) {
-      try {
-        console.log('[LivepeerAgent] seedance-25-t2v fallback: attempting pixverse-t2v (8s)...');
-        const pixverseRes = await fetch(this.endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json, text/event-stream',
-            ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-          },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            id: Date.now(),
-            method: 'tools/call',
-            params: {
-              name: 'create_media',
-              arguments: {
-                action: 'generate',
-                prompt: livepeerPrompt,
-                model_override: 'pixverse-t2v',
-                duration: 8,
-              },
-            },
-          }),
-        });
-
-        if (pixverseRes.ok) {
-          const pixverseData = await pixverseRes.json();
-          if (pixverseData.result?.structuredContent?.url) {
-            realMediaUrl = pixverseData.result.structuredContent.url;
-            livepeerCapability = 'pixverse-t2v';
-            generationDuration = effectiveDuration;
-          }
-        }
-      } catch (pvErr) {
-        console.error('[LivepeerAgent] Secondary pixverse fallback failed:', pvErr);
-      }
-    }
-
-    // Tertiary Fallback: If video models timed out or errored, generate visual asset with flux-schnell
+    // Secondary Fallback: If video models timed out or errored, generate visual asset with flux-schnell
     if (!realMediaUrl) {
       try {
         console.log('[LivepeerAgent] Attempting fast visual render fallback via flux-schnell...');

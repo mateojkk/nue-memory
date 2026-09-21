@@ -330,71 +330,32 @@ export function MediaMemoryWorkspace({
     }
   };
 
-  // Progress stages for video generation with model-aware SLA interpolation
+  // Progress stages for video generation with Seedance SLA interpolation
   const getCookingProgress = (seconds: number, model?: string) => {
-    const isSeedance = Boolean(model?.includes('seedance'));
-    if (isSeedance) {
-      // Seedance SLA: ~240s (~4 min)
-      if (seconds < 8) {
-        return {
-          step: 1,
-          total: 4,
-          percent: Math.min(20, Math.max(10, Math.round((seconds / 8) * 20))),
-          title: 'Directing creative brief & scenes',
-          detail: 'Architecting multi-frame prompts and visual aesthetics',
-        };
-      }
-      if (seconds < 210) {
-        return {
-          step: 2,
-          total: 4,
-          percent: 20 + Math.min(60, Math.round(((seconds - 8) / 202) * 60)),
-          title: `Rendering neural video takes on ${model || 'seedance-25-t2v'}`,
-          detail: 'Deep multi-frame temporal diffusion in flight on Livepeer GPUs (~4 min)',
-        };
-      }
-      if (seconds < 230) {
-        return {
-          step: 3,
-          total: 4,
-          percent: 80 + Math.min(10, Math.round(((seconds - 210) / 20) * 10)),
-          title: 'Composing & synchronizing AI soundtrack',
-          detail: 'Synthesizing ambient audio track to match scene mood',
-        };
-      }
-      return {
-        step: 4,
-        total: 4,
-        percent: Math.min(96, 90 + Math.round(((seconds - 230) / 30) * 6)),
-        title: 'Assembling multi-scene timeline',
-        detail: 'Stitching takes and encoding seamless continuous MP4',
-      };
-    }
-
-    // Default fast Pixverse SLA: ~45s
-    if (seconds < 5) {
+    // Seedance SLA: ~240s (~4 min)
+    if (seconds < 8) {
       return {
         step: 1,
         total: 4,
-        percent: Math.min(25, Math.max(10, Math.round((seconds / 5) * 25))),
+        percent: Math.min(20, Math.max(10, Math.round((seconds / 8) * 20))),
         title: 'Directing creative brief & scenes',
-        detail: 'Setting visual style, pacing, and camera directives',
+        detail: 'Architecting multi-frame prompts and visual aesthetics',
       };
     }
-    if (seconds < 38) {
+    if (seconds < 210) {
       return {
         step: 2,
         total: 4,
-        percent: 25 + Math.min(55, Math.round(((seconds - 5) / 33) * 55)),
-        title: `Rendering neural video takes on ${model || 'pixverse-t2v'}`,
-        detail: 'Livepeer GPU diffusion inference actively running (~45s)',
+        percent: 20 + Math.min(60, Math.round(((seconds - 8) / 202) * 60)),
+        title: `Rendering neural video takes on ${model || 'seedance-25-t2v'}`,
+        detail: 'Deep multi-frame temporal diffusion in flight on Livepeer GPUs (~4 min)',
       };
     }
-    if (seconds < 42) {
+    if (seconds < 230) {
       return {
         step: 3,
         total: 4,
-        percent: 80 + Math.min(10, Math.round(((seconds - 38) / 4) * 10)),
+        percent: 80 + Math.min(10, Math.round(((seconds - 210) / 20) * 10)),
         title: 'Composing & synchronizing AI soundtrack',
         detail: 'Synthesizing ambient audio track to match scene mood',
       };
@@ -402,13 +363,13 @@ export function MediaMemoryWorkspace({
     return {
       step: 4,
       total: 4,
-      percent: Math.min(96, 90 + Math.round(((seconds - 42) / 10) * 6)),
+      percent: Math.min(96, 90 + Math.round(((seconds - 230) / 30) * 6)),
       title: 'Assembling multi-scene timeline',
       detail: 'Stitching takes and encoding seamless continuous MP4',
     };
   };
 
-  const estimatedSla = serverExpectedSla || (serverModel?.includes('seedance') ? '~4 min' : '~45s');
+  const estimatedSla = serverExpectedSla || '~4 min';
   const baseProgress = getCookingProgress(generationElapsedSeconds, serverModel);
 
   // Compute smooth percentage: between 3-second server poll ticks, advance smoothly with elapsed seconds
@@ -420,12 +381,12 @@ export function MediaMemoryWorkspace({
 
   const stageTitles: Record<number, string> = {
     1: 'Stage 1 of 4: Creative Direction & Scene Architecture',
-    2: `Stage 2 of 4: Neural Video Diffusion on ${serverModel || 'Livepeer GPU'}`,
+    2: `Stage 2 of 4: Neural Video Diffusion on ${serverModel || 'seedance-25-t2v'}`,
     3: 'Stage 3 of 4: AI Soundtrack & Audio Synthesis',
     4: 'Stage 4 of 4: Video Assembly & Final Encoding',
   };
 
-  const activeModelName = serverModel || (generationElapsedSeconds > 45 ? 'seedance-25-t2v' : 'pixverse-t2v');
+  const activeModelName = serverModel || 'seedance-25-t2v';
 
   const cookingProgress = {
     step: currentStep,

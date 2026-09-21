@@ -351,8 +351,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         }
 
         // Build agent response truthfully
-        const dur = newVersion.generationDurationSeconds || 5;
-        const cap = newVersion.livepeerCapability || 'pixverse-t2v';
+        const dur = newVersion.generationDurationSeconds || 15;
+        const cap = newVersion.livepeerCapability || 'seedance-25-t2v';
         const audioNotice = newVersion.audioStyle?.audioUrl
           ? `\n\n🎵 Soundtrack: ${newVersion.audioStyle.style}.`
           : '';

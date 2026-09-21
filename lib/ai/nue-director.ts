@@ -13,10 +13,9 @@ const SYSTEM_PROMPT = `You are Nue, a creative director AI for video production 
 Given a user's creative request (and any recalled memory context about their preferences), produce a structured creative brief as valid JSON.
 
 Available Livepeer video models and timeline assembly:
-- pixverse-t2v: Fast, crisp text-to-video takes (~45s render SLA, 5-8s duration). ONLY for short quick single takes (up to 8s). NEVER use for videos >8s or 1-minute videos.
-- seedance-25-t2v: High-fidelity cinematic video diffusion (~4 min SLA). MUST be selected whenever requested duration is >8s (e.g. 15s, 30s, 45s, 60s / 1 min), multi-scene sequences, or when user requests seedance or cinematic fidelity.
+- seedance-25-t2v: High-fidelity cinematic video diffusion (flagship text-to-video model for all takes and multi-scene timelines up to 60s).
+- seedance-25-i2v: High-fidelity image-to-video diffusion. Use whenever an image is provided.
 - Multi-scene timeline assembly: Each take is rendered with a UNIQUE scene prompt, then assembled into a continuous video with synchronized soundtrack. Supports 15-60s total.
-- pixverse-i2v: Image-to-video animation (~45s). Use when user provides an image.
 - ltx-25-t2v-pro: Alternative text-to-video model (when explicitly requested).
 
 Available post-processing:
@@ -35,8 +34,8 @@ Output ONLY valid JSON with these fields:
   "audioEnabled": true | false,
   "lyricsPrompt": "[Verse 1]\nLine 1\nLine 2\n\n[Chorus]\nLine 3\nLine 4..." (REQUIRED if user provided lyrics or asked for singing/song. You MUST preserve the user's EXACT lyrics verbatim without changing or hallucinating words),
   "hasVocals": true | false (true if user asked for singing vocals, lyrics, song, or nursery rhyme),
-  "duration": number (seconds: 60 for 1 minute, 45, 30, 15, or 5-8 for quick single takes),
-  "model": "seedance-25-t2v" | "pixverse-t2v",
+  "duration": number (seconds: 60 for 1 minute, 45, 30, 15, or 5-15 for single takes),
+  "model": "seedance-25-t2v" | "seedance-25-i2v",
   "aspectRatio": "16:9" | "9:16" | "1:1",
   "agentMessage": "a conversational response confirming the full video generation and duration"
 }
@@ -46,7 +45,7 @@ Guidelines:
   * When user asks for 1 minute, 60s, or 1min: set duration: 60, model: "seedance-25-t2v", and provide 4 scenePrompts.
   * When user asks for 45 seconds: set duration: 45, model: "seedance-25-t2v", and provide 3 scenePrompts.
   * When user asks for 30 seconds: set duration: 30, model: "seedance-25-t2v", and provide 2 scenePrompts.
-  * When user asks for quick takes or default: set duration: 5 or 8, model: "pixverse-t2v".
+  * When user asks for quick takes or default: set duration: 15, model: "seedance-25-t2v".
 - CRITICAL LYRICS RULES:
   * If the user provides lyrics anywhere in their message or conversation history, you MUST use their EXACT lyrics in lyricsPrompt. DO NOT make up new lyrics, DO NOT rewrite them, DO NOT leave out lines. Format with [Verse] / [Chorus] tags.
   * Ensure the lyrics structure covers the song duration so singing continues across the clip.
@@ -247,8 +246,8 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
       pacing: 'moderate',
       audioStyle: 'Ambient modern electronic',
       audioEnabled: false,
-      duration: 5,
-      model: 'pixverse-t2v',
+      duration: 15,
+      model: 'seedance-25-t2v',
       aspectRatio: '16:9',
       agentMessage: text.trim() || "Hey there! I'm Nue, your creative director. What kind of video or scene would you like to create today?",
     };
@@ -298,7 +297,7 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
   }
 
   if (context.imageUrl) {
-    fullMessage += `\nImage provided for animation. Use an i2v model (pixverse-i2v or seedance-25-i2v).\n`;
+    fullMessage += `\nImage provided for animation. Use seedance-25-i2v.\n`;
   }
 
   if (context.projectTitle) {
@@ -418,7 +417,7 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
     const hasVocals = parsed.hasVocals !== undefined ? Boolean(parsed.hasVocals) : hasLyricsIntent;
     const lyricsPrompt = userLyrics || (typeof parsed.lyricsPrompt === 'string' && parsed.lyricsPrompt.trim() ? parsed.lyricsPrompt.trim() : undefined);
 
-    const model = duration > 8 ? 'seedance-25-t2v' : (parsed.model && parsed.model !== 'seedance-25-t2v' ? parsed.model : 'pixverse-t2v');
+    const model = context?.imageUrl ? 'seedance-25-i2v' : 'seedance-25-t2v';
 
     return {
       shouldGenerate: shouldGen,
@@ -443,9 +442,9 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
 
     const isOneMin = /\b(?:1\s*min(?:ute)?|60\s*s(?:econds?)?)\b/i.test(userMessage);
     const durMatch = userMessage.match(/(\d+)\s*(?:seconds?|secs?|s)\b/i);
-    const parsedDur = isOneMin ? 60 : durMatch ? parseInt(durMatch[1], 10) : 5;
-    const dur = Math.max(3, Math.min(60, parsedDur));
-    const model = dur > 8 ? 'seedance-25-t2v' : 'pixverse-t2v';
+    const parsedDur = isOneMin ? 60 : durMatch ? parseInt(durMatch[1], 10) : 15;
+    const dur = Math.max(5, Math.min(60, parsedDur));
+    const model = context?.imageUrl ? 'seedance-25-i2v' : 'seedance-25-t2v';
 
     const targetSceneCount = dur >= 46 ? 4 : dur >= 31 ? 3 : dur > 15 ? 2 : 1;
     let scenePrompts: string[] | undefined;

@@ -88,7 +88,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
      resolvedMediaUrl.endsWith('.webm') ||
      resolvedMediaUrl.includes('.mp4') ||
      resolvedMediaUrl.includes('video') ||
-     version?.livepeerCapability?.includes('pixverse') ||
+     version?.livepeerCapability?.includes('seedance') ||
      version?.livepeerCapability?.includes('t2v') ||
      version?.livepeerCapability?.includes('video'))
   );
@@ -114,7 +114,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
         version.mediaUrl.endsWith('.webm') ||
         version.mediaUrl.includes('.mp4') ||
         version.mediaUrl.includes('video') ||
-        version.livepeerCapability?.includes('pixverse') ||
+        version.livepeerCapability?.includes('seedance') ||
         version.livepeerCapability?.includes('t2v') ||
         version.livepeerCapability?.includes('video');
       setDisplayMode(isVid ? 'video' : 'keyframe');
