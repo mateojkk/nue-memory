@@ -1053,10 +1053,11 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     setMessages([resetMsg]);
   };
 
-  // Forget memory
+  // Forget memory (optimistic: card vanishes instantly, restored on failure)
   const handleForgetMemory = async (id: string) => {
+    setActiveMemories((prev) => prev.filter((m) => m.id !== id));
     try {
-      await fetch('/api/memwal', {
+      const res = await fetch('/api/memwal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1066,9 +1067,17 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           userId: email || undefined,
         }),
       });
-      setActiveMemories((prev) => prev.filter((m) => m.id !== id));
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        // Durable delete failed (e.g. Walrus relayer throttled) - re-sync so
+        // the item restores instead of fake-deleting then reappearing later.
+        console.error('Failed to forget memory:', data?.error || res.status);
+        if (email) await fetchMemories(email);
+        return;
+      }
     } catch (e) {
       console.error('Failed to forget memory:', e);
+      if (email) await fetchMemories(email);
     }
   };
 

@@ -96,23 +96,13 @@ export async function POST(request: Request) {
       if (itemsToRemember.length > 0) {
         const storedItems: { blobId: string; preference: MediaPreference; namespace?: string }[] = [];
         let allSuperseded: MediaPreference[] = [];
+        const warnings: string[] = [];
 
         for (const item of itemsToRemember) {
           const itemUserId = item.userId || effectiveUserId || 'default_user';
           const currentPreferences = memWalService.getAllPreferences(itemUserId, true);
           const evolution = evolveMemories(currentPreferences, item);
           const newId = item.id || `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-
-          for (const superseded of evolution.supersededMemories) {
-            const updatedSuperseded: MediaPreference = {
-              ...superseded,
-              userId: itemUserId,
-              isActive: false,
-              updatedAt: new Date().toISOString(),
-            };
-            await memWalService.updatePreference(updatedSuperseded);
-            allSuperseded.push(updatedSuperseded);
-          }
 
           const preferenceToPersist: MediaPreference = {
             ...item,
@@ -124,8 +114,26 @@ export async function POST(request: Request) {
             supersedesId: evolution.supersededMemories.length > 0 ? evolution.supersededMemories[0].id : undefined,
           };
 
+          // Persist the new memory first so a throttled supersede marker
+          // cannot fail the whole remember - the replaced rule is retired
+          // best-effort afterwards and any miss is reported, not hidden.
           const result = await memWalService.rememberPreference(preferenceToPersist);
           storedItems.push(result);
+
+          for (const superseded of evolution.supersededMemories) {
+            const updatedSuperseded: MediaPreference = {
+              ...superseded,
+              userId: itemUserId,
+              isActive: false,
+              updatedAt: new Date().toISOString(),
+            };
+            try {
+              await memWalService.updatePreference(updatedSuperseded);
+              allSuperseded.push(updatedSuperseded);
+            } catch (e) {
+              warnings.push(`Saved the new rule but could not retire replaced memory ${superseded.id} (Walrus throttled) - it may still show until the next sync.`);
+            }
+          }
         }
 
         const activeList = memWalService.getAllPreferences(effectiveUserId, false);
@@ -138,15 +146,27 @@ export async function POST(request: Request) {
           blobIds: storedItems.map((s) => s.blobId),
           namespace: storedItems[storedItems.length - 1]?.namespace,
           superseded: allSuperseded,
+          warnings,
           totalActiveCount: activeList.length,
         });
       }
     }
 
     if (action === 'forget' && id) {
-      // Rehydrate user namespace memories from Walrus in case of serverless cold-start
-      await memWalService.getAllPreferencesAsync(effectiveUserId, true);
-      await memWalService.forgetPreference(id);
+      // Fast path: warm cache already holds the id, so tombstone it directly.
+      // Slow path: rehydrate from Walrus once (serverless cold-start), then retry.
+      // The old code always rehydrated first, adding a full recall round-trip to every delete.
+      let removed = await memWalService.forgetPreference(id);
+      if (!removed) {
+        await memWalService.getAllPreferencesAsync(effectiveUserId, true);
+        removed = await memWalService.forgetPreference(id);
+      }
+      if (!removed) {
+        return NextResponse.json(
+          { success: false, error: 'Memory not found. It may already be deleted - refresh the tab to sync.' },
+          { status: 404 }
+        );
+      }
       return NextResponse.json({ success: true, removedId: id });
     }
 
