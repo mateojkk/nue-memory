@@ -89,6 +89,7 @@ interface PendingRenderPreflight {
     visualTheme?: string;
     pacing?: string;
     scenePrompts?: string[];
+    timelineNote?: string;
     recalledMemories?: Array<{ category: string; preference: string }>;
     agentMessage?: string;
   };
@@ -261,25 +262,6 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     } catch (e) {
       console.warn('Failed to persist project to DB:', e);
     }
-  };
-
-  const mergeVisibleMemories = (memories: MediaPreference[]) => {
-    if (!memories.length) return;
-    setActiveMemories((prev) => {
-      const byKey = new Map<string, MediaPreference>();
-      for (const memory of curateMemories(prev)) {
-        byKey.set(`${memory.category}:${memory.preference}`.toLowerCase(), memory);
-      }
-      for (const memory of curateMemories(memories)) {
-        if (!memory.preference?.trim()) continue;
-        const key = `${memory.category}:${memory.preference}`.toLowerCase();
-        byKey.set(key, {
-          ...memory,
-          isActive: memory.isActive !== false,
-        });
-      }
-      return Array.from(byKey.values());
-    });
   };
 
   const proposeMemoriesFromFeedback = async (feedback: string, project: CreativeProject | null) => {
@@ -511,8 +493,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         // Deduct compute cost ($0.05) from user profile in Supabase
         deductCredits?.(0.05);
 
-        // Re-sync user memories so newly discovered preferences appear in UI immediately
-        mergeVisibleMemories(newVersion.appliedPreferences || []);
+        // Re-sync durable memories only. Render traces are shown on the video card but are not memory.
         if (email) {
           fetchMemories(email);
         }

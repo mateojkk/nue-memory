@@ -49,6 +49,10 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   const [showStoryboard, setShowStoryboard] = useState(false);
   const [activeStudioAction, setActiveStudioAction] = useState<string | null>(null);
   const [studioFeedback, setStudioFeedback] = useState<{ text: string; isError?: boolean } | null>(null);
+  const appliedMemoryRules = (version.appliedPreferences || []).filter((pref) => pref.id.startsWith('recall-') || pref.source === 'user_feedback');
+  const promptRenderTraits = (version.appliedPreferences || []).filter((pref) => !appliedMemoryRules.includes(pref));
+  const visibleAppliedTrace = appliedMemoryRules.length > 0 ? appliedMemoryRules : promptRenderTraits;
+  const traceTitle = appliedMemoryRules.length > 0 ? 'Approved Nue Memory' : 'Parsed from this prompt, not saved as memory';
 
   const handleTriggerStudioAction = async (action: string) => {
     if (!projectId) {
@@ -536,13 +540,13 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
             </span>
           )}
 
-          {version.appliedPreferences && version.appliedPreferences.length > 0 && (
+          {visibleAppliedTrace.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
-              {version.appliedPreferences.map((pref) => (
+              {visibleAppliedTrace.map((pref) => (
                 <span
                   key={pref.id}
                   className="px-2 py-0.5 rounded-md bg-emerald-950/20 text-emerald-400 text-[10px] font-mono"
-                  title="Applied from your preferences"
+                  title={traceTitle}
                 >
                   ✓ {pref.preference}
                 </span>

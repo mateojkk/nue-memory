@@ -83,6 +83,7 @@ interface NueDashboardProps {
     visualTheme?: string;
     pacing?: string;
     scenePrompts?: string[];
+    timelineNote?: string;
     recalledMemories?: Array<{ category: string; preference: string }>;
     agentMessage?: string;
   } | null;

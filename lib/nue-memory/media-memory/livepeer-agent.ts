@@ -1353,9 +1353,11 @@ export class LivepeerMediaAgent {
         }))
       : undefined;
 
-    const appliedSummary = appliedPreferences.length > 0
-      ? `Applied ${appliedPreferences.length} remembered preferences from Nue Memory: ${appliedPreferences.map((p) => p.category).join(', ')}.`
-      : 'Standard baseline generation without prior preferences.';
+    const rememberedPreferences = appliedPreferences.filter((pref) => pref.id.startsWith('recall-') || pref.source === 'user_feedback');
+    const rememberedCount = rememberedPreferences.length;
+    const appliedSummary = rememberedCount > 0
+      ? `Applied ${rememberedCount} approved memory rule${rememberedCount === 1 ? '' : 's'} from Nue Memory: ${rememberedPreferences.map((p) => p.category).join(', ')}.`
+      : 'Standard generation using the current creative brief only.';
 
     const captionHighlight = projectTitle && !projectTitle.toLowerCase().includes('project')
       ? projectTitle.toUpperCase()

@@ -64,6 +64,7 @@ interface MediaMemoryWorkspaceProps {
     visualTheme?: string;
     pacing?: string;
     scenePrompts?: string[];
+    timelineNote?: string;
     recalledMemories?: Array<{ category: string; preference: string }>;
     agentMessage?: string;
   } | null;
@@ -408,6 +409,11 @@ export function MediaMemoryWorkspace({
 
   const activeModelName = serverModel || 'seedance-25-t2v';
   const activeMemoryPreview = activeMemories.filter((m) => m.isActive).slice(0, 4);
+  const appliedTrace = activeVersion?.appliedPreferences || [];
+  const appliedMemoryRules = appliedTrace.filter((pref) => pref.id.startsWith('recall-') || pref.source === 'user_feedback');
+  const promptRenderTraits = appliedTrace.filter((pref) => !appliedMemoryRules.includes(pref));
+  const visibleAppliedTrace = appliedMemoryRules.length > 0 ? appliedMemoryRules : promptRenderTraits;
+  const isShowingAppliedMemory = appliedMemoryRules.length > 0;
 
   const cookingProgress = {
     step: currentStep,
@@ -583,15 +589,19 @@ export function MediaMemoryWorkspace({
       </div>
 
       {/* Memory Applied Banner */}
-      {activeVersion && activeVersion.appliedPreferences.length > 0 && (
+      {activeVersion && visibleAppliedTrace.length > 0 && (
         <div className="my-3 p-3 rounded-xl bg-[var(--surface)] text-xs font-mono text-[var(--fg)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs shrink-0">
           <div className="flex items-center gap-2.5 flex-wrap">
             <div className="flex items-center gap-1.5 text-emerald-500 font-medium">
               <Check className="w-3.5 h-3.5 text-emerald-500" />
-              <span>{activeVersion.appliedPreferences.length} learned preferences applied</span>
+              <span>
+                {isShowingAppliedMemory
+                  ? `${visibleAppliedTrace.length} approved memory rule${visibleAppliedTrace.length === 1 ? '' : 's'} applied`
+                  : `${visibleAppliedTrace.length} render trait${visibleAppliedTrace.length === 1 ? '' : 's'} parsed from this prompt`}
+              </span>
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              {activeVersion.appliedPreferences.map((pref) => (
+              {visibleAppliedTrace.map((pref) => (
                 <span
                   key={pref.id}
                   className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--fg)] text-[11px]"
@@ -602,7 +612,7 @@ export function MediaMemoryWorkspace({
             </div>
           </div>
           <span className="text-[10px] text-[var(--fg-muted)] shrink-0">
-            Applied from persistent memory
+            {isShowingAppliedMemory ? 'Approved Nue Memory' : 'Not saved as memory'}
           </span>
         </div>
       )}
@@ -1093,6 +1103,13 @@ export function MediaMemoryWorkspace({
                       <pre className="whitespace-pre-wrap text-[11px] leading-relaxed text-[var(--fg)] font-mono max-h-40 overflow-auto">
                         {pendingPreflight.lyricsPrompt}
                       </pre>
+                    </div>
+                  )}
+
+                  {pendingPreflight.timelineNote && (
+                    <div className="p-2 rounded-lg bg-[var(--surface-2)] text-[11px] text-[var(--fg-muted)] leading-relaxed">
+                      <span className="text-[var(--fg)] font-medium">Timeline: </span>
+                      {pendingPreflight.timelineNote}
                     </div>
                   )}
 

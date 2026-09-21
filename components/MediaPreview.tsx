@@ -42,6 +42,11 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
 }) => {
   const [activeStudioAction, setActiveStudioAction] = useState<string | null>(null);
   const [studioFeedback, setStudioFeedback] = useState<{ text: string; isError?: boolean } | null>(null);
+  const appliedTrace = version?.appliedPreferences || [];
+  const appliedMemoryRules = appliedTrace.filter((pref) => pref.id.startsWith('recall-') || pref.source === 'user_feedback');
+  const promptRenderTraits = appliedTrace.filter((pref) => !appliedMemoryRules.includes(pref));
+  const visibleAppliedTrace = appliedMemoryRules.length > 0 ? appliedMemoryRules : promptRenderTraits;
+  const isShowingAppliedMemory = appliedMemoryRules.length > 0;
 
   const handleTriggerStudioAction = async (action: string) => {
     if (!projectId) {
@@ -596,17 +601,18 @@ ${version.captionStyle.text}
         </div>
 
         {/* Applied Preferences Bar */}
-        {version && version.appliedPreferences.length > 0 && (
+        {version && visibleAppliedTrace.length > 0 && (
           <div className="flex items-center justify-between text-xs pt-2 border-t border-[var(--border)]/50 text-[var(--fg-muted)] animate-fadeIn">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-1 text-[var(--accent)] font-medium text-[11px]">
                 <Sparkles className="w-3 h-3 text-[var(--accent)] animate-pulse-subtle" />
-                Learned Preferences Applied:
+                {isShowingAppliedMemory ? 'Approved Memory Applied:' : 'Render Traits Parsed:'}
               </span>
-              {version.appliedPreferences.map((pref) => (
+              {visibleAppliedTrace.map((pref) => (
                 <span
                   key={pref.id}
                   className="px-2.5 py-0.5 rounded-full bg-[var(--surface-2)] text-[var(--fg)] text-[10px] font-mono font-medium hover:scale-105 transition-all duration-200"
+                  title={isShowingAppliedMemory ? 'Approved Nue Memory' : 'Parsed from this prompt, not saved as memory'}
                 >
                   ✓ {pref.preference}
                 </span>
@@ -754,8 +760,8 @@ ${version.captionStyle.text}
             }`}
           >
             <span>v{v.versionNumber}</span>
-            {v.appliedPreferences.length > 0 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-bright)]" title="Applied persistent memory" />
+            {v.appliedPreferences.some((pref) => pref.id.startsWith('recall-') || pref.source === 'user_feedback') && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-bright)]" title="Approved Nue Memory applied" />
             )}
             <span className="text-[10px] font-mono opacity-80">
               {new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

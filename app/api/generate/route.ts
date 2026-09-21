@@ -551,6 +551,9 @@ export async function POST(request: Request) {
       const sceneCount = !validatedImageUrl && requestedDuration > 15
         ? Math.min(4, Math.max(2, Math.ceil(requestedDuration / 15)))
         : 1;
+      const timelineNote = sceneCount > 1
+        ? `Livepeer renders this as ${sceneCount} sequential 15s takes stitched into one ${sceneCount * 15}s timeline. Nue will enforce the same characters, setting, lighting, camera language, and action continuity across every take.`
+        : undefined;
       return NextResponse.json({
         success: true,
         preflight: true,
@@ -567,6 +570,7 @@ export async function POST(request: Request) {
           visualTheme: directorBrief.visualTheme,
           pacing: directorBrief.pacing,
           scenePrompts: directorBrief.scenePrompts || [],
+          timelineNote,
           recalledMemories: directorBrief.recalledMemories || [],
           agentMessage: directorBrief.agentMessage,
         },
@@ -620,7 +624,7 @@ export async function POST(request: Request) {
         preference: directorBrief.visualTheme,
         strength: 'high' as const,
         scope: 'media' as const,
-        source: 'user_feedback' as const,
+        source: 'creative_brief' as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         isActive: true,
@@ -634,7 +638,7 @@ export async function POST(request: Request) {
         preference: directorBrief.audioStyle,
         strength: 'high' as const,
         scope: 'media' as const,
-        source: 'user_feedback' as const,
+        source: 'creative_brief' as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         isActive: true,
@@ -753,9 +757,17 @@ export async function POST(request: Request) {
       }
 
       const sceneDispatches = await Promise.all(
-        scenePromptsToUse.map((scenePrompt) => {
+        scenePromptsToUse.map((scenePrompt, idx) => {
           const charDna = directorBrief.characterBible ? ` Characters: ${directorBrief.characterBible}.` : '';
-          const fullPrompt = `${scenePrompt}.${charDna} Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.${recalledMemoryDirective}`;
+          const continuityDirective = [
+            `This is take ${idx + 1} of ${numScenes} in one continuous ${totalAssembledDuration}s stitched timeline, not a separate concept.`,
+            'Maintain the exact same subject identity, wardrobe, props, setting geography, lighting continuity, lens language, scale relationships, and visual rules from the original prompt.',
+            idx === 0
+              ? 'End this take on an action state that can continue naturally into the next take.'
+              : 'Begin exactly where the previous take ended; do not reset the scene, change the cast, change the location, or introduce a new unrelated setup.',
+            'Follow the user prompt over any inferred style defaults.'
+          ].join(' ');
+          const fullPrompt = `${scenePrompt}. ${continuityDirective}${charDna} Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.${recalledMemoryDirective}`;
 
           return livepeerAgent.dispatchCreateMedia({
             action: 'generate',
