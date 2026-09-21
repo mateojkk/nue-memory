@@ -5,7 +5,6 @@ import {
   candidateToStructuredMemory,
   MemoryExtractionResult,
 } from './engine/extractor';
-import { planMemoryEvolution, EvolutionPlan } from './engine/evolution';
 import { formatAgentContext, RetrievedContext } from './engine/retrieval';
 
 export interface MemoryClientConfig {
@@ -21,7 +20,6 @@ export interface AddOptions {
   domain?: string;
   projectId?: string;
   sessionContext?: string;
-  autoEvolve?: boolean;
 }
 
 export interface SearchOptions {
@@ -40,7 +38,6 @@ export interface AddResult {
   extractedCount: number;
   memories: StructuredMemory[];
   temporaryInstructions: string[];
-  evolutionPlans: EvolutionPlan[];
 }
 
 /**
@@ -66,9 +63,10 @@ export class MemoryClient {
   }
 
   /**
-   * Add agent interaction:
-   * 1. Extracts what matters, differentiating temporary noise from durable preferences.
-   * 2. Evaluates semantic conflicts against existing memories (evolution/supersession).
+   * Add agent interaction (Mem0-style ADD-only):
+   * 1. Extracts standing preferences with the LLM.
+   * 2. Appends each as a new fact. Nothing is overwritten or deactivated;
+   *    contradictions resolve at retrieval ranking, history is preserved.
    * 3. Persists structured memories with provenance to Walrus MemWal.
    */
   async add(
@@ -89,8 +87,8 @@ export class MemoryClient {
             .map((m) => m.content)
             .join(' ');
 
-    // Stage 1: Extraction & Classification
-    const extraction = extractMemories(text, {
+    // Stage 1: Extraction & Classification (LLM, Mem0-style)
+    const extraction = await extractMemories(text, {
       userId,
       domain,
       projectId: options.projectId,
@@ -105,16 +103,12 @@ export class MemoryClient {
         extractedCount: 0,
         memories: [],
         temporaryInstructions: extraction.temporaryInstructions,
-        evolutionPlans: [],
       };
     }
 
     const savedMemories: StructuredMemory[] = [];
-    const evolutionPlans: EvolutionPlan[] = [];
 
-    // Stage 2: Evolution & Persistence
-    const existingMemories = await this.store.list({ userId, domain });
-
+    // Stage 2: append every candidate as a new fact (ADD-only).
     for (const candidate of extraction.candidates) {
       const memoryObj = candidateToStructuredMemory(candidate, {
         userId,
@@ -123,24 +117,8 @@ export class MemoryClient {
         sessionContext: options.sessionContext,
       });
 
-      if (options.autoEvolve !== false) {
-        const plan = planMemoryEvolution(existingMemories, memoryObj);
-        evolutionPlans.push(plan);
-
-        // Deactivate any superseded memories
-        for (const deact of plan.memoriesToDeactivate) {
-          await this.store.update(deact.id, {
-            isActive: false,
-            supersededById: plan.memoryToPersist.id,
-          });
-        }
-
-        const { memory } = await this.store.save(plan.memoryToPersist);
-        savedMemories.push(memory);
-      } else {
-        const { memory } = await this.store.save(memoryObj);
-        savedMemories.push(memory);
-      }
+      const { memory } = await this.store.save(memoryObj);
+      savedMemories.push(memory);
     }
 
     return {
@@ -150,7 +128,6 @@ export class MemoryClient {
       extractedCount: savedMemories.length,
       memories: savedMemories,
       temporaryInstructions: extraction.temporaryInstructions,
-      evolutionPlans,
     };
   }
 

@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { MediaMemoryWorkspace } from './MediaMemoryWorkspace';
+import { NueMotionWorkspace } from './NueMotionWorkspace';
 import { ProjectsView } from './ProjectsView';
 import { ApiKeysView } from './ApiKeysView';
 import { GalleryView } from './GalleryView';
 import { MemoriesView } from './MemoriesView';
 import { UsageView } from './OverviewView';
-import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
+import { CreativeProject, MediaVersion, ChatMessage, MotionPreference } from '@/lib/types';
 import { NueLogo } from '../NueLogo';
 import { ThemeToggle } from '../ThemeToggle';
 import { AuthButton } from '../auth/AuthButton';
@@ -23,38 +23,48 @@ import {
 } from 'lucide-react';
 
 export type DashboardTab =
-  | 'media-memory'
+  | 'motion'
   | 'gallery'
   | 'projects'
   | 'usage'
   | 'memories'
   | 'api-keys';
 
-const VALID_TABS: DashboardTab[] = ['media-memory', 'gallery', 'projects', 'usage', 'memories', 'api-keys'];
+const VALID_TABS: DashboardTab[] = ['motion', 'gallery', 'projects', 'usage', 'memories', 'api-keys'];
+
+/** Legacy slug from before the Media Memory -> Nue Motion rename. */
+const LEGACY_TAB_SLUG = 'media-memory';
+
+function normalizeTab(tab: string | null | undefined): DashboardTab | null {
+  if (tab === LEGACY_TAB_SLUG) return 'motion';
+  if (tab && (VALID_TABS as string[]).includes(tab)) return tab as DashboardTab;
+  return null;
+}
 
 function getResolvedTab(initialTab?: DashboardTab): DashboardTab {
   if (typeof window !== 'undefined') {
     try {
-      const urlTab = new URLSearchParams(window.location.search).get('tab') as DashboardTab | null;
-      if (urlTab && VALID_TABS.includes(urlTab)) {
+      const urlTab = normalizeTab(new URLSearchParams(window.location.search).get('tab'));
+      if (urlTab) {
         return urlTab;
       }
-      const savedTab = localStorage.getItem('nue_active_tab') as DashboardTab | null;
-      if (savedTab && VALID_TABS.includes(savedTab)) {
+      const savedTab = normalizeTab(localStorage.getItem('nue_active_tab'));
+      if (savedTab) {
         return savedTab;
       }
     } catch {
       // In case of restricted storage environments
     }
   }
-  if (initialTab && VALID_TABS.includes(initialTab)) {
-    return initialTab;
+  if (initialTab) {
+    const normalized = normalizeTab(initialTab);
+    if (normalized) return normalized;
   }
-  return 'media-memory';
+  return 'motion';
 }
 
 interface NueDashboardProps {
-  /** Tab to open on first render. Defaults to 'media-memory'. */
+  /** Tab to open on first render. Defaults to 'motion'. */
   initialTab?: DashboardTab;
   activeProject: CreativeProject;
   activeVersion: MediaVersion | null;
@@ -70,7 +80,7 @@ interface NueDashboardProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
-  pendingPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
+  pendingPreferences: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
   pendingPreflight?: {
     duration: number;
     sceneCount: number;
@@ -99,7 +109,7 @@ interface NueDashboardProps {
   onDeleteProject?: (projectId: string) => void;
   onResetProject?: (projectId: string) => void;
   onDeleteVersion?: (projectId: string, versionIndex: number) => void;
-  activeMemories: MediaPreference[];
+  activeMemories: MotionPreference[];
   isLoadingMemories?: boolean;
   onForgetMemory: (id: string) => void;
   projects: CreativeProject[];
@@ -111,7 +121,7 @@ interface NueDashboardProps {
 }
 
 export function NueDashboard({
-  initialTab = 'media-memory',
+  initialTab = 'motion',
   activeProject,
   activeVersion,
   allVersions,
@@ -208,7 +218,7 @@ export function NueDashboard({
   const totalVideos = projects.reduce((acc, p) => acc + (p.versions?.length || 0), 0);
 
   const navItems = [
-    { id: 'media-memory' as DashboardTab, label: 'Motion', icon: Video, highlight: true },
+    { id: 'motion' as DashboardTab, label: 'Motion', icon: Video, highlight: true },
     { id: 'gallery' as DashboardTab, label: 'Gallery', icon: Film, badge: totalVideos },
     { id: 'projects' as DashboardTab, label: 'Projects', icon: Layers, badge: projects.length },
     { id: 'memories' as DashboardTab, label: 'Memory', icon: Brain, badge: activeMemories.filter((m) => m.isActive).length },
@@ -271,8 +281,8 @@ export function NueDashboard({
       {/* Main Workspace View Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 md:p-8 animate-fadeIn" key={activeTab}>
 
-        {activeTab === 'media-memory' && (
-          <MediaMemoryWorkspace
+        {activeTab === 'motion' && (
+          <NueMotionWorkspace
             activeProject={activeProject}
             activeVersion={activeVersion}
             allVersions={allVersions}
@@ -312,7 +322,7 @@ export function NueDashboard({
         {activeTab === 'gallery' && (
           <GalleryView
             projects={projects}
-            onOpenWorkspace={() => handleTabChange('media-memory')}
+            onOpenWorkspace={() => handleTabChange('motion')}
             onSelectProject={onSelectProject}
             onSelectVersion={onSelectVersion}
             onDeleteVersion={onDeleteVersion || (() => {})}
@@ -328,14 +338,14 @@ export function NueDashboard({
             onRenameProject={onRenameProject}
             onDeleteProject={onDeleteProject}
             onResetProject={onResetProject}
-            onOpenWorkspace={() => handleTabChange('media-memory')}
+            onOpenWorkspace={() => handleTabChange('motion')}
           />
         )}
 
         {activeTab === 'usage' && (
           <UsageView
             versions={projects.flatMap((p) => p.versions || [])}
-            onOpenStudio={() => handleTabChange('media-memory')}
+            onOpenStudio={() => handleTabChange('motion')}
           />
         )}
 
@@ -344,7 +354,7 @@ export function NueDashboard({
             memories={activeMemories}
             isLoading={isLoadingMemories}
             onForget={onForgetMemory}
-            onOpenStudio={() => handleTabChange('media-memory')}
+            onOpenStudio={() => handleTabChange('motion')}
             userNamespace={userNamespace}
             userEmail={userEmail}
           />

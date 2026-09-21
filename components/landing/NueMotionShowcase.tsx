@@ -4,13 +4,13 @@ import React from 'react';
 import { Sparkles, ArrowRight, Play, Check, Database, Video } from 'lucide-react';
 import { Reveal } from '@/components/motion';
 
-interface MediaMemoryShowcaseProps {
+interface NueMotionShowcaseProps {
   onOpenWorkspace: () => void;
 }
 
-export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProps) {
+export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
   return (
-    <section id="media-memory" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
+    <section id="nue-motion" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
       {/* Section Header */}
       <Reveal>
         <div className="text-left mb-14">
@@ -146,7 +146,7 @@ export function MediaMemoryShowcase({ onOpenWorkspace }: MediaMemoryShowcaseProp
         </div>
       </Reveal>
 
-      {/* Try Interactive Media Memory CTA */}
+      {/* Try Interactive Nue Motion CTA */}
       <Reveal delay={120}>
         <div className="p-8 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="text-left space-y-1">

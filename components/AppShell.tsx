@@ -46,7 +46,7 @@ import { DifferentiatorSection } from '@/components/landing/DifferentiatorSectio
 import { LifecycleSection } from '@/components/landing/LifecycleSection';
 import { MemoryObjectsSection } from '@/components/landing/MemoryObjectsSection';
 import { EvolutionSection } from '@/components/landing/EvolutionSection';
-import { MediaMemoryShowcase } from '@/components/landing/MediaMemoryShowcase';
+import { NueMotionShowcase } from '@/components/landing/NueMotionShowcase';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { NueDashboard, type DashboardTab } from '@/components/dashboard/NueDashboard';
 import { useAuth } from '@/components/auth/useAuth';
@@ -56,7 +56,7 @@ import {
   CreativeProject,
   MediaVersion,
   ChatMessage,
-  MediaPreference,
+  MotionPreference,
 } from '@/lib/types';
 
 export interface NueAppProps {
@@ -113,7 +113,7 @@ const ACTIONABLE_MEMORY_CATEGORIES = new Set([
   'composition',
 ]);
 
-function isActionableMemory(memory: MediaPreference): boolean {
+function isActionableMemory(memory: MotionPreference): boolean {
   const preference = memory.preference?.trim();
   if (!preference) return false;
 
@@ -133,8 +133,8 @@ function isActionableMemory(memory: MediaPreference): boolean {
   return true;
 }
 
-function curateMemories(memories: MediaPreference[]): MediaPreference[] {
-  const byKey = new Map<string, MediaPreference>();
+function curateMemories(memories: MotionPreference[]): MotionPreference[] {
+  const byKey = new Map<string, MotionPreference>();
   for (const memory of memories) {
     if (!isActionableMemory(memory)) continue;
     const key = `${String(memory.category).toLowerCase()}:${memory.preference.trim().toLowerCase()}`;
@@ -169,11 +169,11 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   ]);
 
   // Memory & Confirmation State
-  const [activeMemories, setActiveMemories] = useState<MediaPreference[]>([]);
+  const [activeMemories, setActiveMemories] = useState<MotionPreference[]>([]);
   const [isLoadingMemories, setIsLoadingMemories] = useState(false);
   const [activeNamespace, setActiveNamespace] = useState<string>('');
   const [pendingPreferences, setPendingPreferences] = useState<
-    Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[]
+    Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[]
   >([]);
   const [pendingPreflight, setPendingPreflight] = useState<PendingRenderPreflight | null>(null);
 
@@ -296,13 +296,13 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         ...activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
       ]);
       const next = extracted
-        .map((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
+        .map((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
           ...pref,
           projectId: project?.id,
           projectTitle: project?.title || pref.projectTitle,
           userId: email || pref.userId,
         }))
-        .filter((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
+        .filter((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
           const key = `${pref.category}:${pref.preference}`.toLowerCase();
           if (existingKeys.has(key)) return false;
           existingKeys.add(key);
@@ -349,13 +349,13 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase())
       );
       const fresh = extracted
-        .map((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
+        .map((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
           ...pref,
           projectId: project?.id,
           projectTitle: project?.title || pref.projectTitle,
           userId: email || pref.userId,
         }))
-        .filter((pref: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
+        .filter((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
           const key = `${pref.category}:${pref.preference}`.toLowerCase();
           if (existingKeys.has(key)) return false;
           existingKeys.add(key);
@@ -378,7 +378,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
       if (email) await fetchMemories(email);
       else {
-        const stored: MediaPreference[] = (saveData.storedPreferences || []).map((p: any, i: number) => ({
+        const stored: MotionPreference[] = (saveData.storedPreferences || []).map((p: any, i: number) => ({
           ...fresh[i],
           ...p,
           isActive: true,
@@ -1352,8 +1352,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       {/* 7. Memory Conflict & Evolution */}
       <EvolutionSection />
 
-      {/* 8. Flagship Shipped Feature: Media Memory Showcase */}
-      <MediaMemoryShowcase
+      {/* 8. Flagship Shipped Feature: Nue Motion Showcase */}
+      <NueMotionShowcase
         onOpenWorkspace={() => router.push('/motion')}
       />
 

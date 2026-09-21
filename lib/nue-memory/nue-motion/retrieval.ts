@@ -1,4 +1,4 @@
-import { MediaPreference, RetrievalResult } from './types';
+import { MotionPreference, RetrievalResult } from './types';
 
 /**
  * Evaluates active memories against the creative brief to find relevant preferences
@@ -6,10 +6,10 @@ import { MediaPreference, RetrievalResult } from './types';
  */
 export function retrieveAndEnrichBrief(
   brief: string,
-  memories: MediaPreference[]
+  memories: MotionPreference[]
 ): RetrievalResult {
   const activeMemories = memories.filter((m) => m.isActive);
-  const relevantMemories: MediaPreference[] = [];
+  const relevantMemories: MotionPreference[] = [];
   const creativeDirectives: RetrievalResult['creativeDirectives'] = {};
   const summaryTokens: string[] = [];
 

@@ -3,7 +3,7 @@ import path from 'path';
 import os from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { unwrapLivepeerUrl } from '../nue-memory/media-memory/livepeer-agent';
+import { unwrapLivepeerUrl } from '../nue-memory/nue-motion/livepeer-agent';
 
 const execFileAsync = promisify(execFile);
 

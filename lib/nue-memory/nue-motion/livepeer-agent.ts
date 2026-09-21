@@ -1,4 +1,4 @@
-import { MediaPreference, MediaVersion, GenerateMediaRequest } from './types';
+import { MotionPreference, MediaVersion, GenerateMediaRequest } from './types';
 
 /**
  * Provider-enforced ceiling for a single Livepeer `create_media` render: the tool validates
@@ -58,7 +58,7 @@ export class LivepeerMediaAgent {
           params: {
             protocolVersion: '2025-03-26',
             capabilities: {},
-            clientInfo: { name: 'nue-media-memory-agent', version: '1.0.0' },
+            clientInfo: { name: 'nue-motion-agent', version: '1.0.0' },
           },
         }),
       });

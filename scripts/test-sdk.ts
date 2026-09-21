@@ -47,8 +47,8 @@ async function testSdk() {
   console.log('Injected Context Block:');
   console.log(context.injectedContextBlock);
 
-  // Step 4: Evolution - User switches style
-  console.log('--- Step 4: Evolve / Contradiction handling ---');
+  // Step 4: Contradiction - User switches style (ADD-only: history preserved)
+  console.log('--- Step 4: ADD-only contradiction handling ---');
   const evolveResult = await nue.add([
     { role: 'user', content: 'From now on, I want gentle, cinematic pacing.' },
   ], {
@@ -56,12 +56,9 @@ async function testSdk() {
     domain: 'media',
   });
 
-  console.log(`Evolve action registered: ${evolveResult.evolutionPlans.length} plan(s)`);
-  evolveResult.evolutionPlans.forEach((p) => {
-    console.log(`  * Action: ${p.action} -> ${p.reason}`);
-  });
+  console.log(`Stored: ${evolveResult.extractedCount} additional memories (nothing deactivated)`);
 
-  // Search again: only active cinematic pacing should be retrieved, fast pacing should be superseded
+  // Search again: both pacing memories stay active, newest ranks first
   const updatedSearch = await nue.search('pacing', {
     userId: 'dev_user_01',
     domain: 'media',
@@ -72,7 +69,7 @@ async function testSdk() {
   });
 
   if (!updatedSearch[0]?.value.toLowerCase().includes('cinematic')) {
-    throw new Error('Expected newer cinematic preference to supersede older fast pacing');
+    throw new Error('Expected newer cinematic preference to rank above older fast pacing');
   }
 
   console.log('\n=== All Nue Memory SDK Developer API Tests Passed! ===');

@@ -1,7 +1,7 @@
 /**
  * Livepeer Agent MCP probe.
  *
- * Verifies the real end-to-end contract used by lib/nue-memory/media-memory/livepeer-agent.ts:
+ * Verifies the real end-to-end contract used by lib/nue-memory/nue-motion/livepeer-agent.ts:
  *   1. MCP initialize handshake (Streamable HTTP, JSON-RPC 2.0)
  *   2. tools/list - confirms create_media exists on the live surface
  *   3. create_media - a real render (defaults to keyless demo credit, ~$10 free)

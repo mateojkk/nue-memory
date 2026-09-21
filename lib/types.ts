@@ -1,10 +1,10 @@
 /**
  * Root Types Re-export Bridge
- * All Media Memory domain types are now modularly defined in @/lib/nue-memory/media-memory/types.
+ * All Nue Motion domain types are now modularly defined in @/lib/nue-memory/nue-motion/types.
  * Core domain-agnostic Nue types are defined in @/lib/nue-memory/core/types.
  */
 
-export * from './nue-memory/media-memory/types';
+export * from './nue-memory/nue-motion/types';
 export type {
   StructuredMemory as CoreStructuredMemory,
   MemoryType,

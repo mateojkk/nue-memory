@@ -5,6 +5,8 @@ export interface ExtractionContext {
   domain?: string;
   projectId?: string;
   sessionContext?: string;
+  /** Active memories for Mem0-style context-lookup dedupe. */
+  existingMemories?: Array<{ category: string; value: string }>;
 }
 
 export interface ExtractedMemoryCandidate {
@@ -24,393 +26,6 @@ export interface MemoryExtractionResult {
   reasoning: string;
   candidates: ExtractedMemoryCandidate[];
   temporaryInstructions: string[];
-}
-
-/**
- * Signals that indicate temporary, one-off instructions
- */
-const TEMPORARY_MARKERS = [
-  /\bthis (video|image|clip|draft|version|file|run|prompt|audio|scene|take)\b/i,
-  /\bjust for (this|now|today)\b/i,
-  /\bonly (in|for) this\b/i,
-  /\bfor now\b/i,
-  /\bat (0:\d\d|\d+ seconds?|frame \d+)\b/i,
-  /\bmove (it|that|this) (slightly|a bit|2px|up|down|left|right)\b/i,
-  /\bmake (it|this) (\d+|a few) (seconds?|px|percent) (shorter|longer|taller|wider)\b/i,
-  /\bfix (the typo|the wording|that word)\b/i,
-  /\btweak (just|only) the\b/i,
-];
-
-/**
- * Signals that indicate persistent, durable preferences and constraints
- */
-const PERSISTENT_MARKERS = [
-  /\balways\b/i,
-  /\bnever\b/i,
-  /\bfrom now on\b/i,
-  /\bgoing forward\b/i,
-  /\bin all (my|our|future)\b/i,
-  /\bfor future (projects|runs|media|work|builds)\b/i,
-  /\bi prefer\b/i,
-  /\bi (really )?like\b/i,
-  /\bi (really )?dislike\b/i,
-  /\bi don't like\b/i,
-  /\bwe prefer\b/i,
-  /\bby default\b/i,
-  /\busually\b/i,
-  /\bnormally\b/i,
-  /\bgenerally\b/i,
-  /\bmy standard\b/i,
-  /\bour brand\b/i,
-  /\bconsistently\b/i,
-  /\bmake sure to always\b/i,
-];
-
-/**
- * Semantic extraction rules for domain-agnostic and media preferences
- */
-interface SemanticPattern {
-  category: string;
-  type: MemoryType;
-  domain: string;
-  pattern: RegExp;
-  extract: (text: string, match: RegExpExecArray) => { value: string; confidence: number };
-}
-
-const SEMANTIC_PATTERNS: SemanticPattern[] = [
-  // 1. Visual Style
-  {
-    category: 'visual_style',
-    type: 'preference',
-    domain: 'media',
-    pattern: /(?:(?:prefer|like|want|use|make|set|switch(?:ed)? to|aesthetic(?: is)?)\s+.*?(monochrome|black and white|b&w|grayscale|cyberpunk|neon|minimal|bright|clean|cinematic|dark|light|vibrant|pastel))|\b(monochrome|black and white|b&w|cyberpunk|neon|grayscale)\b/i,
-    extract: (text) => {
-      const lower = text.toLowerCase();
-      if (lower.includes('monochrome') || lower.includes('black and white') || lower.includes('b&w') || lower.includes('grayscale')) {
-        return {
-          value: 'Prefer monochrome and high-contrast black and white cinematic visuals',
-          confidence: 0.95,
-        };
-      }
-      if (lower.includes('cyberpunk') || lower.includes('neon')) {
-        return {
-          value: 'Prefer cyberpunk aesthetic with neon atmospheric lighting',
-          confidence: 0.95,
-        };
-      }
-      if (lower.includes('dark')) {
-        return {
-          value: 'Prefers dark mode interfaces with deep black canvases',
-          confidence: 0.94,
-        };
-      }
-      if (lower.includes('light')) {
-        return {
-          value: 'Prefers light mode interfaces with warm white canvases',
-          confidence: 0.94,
-        };
-      }
-      if (lower.includes('bright') || lower.includes('minimal')) {
-        return {
-          value: 'Prefers bright, minimalist visual styling',
-          confidence: 0.93,
-        };
-      }
-      return {
-        value: 'Prefers clean, modern cinematic visuals',
-        confidence: 0.88,
-      };
-    },
-  },
-  // 2. Pacing / Tempo
-  {
-    category: 'pacing',
-    type: 'preference',
-    domain: 'media',
-    pattern: /(?:(?:intro|pacing|cuts?)\s+.*(?:too slow|too fast|speed up|slow down|fast|brisk|smooth|cinematic|energetic|gentle)|(?:prefer|like|want|use|switch(?:ed)? to)\s+.*(?:fast|brisk|smooth|cinematic|energetic|gentle|slow)\s+(?:pacing|cuts?|intro)|pacing\s+(?:is too|should be|must be))/i,
-    extract: (text) => {
-      const lower = text.toLowerCase();
-      if (lower.includes('too slow') || lower.includes('speed up') || lower.includes('fast') || lower.includes('energetic')) {
-        return {
-          value: 'Prefer fast, energetic introductions and brisk cut pacing',
-          confidence: 0.94,
-        };
-      }
-      return {
-        value: 'Prefer smooth, steady cinematic pacing with gentle transitions',
-        confidence: 0.90,
-      };
-    },
-  },
-  // 3. Captions / Typography
-  {
-    category: 'typography',
-    type: 'preference',
-    domain: 'media',
-    pattern: /(?:(?:captions?|subtitles?|text on screen)\s+.*(?:larger|large|bigger|readable|small|subtle|remove|none|bold)|(?:make|set|use|prefer|want|like)\s+.*(?:captions?|subtitles?|text on screen)|(?:large|larger|bold|small|subtle|compact|no)\s+(?:captions?|subtitles?|text on screen))/i,
-    extract: (text) => {
-      const lower = text.toLowerCase();
-      if (lower.includes('larger') || lower.includes('large') || lower.includes('bigger') || lower.includes('readable')) {
-        return {
-          value: 'Prefer large, high-contrast, easily readable captions',
-          confidence: 0.95,
-        };
-      }
-      if (lower.includes('small') || lower.includes('subtle') || lower.includes('minimal')) {
-        return {
-          value: 'Prefer compact, subtle captions that do not obscure visuals',
-          confidence: 0.91,
-        };
-      }
-      if (lower.includes('remove') || lower.includes('none') || lower.includes('off') || lower.includes('no caption')) {
-        return {
-          value: 'Disable on-screen captions by default',
-          confidence: 0.96,
-        };
-      }
-      return {
-        value: 'Use clear, synchronized typography for captions',
-        confidence: 0.85,
-      };
-    },
-  },
-  // 4. Audio & Soundtrack
-  {
-    category: 'audio',
-    type: 'constraint',
-    domain: 'media',
-    pattern: /(?:lyrics?|vocals?|sing(?:ing)?)\s+.*(?:repeat|repeating|loop|abandon|missing|skip|complete|full|every word|all (?:the )?words|synchroniz|sync)|(?:repeat|repeating|loop|abandon|missing|skip)\s+.*(?:lyrics?|vocals?|sing(?:ing)?)/i,
-    extract: () => ({
-      value: 'Sing every supplied lyric exactly once in order, with clear synchronized vocals and no looping of opening lines',
-      confidence: 0.97,
-    }),
-  },
-  {
-    category: 'music',
-    type: 'preference',
-    domain: 'media',
-    pattern: /(?:(?:music|sound|soundtrack|audio|song)\s+.*?fade\s*-?\s*out|fade\s*-?\s*out\s+.*?(?:music|sound|soundtrack|audio|song)|fadeout)/i,
-    extract: (text) => {
-      const durMatch = text.match(/\b(\d+)\s*(?:-|–)?\s*(?:seconds?|secs?|s)\b/i);
-      const secs = durMatch ? Math.max(1, Math.min(10, parseInt(durMatch[1], 10))) : 2;
-      return {
-        value: `Fade out soundtrack over the final ${secs} seconds rather than cutting abruptly`,
-        confidence: 0.94,
-      };
-    },
-  },
-  {
-    category: 'audio',
-    type: 'preference',
-    domain: 'media',
-    pattern: /(?:(?:ambient|atmospheric|electronic|upbeat|lo-fi|synth)\s+(?:audio|sound|music|soundtrack))|(?:(?:audio|music|soundtrack|sound)\s*.*?(?:ambient|atmospheric|electronic|upbeat|lo-fi|strings|dramatic))|(?:(?:with|some|add|need|where is the)\s+(?:ambient\s+)?(?:audio|music|soundtrack))|(?:(?:remove|avoid|no|don't like)\s+(?:the\s+)?(?:dramatic\s+)?(?:music|soundtrack|audio|strings))/i,
-    extract: (text) => {
-      const lower = text.toLowerCase();
-      if (lower.includes('ambient')) {
-        return {
-          value: 'Prefer subtle ambient atmospheric electronic soundtrack',
-          confidence: 0.95,
-        };
-      }
-      if (lower.includes('remove') || lower.includes('avoid') || lower.includes('dramatic') || lower.includes("don't like dramatic") || lower.includes('no dramatic')) {
-        return {
-          value: 'Avoid dramatic cinematic strings; prefer subtle, modern ambient or rhythm beds',
-          confidence: 0.93,
-        };
-      }
-      if (lower.includes('upbeat') || lower.includes('energetic') || lower.includes('electronic')) {
-        return {
-          value: 'Prefer upbeat, modern rhythmic background tracks',
-          confidence: 0.91,
-        };
-      }
-      return {
-        value: 'Synchronize media with subtle, balanced background audio',
-        confidence: 0.88,
-      };
-    },
-  },
-  // 5. Layout & Aspect Ratio
-  {
-    category: 'layout',
-    type: 'constraint',
-    domain: 'media',
-    pattern: /(?:format|aspect ratio|render in|dimensions?)\s*(?:as|to|is|in)?\s*(9:16|16:9|1:1|vertical|widescreen|portrait)/i,
-    extract: (text, match) => {
-      const val = match[1].toLowerCase();
-      const ratio = val.includes('vertical') || val.includes('9:16') || val.includes('portrait') ? '9:16 vertical' : '16:9 widescreen';
-      return {
-        value: `Default video aspect ratio is ${ratio}`,
-        confidence: 0.96,
-      };
-    },
-  },
-  // 6. Video Duration / Length (numbers in fade/outro context are fade lengths, not video lengths)
-  {
-    category: 'duration',
-    type: 'preference',
-    domain: 'media',
-    pattern: /(?:(?:prefer|like|want|make|generate|use|standard is|keep|set|told you)\s+.*?\b(\d+)\s*(?:seconds?|secs?|s)\b(?!\s+fade))|(?:(?<!fade\s)(?<!fade\sout\s)(?<!fadeout\s)(?<!over\s)(?<!final\s)(?<!last\s)(\d+)\s*(?:seconds?|secs?|s)\b(?!\s+fade))/i,
-    extract: (text, match) => {
-      const numStr = match[1] || match[2];
-      const sec = parseInt(numStr, 10);
-      return {
-        value: `Prefer ${sec} second video duration`,
-        confidence: 0.95,
-      };
-    },
-  },
-  // 7. Video AI Model Selection
-  {
-    category: 'model',
-    type: 'preference',
-    domain: 'media',
-    pattern: /(?:prefer|use|switch to|render with|on)\s+(seedance(?:-25-t2v)?|ltx(?:-25-t2v-pro)?)/i,
-    extract: (text, match) => {
-      const raw = match[1].toLowerCase();
-      const model = raw.includes('ltx')
-        ? 'ltx-25-t2v-pro'
-        : 'seedance-25-t2v';
-      return {
-        value: `Prefer ${model} generative video model`,
-        confidence: 0.96,
-      };
-    },
-  },
-  // 6. Branding & Logo Placement
-  {
-    category: 'branding',
-    type: 'constraint',
-    domain: 'media',
-    pattern: /(?:logo|brand watermark)\s+(?:should normally be|should be|must be|always in)\s+([^,.;]+)/i,
-    extract: (text, match) => {
-      return {
-        value: `Logo positioning: ${match[1].trim()}`,
-        confidence: 0.93,
-      };
-    },
-  },
-  // 7. General Developer & Workflow Preferences
-  {
-    category: 'workflow',
-    type: 'preference',
-    domain: 'general',
-    pattern: /(?:prefer|always use|standard is)\s+([^,.;]+(?:typescript|tabs|spaces|dark mode|light mode|concise|detailed|python)[^,.;]*)/i,
-    extract: (text, match) => {
-      return {
-        value: `Developer preference: ${match[1].trim()}`,
-        confidence: 0.92,
-      };
-    },
-  },
-];
-
-/**
- * Distinguishes temporary instructions from durable preferences and extracts structured candidates
- */
-export function extractMemories(
-  input: string,
-  context: ExtractionContext = {}
-): MemoryExtractionResult {
-  const text = input.trim();
-  const lower = text.toLowerCase();
-
-  // 1. Evaluate signal indicators
-  const temporarySignalsFound = TEMPORARY_MARKERS.filter((rx) => rx.test(lower));
-  const persistentSignalsFound = PERSISTENT_MARKERS.filter((rx) => rx.test(lower));
-
-  const hasExplicitTemporary = temporarySignalsFound.length > 0;
-  const hasExplicitPersistent = persistentSignalsFound.length > 0;
-
-  // 2. Extract semantic candidates
-  const candidates: ExtractedMemoryCandidate[] = [];
-
-  for (const rule of SEMANTIC_PATTERNS) {
-    const match = rule.pattern.exec(text);
-    if (match) {
-      const extracted = rule.extract(text, match);
-
-      // Adjust confidence based on persistent/temporary signals
-      let confidence = extracted.confidence;
-      if (hasExplicitPersistent) {
-        confidence = Math.min(0.99, confidence + 0.05);
-      } else if (hasExplicitTemporary && !['visual_style', 'audio', 'duration', 'pacing', 'typography', 'model'].includes(rule.category)) {
-        // Only lower candidate confidence if not a primary stylistic preference
-        confidence = Math.max(0.4, confidence - 0.35);
-      }
-
-      // Scope is global/domain for media styling preferences
-      const scope: MemoryScope = 'domain';
-
-      candidates.push({
-        type: rule.type,
-        category: rule.category,
-        value: extracted.value,
-        confidence,
-        scope,
-        domain: context.domain || rule.domain,
-        rationale: `Matched ${rule.category} pattern with ${hasExplicitPersistent ? 'explicit persistence signal' : 'standard inference'}.`,
-        sourceText: text,
-      });
-    }
-  }
-
-  // 3. Classify overall turn
-  const temporaryInstructions: string[] = [];
-  if (hasExplicitTemporary) {
-    temporaryInstructions.push(text);
-  }
-
-  let classification: MemoryExtractionResult['classification'] = 'temporary_edit';
-  let reasoning = 'Input is specific to the current artifact revision.';
-
-  if (candidates.length > 0) {
-    classification = hasExplicitPersistent ? 'persistent_memory' : hasExplicitTemporary ? 'mixed' : 'persistent_memory';
-    reasoning = `Identified ${candidates.length} durable styling preference(s) from user feedback.`;
-  }
-
-  const overallConfidence = candidates.length > 0
-    ? candidates.reduce((acc, c) => acc + c.confidence, 0) / candidates.length
-    : 0.9;
-
-  return {
-    classification,
-    confidence: overallConfidence,
-    reasoning,
-    candidates,
-    temporaryInstructions,
-  };
-}
-
-/**
- * Converts an ExtractedMemoryCandidate into a full StructuredMemory ready for storage
- */
-export function candidateToStructuredMemory(
-  candidate: ExtractedMemoryCandidate,
-  context: ExtractionContext = {}
-): StructuredMemory {
-  const now = new Date().toISOString();
-  const id = `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-  return {
-    id,
-    userId: context.userId || 'default_user',
-    type: candidate.type,
-    category: candidate.category,
-    value: candidate.value,
-    confidence: candidate.confidence,
-    scope: candidate.scope,
-    domain: candidate.domain,
-    source: {
-      type: 'user_feedback',
-      eventContext: context.sessionContext || 'User interaction',
-      projectId: context.projectId,
-      timestamp: now,
-    },
-    createdAt: now,
-    updatedAt: now,
-    isActive: true,
-  };
 }
 
 /**
@@ -445,82 +60,76 @@ Rules:
 - "audio"/"sound" maps to category "music". On-screen text maps to "captions". Speed/rhythm maps to "pacing".
 - At most 4 candidates. Confidence above 0.9 only for explicit statements ("I like", "always", "from now on").`;
 
-export interface AutoExtractionContext extends ExtractionContext {
-  /** Active memories for Mem0-style context-lookup dedupe. */
-  existingMemories?: Array<{ category: string; value: string }>;
-}
-
 /**
  * Mem0-style extraction: a single LLM pass over the message with existing
  * memories as dedupe context (lookup -> extract -> dedupe in one call).
- * Falls back to the deterministic rule engine when Groq is unavailable, so
- * learning degrades instead of breaking.
+ * Throws when the LLM is unavailable - learning pauses honestly instead of
+ * guessing.
  */
-export async function extractMemoriesAuto(
+export async function extractMemories(
   input: string,
-  context: AutoExtractionContext = {}
+  context: ExtractionContext = {}
 ): Promise<MemoryExtractionResult> {
   const text = input.trim();
   if (!text) {
     return { classification: 'temporary_edit', confidence: 1, reasoning: 'Empty input.', candidates: [], temporaryInstructions: [] };
   }
 
-  try {
-    if (!process.env.GROQ_API_KEY) throw new Error('GROQ_API_KEY not set');
-    const { generateText } = await import('ai');
-    const { createGroq } = await import('@ai-sdk/groq');
-    const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
-    const modelName = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
-
-    const existingBlock =
-      context.existingMemories && context.existingMemories.length > 0
-        ? `EXISTING MEMORIES (do not re-extract these):\n${context.existingMemories
-            .slice(0, 20)
-            .map((m) => `- [${m.category}] ${m.value}`)
-            .join('\n')}\n\n`
-        : '';
-
-    const { text: out } = await generateText({
-      model: groq(modelName),
-      system: EXTRACTION_SYSTEM_PROMPT,
-      prompt: `${existingBlock}USER MESSAGE: "${text}"`,
-    });
-
-    const parsed = parseExtractionJson(out);
-    if (!parsed) throw new Error('Unparseable extractor output');
-
-    const candidates: ExtractedMemoryCandidate[] = [];
-    for (const c of parsed.candidates.slice(0, 4)) {
-      const category = String(c.category || '').toLowerCase();
-      const value = String(c.value || '').trim();
-      if (!MEMORY_CATEGORIES.includes(category as (typeof MEMORY_CATEGORIES)[number])) continue;
-      if (value.length < 8) continue;
-      const confidence = Math.max(0.4, Math.min(0.99, Number(c.confidence) || 0.8));
-      candidates.push({
-        type: 'preference',
-        category,
-        value: value.slice(0, 240),
-        confidence,
-        scope: 'domain',
-        domain: context.domain || 'media',
-        rationale: 'LLM-extracted standing preference with dedupe context.',
-        sourceText: text,
-      });
-    }
-
-    const classification: MemoryExtractionResult['classification'] =
-      candidates.length > 0 ? 'persistent_memory' : 'temporary_edit';
-    return {
-      classification,
-      confidence: candidates.length > 0 ? candidates.reduce((a, c) => a + c.confidence, 0) / candidates.length : 0.9,
-      reasoning: `LLM extraction: ${candidates.length} durable preference(s).`,
-      candidates,
-      temporaryInstructions: candidates.length > 0 ? [] : [text],
-    };
-  } catch (err) {
-    console.warn('[extractor] LLM extraction unavailable, falling back to rules:', err instanceof Error ? err.message : err);
-    return extractMemories(text, context);
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY is not set: memory extraction requires the LLM.');
   }
+  const { generateText } = await import('ai');
+  const { createGroq } = await import('@ai-sdk/groq');
+  const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+  const modelName = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+
+  const existingBlock =
+    context.existingMemories && context.existingMemories.length > 0
+      ? `EXISTING MEMORIES (do not re-extract these):\n${context.existingMemories
+          .slice(0, 20)
+          .map((m) => `- [${m.category}] ${m.value}`)
+          .join('\n')}\n\n`
+      : '';
+
+  const { text: out } = await generateText({
+    model: groq(modelName),
+    system: EXTRACTION_SYSTEM_PROMPT,
+    prompt: `${existingBlock}USER MESSAGE: "${text}"`,
+  });
+
+  const parsed = parseExtractionJson(out);
+  if (!parsed) {
+    throw new Error('Unparseable extractor output from the LLM.');
+  }
+
+  const candidates: ExtractedMemoryCandidate[] = [];
+  for (const c of parsed.candidates.slice(0, 4)) {
+    const category = String(c.category || '').toLowerCase();
+    const value = String(c.value || '').trim();
+    if (!MEMORY_CATEGORIES.includes(category as (typeof MEMORY_CATEGORIES)[number])) continue;
+    if (value.length < 8) continue;
+    const confidence = Math.max(0.4, Math.min(0.99, Number(c.confidence) || 0.8));
+    candidates.push({
+      type: 'preference',
+      category,
+      value: value.slice(0, 240),
+      confidence,
+      scope: 'domain',
+      domain: context.domain || 'media',
+      rationale: 'LLM-extracted standing preference with dedupe context.',
+      sourceText: text,
+    });
+  }
+
+  const classification: MemoryExtractionResult['classification'] =
+    candidates.length > 0 ? 'persistent_memory' : 'temporary_edit';
+  return {
+    classification,
+    confidence: candidates.length > 0 ? candidates.reduce((a, c) => a + c.confidence, 0) / candidates.length : 0.9,
+    reasoning: `LLM extraction: ${candidates.length} durable preference(s).`,
+    candidates,
+    temporaryInstructions: candidates.length > 0 ? [] : [text],
+  };
 }
 
 function parseExtractionJson(out: string): { classification: string; candidates: Array<{ category?: unknown; value?: unknown; confidence?: unknown }> } | null {
@@ -539,4 +148,35 @@ function parseExtractionJson(out: string): { classification: string; candidates:
   } catch {
     return null;
   }
+}
+
+/**
+ * Converts an ExtractedMemoryCandidate into a full StructuredMemory ready for storage
+ */
+export function candidateToStructuredMemory(
+  candidate: ExtractedMemoryCandidate,
+  context: ExtractionContext = {}
+): StructuredMemory {
+  const now = new Date().toISOString();
+  const id = `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  return {
+    id,
+    userId: context.userId || 'default_user',
+    type: candidate.type,
+    category: candidate.category,
+    value: candidate.value,
+    confidence: candidate.confidence,
+    scope: candidate.scope,
+    domain: candidate.domain,
+    source: {
+      type: 'user_feedback',
+      eventContext: context.sessionContext || 'User interaction',
+      projectId: context.projectId,
+      timestamp: now,
+    },
+    createdAt: now,
+    updatedAt: now,
+    isActive: true,
+  };
 }

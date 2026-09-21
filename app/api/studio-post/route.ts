@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase/client';
 import { authenticateRequest } from '@/lib/auth/server';
-import { LivepeerMediaAgent } from '@/lib/nue-memory/media-memory/livepeer-agent';
+import { LivepeerMediaAgent } from '@/lib/nue-memory/nue-motion/livepeer-agent';
 import { MediaVersion } from '@/lib/types';
 
 export const runtime = 'nodejs';

@@ -11,7 +11,7 @@
 
 AI media generation has historically suffered from severe **session amnesia**. Every time a creator opens a new conversation or starts a new video project, the AI forgets their aesthetic preferences, branding guidelines, preferred pacing, vocal styles, and past corrections. Creators are trapped in repetitive prompt loops (*"make it 16:9"*, *"warm golden hour lighting"*, *"no ambient synths"*, *"faster pacing"*).
 
-**Nue** solves this by introducing a continuous, decentralized memory layer for AI agents. Rather than dumping raw chat histories into the context window (which inflates token costs and degrades LLM reasoning), Nue observes creator interactions, extracts structured aesthetic preferences, resolves contradictions through autonomous evolution, and cryptographically persists them to **Sui Walrus (MemWal)**.
+**Nue** solves this by introducing a continuous, decentralized memory layer for AI agents. Rather than dumping raw chat histories into the context window (which inflates token costs and degrades LLM reasoning), Nue observes creator interactions, extracts structured aesthetic preferences with an LLM, appends them as additive facts, and cryptographically persists them to **Sui Walrus (MemWal)**.
 
 **Nue Motion** is the flagship generative video studio built on top of Nue Memory and the **Livepeer Agent Network**. In Nue Motion, creators do not write prompts for a cold, robotic dispatcher—they collaborate with an AI co-director that acts like a true creative partner ("buddy"), remembers their artistic taste across projects, directs single continuous Seedance 2.5 takes, and shields creators from upstream GPU errors.
 
@@ -45,7 +45,7 @@ AI media generation has historically suffered from severe **session amnesia**. E
 #### 1. Sui Walrus MemWal (`@mysten-incubation/memwal`)
 - **Cryptographic Decentralization**: User memories are not trapped in a centralized proprietary silo. Each creator has an Ed25519 Sui cryptographic identity (`MEMWAL_PRIVATE_KEY` / `MEMWAL_ACCOUNT_ID`) and a dedicated Walrus namespace (`nue-{user_email}`).
 - **Zero-Mock Integrity**: Nue enforces a strict live-only policy. If Walrus keys are absent, the system surfaces an honest `WalrusConfigError` (`503 configuration_required`) rather than faking persistence with temporary in-memory mocks.
-- **Autonomous Rule Evolution & Conflict Supersession**: When a user changes their preference (e.g., from *"ambient electronic soundtrack"* to *"upbeat acoustic guitar"*), Nue marks the older memory as superseded rather than letting contradictory tokens corrupt future prompt assemblies.
+- **ADD-only Contradiction Handling**: When a user changes their preference (e.g., from *"ambient electronic soundtrack"* to *"upbeat acoustic guitar"*), Nue appends the new rule as a fact and preserves history. Recency-weighted retrieval ranking resolves contradictions at read time instead of destructively superseding.
 - **Bi-Directional AI Middleware**: Integrated directly with Groq via `withMemWal`:
   - **Pre-flight Recall**: Automatically fetches top relevant decentralized preferences before each director decision.
   - **Post-flight Extraction**: Automatically analyzes user revision feedback and commits new taste profiles to Walrus.
@@ -149,7 +149,7 @@ AI media generation has historically suffered from severe **session amnesia**. E
 | `app/api/memwal/route.ts` | **Memory CRUD Route**: Direct Walrus MemWal endpoints to query, commit, delete, or reset user preferences. |
 | `app/api/health/route.ts` | **Honesty Telemetry**: Live status check of Walrus relayer connection and Livepeer API key presence. |
 | `lib/media/timeline-stitcher.ts` | **Timeline Assembly**: Local FFmpeg engine for multi-scene video concatenation and audio track muxing. |
-| `lib/nue-memory/media-memory/livepeer-agent.ts` | **Livepeer MCP Client**: Model Context Protocol client for `create_media`, `get_create_media`, and `assemble`. |
+| `lib/nue-memory/nue-motion/livepeer-agent.ts` | **Livepeer MCP Client**: Model Context Protocol client for `create_media`, `get_create_media`, and `assemble`. |
 | `lib/nue-memory/storage/walrus-store.ts` | **Walrus Storage Driver**: Low-level Sui Walrus client managing blob storage and cryptographic signing. |
 | `components/AppShell.tsx` | **Studio Application Shell**: State coordinator for chat, video player, version history, and generation polling. |
 | `components/AgentChat.tsx` | **Chat Interface**: Multi-modal input panel with image upload, drag-and-drop, and prompt suggestions. |

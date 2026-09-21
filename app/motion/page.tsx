@@ -6,9 +6,9 @@ interface MotionPageProps {
 }
 
 /**
- * Media Memory route - the working surface.
+ * Nue Motion route - the working surface.
  *
- * Opens Nue Memory directly on the Media Memory workspace, where the
+ * Opens Nue Memory directly on the Nue Motion workspace, where the
  * create -> review -> feedback -> remember -> recall loop runs against the
  * real Livepeer Agent and Walrus MemWal layers.
  */

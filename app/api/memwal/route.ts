@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { memWalService } from '@/lib/walrus-memwal/client';
-import { MediaPreference } from '@/lib/types';
+import { MotionPreference } from '@/lib/types';
 import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
@@ -97,19 +97,19 @@ export async function POST(request: Request) {
     }
 
     if (action === 'remember') {
-      const itemsToRemember: MediaPreference[] = preferences || (preference ? [preference] : []);
+      const itemsToRemember: MotionPreference[] = preferences || (preference ? [preference] : []);
       if (itemsToRemember.length > 0) {
         // Mem0-style ADD-only persistence: every confirmed rule is appended as
         // a new fact. Nothing is overwritten or deactivated here - contradictions
         // resolve at retrieval ranking (recency-weighted), with full history
         // preserved. Explicit user deletes tombstone via forget.
-        const storedItems: { blobId: string; preference: MediaPreference; namespace?: string }[] = [];
+        const storedItems: { blobId: string; preference: MotionPreference; namespace?: string }[] = [];
 
         for (const item of itemsToRemember) {
           const itemUserId = item.userId || effectiveUserId || 'default_user';
           const newId = item.id || `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
-          const preferenceToPersist: MediaPreference = {
+          const preferenceToPersist: MotionPreference = {
             ...item,
             id: newId,
             userId: itemUserId,

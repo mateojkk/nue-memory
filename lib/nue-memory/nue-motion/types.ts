@@ -24,7 +24,7 @@ export type MemoryCategory =
 export type PreferenceStrength = 'high' | 'medium' | 'low';
 export type PreferenceScope = 'global' | 'project' | 'media' | 'coding' | 'general';
 
-export interface MediaPreference {
+export interface MotionPreference {
   id: string;
   type: 'media_preference';
   category: MemoryCategory;
@@ -45,7 +45,7 @@ export interface MediaPreference {
 export interface FeedbackClassification {
   type: 'temporary_edit' | 'persistent_preference';
   rationale: string;
-  extractedPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
+  extractedPreferences: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
 }
 
 export interface StoryboardScene {
@@ -65,7 +65,7 @@ export interface MediaVersion {
   createdAt: string;
   brief: string;
   enrichedBrief: string;
-  appliedPreferences: MediaPreference[];
+  appliedPreferences: MotionPreference[];
   mediaUrl: string;
   thumbnailUrl?: string;
   aspectRatio: '16:9' | '9:16' | '1:1';
@@ -113,7 +113,7 @@ export interface CreativeProject {
 export interface GenerateMediaRequest {
   brief: string;
   enrichedBrief: string;
-  appliedPreferences: MediaPreference[];
+  appliedPreferences: MotionPreference[];
   versionNumber: number;
   projectTitle: string;
   feedbackContext?: string;
@@ -124,7 +124,7 @@ export interface GenerateMediaRequest {
 }
 
 export interface RetrievalResult {
-  relevantMemories: MediaPreference[];
+  relevantMemories: MotionPreference[];
   enrichedBrief: string;
   creativeDirectives: {
     pacing?: 'fast' | 'moderate' | 'cinematic';
@@ -136,10 +136,4 @@ export interface RetrievalResult {
     model?: string;
   };
   summaryTokens: string[];
-}
-
-export interface EvolutionResult {
-  updatedMemories: MediaPreference[];
-  supersededMemories: MediaPreference[];
-  activeMemories: MediaPreference[];
 }

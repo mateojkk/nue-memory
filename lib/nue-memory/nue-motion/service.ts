@@ -1,11 +1,11 @@
-import { MediaPreference } from './types';
+import { MotionPreference } from './types';
 import { StructuredMemory } from '../core/types';
 import { defaultWalrusStore, WalrusMemWalStore } from '../storage/walrus-store';
 
 /**
- * Adapter converting domain-agnostic StructuredMemory to MediaPreference
+ * Adapter converting domain-agnostic StructuredMemory to MotionPreference
  */
-export function structuredToMediaPref(mem: StructuredMemory): MediaPreference {
+export function structuredToMotionPref(mem: StructuredMemory): MotionPreference {
   return {
     id: mem.id,
     type: 'media_preference',
@@ -26,9 +26,9 @@ export function structuredToMediaPref(mem: StructuredMemory): MediaPreference {
 }
 
 /**
- * Adapter converting MediaPreference to domain-agnostic StructuredMemory
+ * Adapter converting MotionPreference to domain-agnostic StructuredMemory
  */
-export function mediaPrefToStructured(pref: MediaPreference): StructuredMemory {
+export function motionPrefToStructured(pref: MotionPreference): StructuredMemory {
   return {
     id: pref.id || `mem_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     userId: pref.userId || 'default_user',
@@ -54,12 +54,12 @@ export function mediaPrefToStructured(pref: MediaPreference): StructuredMemory {
 
 /**
  * MemWal Client for Walrus Memory
- * Bridges Media Memory application workflows directly to the unified WalrusMemWalStore engine.
+ * Bridges Nue Motion application workflows directly to the unified WalrusMemWalStore engine.
  */
 export class MemWalService {
   private static instance: MemWalService;
   private store: WalrusMemWalStore;
-  private memoryCache: Map<string, MediaPreference> = new Map();
+  private memoryCache: Map<string, MotionPreference> = new Map();
 
   private constructor() {
     this.store = defaultWalrusStore;
@@ -94,17 +94,17 @@ export class MemWalService {
   }
 
   /**
-   * Persists a structured MediaPreference to Walrus Memory via MemWal in the user's namespace
+   * Persists a structured MotionPreference to Walrus Memory via MemWal in the user's namespace
    */
   public async rememberPreference(
-    preference: MediaPreference
-  ): Promise<{ blobId: string; preference: MediaPreference; namespace?: string }> {
+    preference: MotionPreference
+  ): Promise<{ blobId: string; preference: MotionPreference; namespace?: string }> {
     await this.initialize();
 
-    const structured = mediaPrefToStructured(preference);
+    const structured = motionPrefToStructured(preference);
     const { blobId, memory, namespace } = await this.store.save(structured);
 
-    const updatedPref: MediaPreference = {
+    const updatedPref: MotionPreference = {
       ...preference,
       id: memory.id,
       userId: memory.userId,
@@ -121,7 +121,7 @@ export class MemWalService {
   /**
    * Recalls preferences relevant to a given query or brief using MemWal semantic vector search in user's namespace
    */
-  public async recallPreferences(query: string, userId?: string): Promise<MediaPreference[]> {
+  public async recallPreferences(query: string, userId?: string): Promise<MotionPreference[]> {
     await this.initialize();
 
     const searchResults = await this.store.search({
@@ -132,7 +132,7 @@ export class MemWalService {
       limit: 10,
     });
 
-    const preferences = searchResults.map((r) => structuredToMediaPref(r.memory));
+    const preferences = searchResults.map((r) => structuredToMotionPref(r.memory));
 
     for (const p of preferences) {
       this.memoryCache.set(p.id, p);
@@ -144,18 +144,18 @@ export class MemWalService {
   /**
    * Returns all stored preferences (both active and evolved/superseded) for a user
    */
-  public getAllPreferences(userId?: string, includeInactive = false): MediaPreference[] {
+  public getAllPreferences(userId?: string, includeInactive = false): MotionPreference[] {
     const list = this.store.listSynchronous({ userId, activeOnly: !includeInactive });
-    return list.map(structuredToMediaPref);
+    return list.map(structuredToMotionPref);
   }
 
   /**
    * Returns all stored preferences asynchronously for a user from their Walrus namespace
    */
-  public async getAllPreferencesAsync(userId?: string, includeInactive = false): Promise<MediaPreference[]> {
+  public async getAllPreferencesAsync(userId?: string, includeInactive = false): Promise<MotionPreference[]> {
     await this.initialize();
     const list = await this.store.list({ userId, activeOnly: !includeInactive });
-    return list.map(structuredToMediaPref);
+    return list.map(structuredToMotionPref);
   }
 
   /**
@@ -163,7 +163,7 @@ export class MemWalService {
    * Walrus (see WalrusMemWalStore.update); the promise resolves once the
    * marker blob is confirmed so callers can await durability.
    */
-  public async updatePreference(pref: MediaPreference): Promise<void> {
+  public async updatePreference(pref: MotionPreference): Promise<void> {
     this.memoryCache.set(pref.id, pref);
     try {
       await this.store.update(pref.id, {

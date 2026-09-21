@@ -1,6 +1,5 @@
 import { WalrusMemWalStore } from '../lib/nue-memory/storage/walrus-store';
 import { extractMemories, candidateToStructuredMemory } from '../lib/nue-memory/engine/extractor';
-import { planMemoryEvolution } from '../lib/nue-memory/engine/evolution';
 import { formatAgentContext } from '../lib/nue-memory/engine/retrieval';
 import { StructuredMemory } from '../lib/nue-memory/core/types';
 
@@ -13,7 +12,7 @@ async function runPhase2Test() {
   console.log('--- Test 1: Temporary vs Persistent Classification ---');
 
   const tempInput = 'Make this video 5 seconds shorter at second 4.';
-  const tempResult = extractMemories(tempInput);
+  const tempResult = await extractMemories(tempInput);
   console.log(`Input: "${tempInput}"`);
   console.log(`-> Classification: ${tempResult.classification}`);
   console.log(`-> Candidate count: ${tempResult.candidates.length}`);
@@ -22,7 +21,7 @@ async function runPhase2Test() {
   }
 
   const persistentInput = 'The intro is too slow. Make the captions much larger and remove the dramatic music.';
-  const persistentResult = extractMemories(persistentInput);
+  const persistentResult = await extractMemories(persistentInput);
   console.log(`\nInput: "${persistentInput}"`);
   console.log(`-> Classification: ${persistentResult.classification}`);
   console.log(`-> Extracted ${persistentResult.candidates.length} candidate(s):`);
@@ -56,9 +55,9 @@ async function runPhase2Test() {
   console.log('✓ Test 2 Passed: Memories persisted through Walrus MemWal adapter.\n');
 
   // ----------------------------------------------------------------------
-  // Test 3: Conflict Detection & Memory Evolution (Dark Mode -> Light Mode)
+  // Test 3: ADD-only Contradiction Handling (Dark Mode -> Light Mode)
   // ----------------------------------------------------------------------
-  console.log('--- Test 3: Conflict Evolution (Contradiction Supersession) ---');
+  console.log('--- Test 3: ADD-only history (contradiction preserved, newest wins ranking) ---');
 
   // Initial preference: Dark Mode
   const initialMem: StructuredMemory = {
@@ -78,7 +77,8 @@ async function runPhase2Test() {
   await store.save(initialMem);
   console.log(`Initial Memory registered: "${initialMem.value}" (isActive: ${initialMem.isActive})`);
 
-  // Later preference: Switched to Light Mode!
+  // Later preference: Switched to Light Mode! Appended as a new fact -
+  // nothing is overwritten or deactivated.
   const newCandidate: StructuredMemory = {
     id: 'mem-theme-02',
     userId: 'test_agent_user',
@@ -93,41 +93,19 @@ async function runPhase2Test() {
     updatedAt: '2026-09-13T12:00:00Z',
     isActive: true,
   };
+  await store.save(newCandidate);
 
-  const existingInStore = await store.list({ userId: 'test_agent_user' });
-  const evolutionPlan = planMemoryEvolution(existingInStore, newCandidate);
-
-  console.log(`Evolution Plan Action: "${evolutionPlan.action}"`);
-  console.log(`Reason: ${evolutionPlan.reason}`);
-  console.log(`Memories to deactivate: ${evolutionPlan.memoriesToDeactivate.length}`);
-
-  if (evolutionPlan.action !== 'supersede') {
-    throw new Error(`Expected evolution action "supersede", got "${evolutionPlan.action}"`);
-  }
-
-  // Apply evolution to store
-  for (const deact of evolutionPlan.memoriesToDeactivate) {
-    await store.update(deact.id, {
-      isActive: false,
-      supersededById: evolutionPlan.memoryToPersist.id,
-    });
-  }
-  await store.save(evolutionPlan.memoryToPersist);
-
-  // Verify that the old memory is now inactive and linked
+  // Both records stay active: history is preserved, ranking resolves.
   const oldMemoryAfter = await store.get('mem-theme-01');
   const newMemoryAfter = await store.get('mem-theme-02');
 
-  console.log(`Older memory isActive: ${oldMemoryAfter?.isActive} (supersededById: ${oldMemoryAfter?.supersededById})`);
-  console.log(`Newer memory isActive: ${newMemoryAfter?.isActive} (supersedesId: ${newMemoryAfter?.supersedesId})`);
+  console.log(`Older memory isActive: ${oldMemoryAfter?.isActive}`);
+  console.log(`Newer memory isActive: ${newMemoryAfter?.isActive}`);
 
-  if (oldMemoryAfter?.isActive !== false || oldMemoryAfter?.supersededById !== 'mem-theme-02') {
-    throw new Error('Supersession failed on older memory');
+  if (oldMemoryAfter?.isActive !== true || newMemoryAfter?.isActive !== true) {
+    throw new Error('ADD-only violated: a contradictory memory was deactivated');
   }
-  if (newMemoryAfter?.supersedesId !== 'mem-theme-01') {
-    throw new Error('Supersession link missing on newer memory');
-  }
-  console.log('✓ Test 3 Passed: Conflict evolution correctly superseded contradictory memory.\n');
+  console.log('✓ Test 3 Passed: Contradictory memories coexist as history.\n');
 
   // ----------------------------------------------------------------------
   // Test 4: Retrieval, Ranking & Context Injection for Next Project
@@ -147,11 +125,15 @@ async function runPhase2Test() {
     console.log(`  ${idx + 1}. [${r.memory.category.toUpperCase()}] ${r.memory.value} (rankScore: ${r.rankScore.toFixed(3)})`);
   });
 
-  // Verify that the superseded Dark Mode memory is NOT retrieved
-  const foundDeactivated = searchResults.some((r) => r.memory.id === 'mem-theme-01');
-  if (foundDeactivated) {
-    throw new Error('Retrieval error: Superseded memory was returned in active search results!');
+  // ADD-only: if both theme memories surface, the newer one must rank first
+  // (recency-weighted ranking resolves contradictions at read time).
+  const themeRank = (id: string) => searchResults.findIndex((r) => r.memory.id === id);
+  const oldIdx = themeRank('mem-theme-01');
+  const newIdx = themeRank('mem-theme-02');
+  if (oldIdx !== -1 && newIdx !== -1 && !(newIdx < oldIdx)) {
+    throw new Error('Retrieval error: newer contradictory memory did not outrank the older one.');
   }
+  console.log('✓ Newest contradictory memory outranks the older one (or older absent).');
 
   // Format into agent context block
   const agentContext = formatAgentContext(searchResults);
@@ -162,7 +144,7 @@ async function runPhase2Test() {
     throw new Error('Expected retrieved context items');
   }
 
-  console.log('✓ Test 4 Passed: Context retrieved, ranked, and injected without superseded records.\n');
+  console.log('✓ Test 4 Passed: Context retrieved, ranked, and injected with history preserved.\n');
 
   console.log('=== All Phase 2 Core Nue Memory Engine Tests PASSED Successfully! ===');
 }

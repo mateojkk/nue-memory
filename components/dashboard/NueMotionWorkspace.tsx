@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { InlineVideoCard } from './InlineVideoCard';
 import { MemoryConfirmation } from '@/components/MemoryConfirmation';
-import { CreativeProject, MediaVersion, ChatMessage, MediaPreference } from '@/lib/types';
+import { CreativeProject, MediaVersion, ChatMessage, MotionPreference } from '@/lib/types';
 import {
   Plus,
   Brain,
@@ -36,7 +36,7 @@ import {
   PanelLeft,
 } from 'lucide-react';
 
-interface MediaMemoryWorkspaceProps {
+interface NueMotionWorkspaceProps {
   activeProject: CreativeProject | null;
   activeVersion: MediaVersion | null;
   allVersions: MediaVersion[];
@@ -51,7 +51,7 @@ interface MediaMemoryWorkspaceProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
-  pendingPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
+  pendingPreferences: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
   pendingPreflight?: {
     duration: number;
     sceneCount: number;
@@ -79,7 +79,7 @@ interface MediaMemoryWorkspaceProps {
   onRenameProject?: (projectId: string, newTitle: string) => void;
   onDeleteProject?: (projectId: string) => void;
   onResetProject?: (projectId: string) => void;
-  activeMemories: MediaPreference[];
+  activeMemories: MotionPreference[];
   projects?: CreativeProject[];
   currentProjectIndex?: number;
   onSelectProject?: (index: number) => void;
@@ -87,7 +87,7 @@ interface MediaMemoryWorkspaceProps {
   userEmail?: string;
 }
 
-export function MediaMemoryWorkspace({
+export function NueMotionWorkspace({
   activeProject,
   activeVersion,
   allVersions,
@@ -121,7 +121,7 @@ export function MediaMemoryWorkspace({
   projects = [],
   currentProjectIndex = 0,
   onSelectProject,
-}: MediaMemoryWorkspaceProps) {
+}: NueMotionWorkspaceProps) {
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState<string | null>(null);

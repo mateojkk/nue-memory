@@ -1,11 +1,11 @@
 /**
  * MemWal Client Adapter (Backward Compatibility Bridge)
- * Delegating directly to @/lib/nue-memory/media-memory/service
+ * Delegating directly to @/lib/nue-memory/nue-motion/service
  */
 
 export {
   MemWalService,
   memWalService,
-  structuredToMediaPref,
-  mediaPrefToStructured,
-} from '../nue-memory/media-memory/service';
+  structuredToMotionPref,
+  motionPrefToStructured,
+} from '../nue-memory/nue-motion/service';

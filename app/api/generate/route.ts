@@ -6,7 +6,7 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText, validateImageSource } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
-import { MediaPreference, MediaVersion } from '@/lib/types';
+import { MotionPreference, MediaVersion } from '@/lib/types';
 import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 
 export const runtime = 'nodejs';
@@ -628,8 +628,8 @@ export async function POST(request: Request) {
     // Build render trace preferences. These explain what shaped this render,
     // but are not durable memories unless the user confirms feedback.
     const shouldApplyRecalledMemories = Boolean(applyRecalledMemories);
-    const syntheticPreferences: MediaPreference[] = [];
-    const recalledPreferences: MediaPreference[] = shouldApplyRecalledMemories && Array.isArray(directorBrief.recalledMemories)
+    const syntheticPreferences: MotionPreference[] = [];
+    const recalledPreferences: MotionPreference[] = shouldApplyRecalledMemories && Array.isArray(directorBrief.recalledMemories)
       ? directorBrief.recalledMemories.map((memory: any, idx: number) => ({
           id: `recall-${idx}-${String(memory.category || 'memory')}-${Date.now()}`,
           type: 'media_preference' as const,

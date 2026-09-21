@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Database, Clock, Eye, Trash2, X, Check, ShieldCheck, ArrowRight } from 'lucide-react';
-import { MediaPreference, StructuredMemory } from '@/lib/types';
+import { MotionPreference, StructuredMemory } from '@/lib/types';
 import { useSystemHealth, connectionIndicator } from '@/lib/hooks/useSystemHealth';
 
 interface MemoriesViewProps {
-  memories: MediaPreference[];
+  memories: MotionPreference[];
   isLoading?: boolean;
   onForget: (id: string) => void;
   onOpenStudio?: () => void;
@@ -42,7 +42,7 @@ export function MemoriesView({
   userNamespace,
   userEmail,
 }: MemoriesViewProps) {
-  const [selectedMemory, setSelectedMemory] = useState<MediaPreference | null>(null);
+  const [selectedMemory, setSelectedMemory] = useState<MotionPreference | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'superseded'>(getResolvedFilter);
   const { health, isLoading: isHealthLoading } = useSystemHealth();
   const walrusIndicator = connectionIndicator(health.walrus.state, isHealthLoading);

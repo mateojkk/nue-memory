@@ -3,10 +3,10 @@
 import React from 'react';
 import { Sparkles, X, Check, Database } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { MediaPreference } from '@/lib/types';
+import { MotionPreference } from '@/lib/types';
 
 interface MemoryConfirmationProps {
-  detectedPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
+  detectedPreferences: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
   onConfirmRemember: () => void;
   onDismiss: () => void;
   isSaving?: boolean;

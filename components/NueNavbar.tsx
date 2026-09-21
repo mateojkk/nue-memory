@@ -9,7 +9,7 @@ interface NueNavbarProps {}
 
 /**
  * Landing navbar. The landing lives at /landing; the working app at
- * /mediamemory (which is also where / redirects). All navigation is
+ * /motion (which is also where / redirects). All navigation is
  * route-based - no client view switching.
  */
 export function NueNavbar({}: NueNavbarProps = {}) {

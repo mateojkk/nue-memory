@@ -2,7 +2,7 @@ import { NueApp } from '@/components/AppShell';
 
 /**
  * Landing route: Nue Memory, the memory infrastructure layer for AI agents.
- * Media Memory is presented as the first app built on it (single section).
+ * Nue Motion is presented as the first app built on it (single section).
  * The working app lives at /motion.
  */
 export const metadata = {
