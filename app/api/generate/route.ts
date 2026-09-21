@@ -650,8 +650,10 @@ export async function POST(request: Request) {
         }
       }
 
-      // Determine model: use seedance-25-ref2v if we have a character anchor reference, otherwise seedance-25-t2v
-      const multiSceneModel = characterAnchorUrl ? 'seedance-25-ref2v' : modelToUse;
+      // seedance-25-ref2v retired 2026-09-19 (69% success, $49.08 wasted — provider-attributed).
+      // No sibling capability substituted automatically; explicit choice: seedance-25-t2v for all scenes.
+      // Character continuity is enforced via characterBible text injected into each scene prompt.
+      const multiSceneModel = modelToUse;
 
       const scenePromptsToUse: string[] = [];
       for (let i = 0; i < numScenes; i++) {
@@ -673,24 +675,13 @@ export async function POST(request: Request) {
           const charDna = directorBrief.characterBible ? ` Characters: ${directorBrief.characterBible}.` : '';
           const fullPrompt = `${scenePrompt}.${charDna} Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
 
-          const sceneArgs: Record<string, any> = {
+          return livepeerAgent.dispatchCreateMedia({
             action: 'generate',
             prompt: fullPrompt,
             model_override: multiSceneModel,
             duration: 15,
             async: true,
-          };
-
-          if (characterAnchorUrl) {
-            sceneArgs.reference = {
-              reference_url: characterAnchorUrl,
-              mode: 'full',
-              strength: 0.85,
-            };
-            sceneArgs.quality_anchor_url = characterAnchorUrl;
-          }
-
-          return livepeerAgent.dispatchCreateMedia(sceneArgs);
+          });
         })
       );
 

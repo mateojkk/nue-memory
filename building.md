@@ -79,7 +79,7 @@ AI media generation has historically suffered from severe **session amnesia**. E
   - 60s → 4 distinct continuous scenes rendered in parallel.
 - **Narrative Continuity & Character DNA (Google & Higgsfield Standard)**:
   - **Google-Style Character DNA**: Groq extracts an immutable `characterBible` locking exact facial features, hair, wardrobe, and colors across all scene prompts so diffusion attention never drifts.
-  - **Higgsfield-Style Soul ID / Character Anchoring**: When recurring characters are identified, Nue Motion generates a canonical Master Concept Anchor image (`flux-schnell`, ~2s) and conditions all downstream takes using Livepeer's `seedance-25-ref2v` (Reference-to-Video) with full character embedding conditioning (`reference: { reference_url, mode: 'full', strength: 0.85 }`).
+  - **Higgsfield-Style Soul ID / Character Anchoring**: When recurring characters are identified, Nue Motion generates a canonical Master Concept Anchor image (`flux-schnell`, ~2s). The anchor image URL is stored with the job for UI display; downstream scene takes use `seedance-25-t2v` with the full `characterBible` injected into every scene prompt for visual continuity. (`seedance-25-ref2v` retired 2026-09-19 — 69% success rate, $49.08 wasted in 7 days, provider-attributed failures.)
 - **Dual-Mode Stitching Architecture with Cinematic Cross-Dissolves**:
   1. Primary: Dispatches clips to Livepeer MCP `assemble` tool with crossfade transitions.
   2. Fallback: Local high-performance `ffmpeg` timeline stitcher (`stitchTimelineWithFfmpeg`) that probes exact frame durations, applies smooth `xfade` (0.6s cinematic cross-dissolves) between takes to eliminate abrupt cutoffs, and muxes an unbroken 60s master soundtrack bed.
