@@ -46,10 +46,18 @@ export interface GenerationJob {
   scene1Prompt?: string;
   scene2Prompt?: string;
   scenes?: any[];
+  characterAnchorUrl?: string;
 }
 
-// Global in-memory job map across requests within this server instance
-const jobRegistry = new Map<string, GenerationJob>();
+// Global in-memory job map preserved across module re-evaluations and HMR in this process
+const globalForJobs = globalThis as unknown as {
+  nueJobRegistry?: Map<string, GenerationJob>;
+};
+
+const jobRegistry = globalForJobs.nueJobRegistry ?? new Map<string, GenerationJob>();
+if (!globalForJobs.nueJobRegistry) {
+  globalForJobs.nueJobRegistry = jobRegistry;
+}
 
 // Clean up jobs older than 1 hour periodically
 const JOB_TTL_MS = 60 * 60 * 1000;

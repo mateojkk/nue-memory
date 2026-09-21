@@ -84,6 +84,7 @@ export interface MediaVersion {
   agentNotes: string;
   generationDurationSeconds: number;
   livepeerCapability?: string;
+  characterAnchorUrl?: string;
   scenes?: StoryboardScene[];
 }
 

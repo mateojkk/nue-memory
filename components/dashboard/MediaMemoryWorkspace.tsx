@@ -347,7 +347,7 @@ export function MediaMemoryWorkspace({
         step: 2,
         total: 4,
         percent: 20 + Math.min(60, Math.round(((seconds - 8) / 202) * 60)),
-        title: `Rendering neural video takes on ${model || 'seedance-25-t2v'}`,
+        title: 'Rendering neural video takes',
         detail: 'Deep multi-frame temporal diffusion in flight on Livepeer GPUs (~4 min)',
       };
     }

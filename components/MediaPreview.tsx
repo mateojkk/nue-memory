@@ -622,6 +622,18 @@ ${version.captionStyle.text}
             <span className="text-[10px] font-mono text-[var(--accent)] uppercase shrink-0 font-medium">
               Storyboard ({version.scenes.length} Takes):
             </span>
+            {version.characterAnchorUrl && (
+              <a
+                href={version.characterAnchorUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="px-2 py-0.5 rounded bg-[var(--accent)]/15 text-[10px] font-mono text-[var(--accent)] border border-[var(--accent)]/30 flex items-center gap-1 shrink-0 hover:bg-[var(--accent)]/25 transition-colors"
+                title="Conditioned on Master Character Concept Anchor (Soul ID)"
+              >
+                <span>⚓</span>
+                <span>Soul ID Anchor</span>
+              </a>
+            )}
             <div className="flex items-center gap-1.5">
               {version.scenes.map((sc) => (
                 <div

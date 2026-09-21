@@ -65,6 +65,51 @@ export class LivepeerMediaAgent {
   }
 
   /**
+   * Generates a master character concept/anchor image via fast image diffusion (flux-schnell, ~2-3s)
+   * used to condition all downstream scene takes for 100% character identity consistency.
+   */
+  public async generateCharacterConcept(conceptPrompt: string): Promise<string | null> {
+    try {
+      console.log(`[LivepeerAgent] Generating character concept anchor: "${conceptPrompt.slice(0, 100)}..."`);
+      const res = await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/event-stream',
+          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: Date.now(),
+          method: 'tools/call',
+          params: {
+            name: 'create_media',
+            arguments: {
+              action: 'generate',
+              prompt: conceptPrompt,
+              model_override: 'flux-schnell',
+              prefer_fast: true,
+              async: false,
+            },
+          },
+        }),
+      });
+
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = data.result?.structuredContent;
+      const textOut = Array.isArray(data.result?.content) ? data.result.content.map((c: any) => c.text).join(' ') : '';
+      const url = content?.url || data.result?.content?.find((c: any) => c.type === 'image' || !!c.url)?.url || (textOut.match(/https?:\/\/\S+/) || [])[0];
+      if (url) {
+        return unwrapLivepeerUrl(url);
+      }
+    } catch (err) {
+      console.warn('[LivepeerAgent] Character concept generation notice:', err);
+    }
+    return null;
+  }
+
+  /**
    * Generates a custom soundtrack via Livepeer MCP music capability
    */
   private async generateAudioTrack(audioPrompt: string): Promise<string | null> {

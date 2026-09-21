@@ -51,7 +51,7 @@ import { LandingFooter } from '@/components/landing/LandingFooter';
 import { NueDashboard, type DashboardTab } from '@/components/dashboard/NueDashboard';
 import { useAuth } from '@/components/auth/useAuth';
 import { AuthGuardModal } from '@/components/auth/AuthGuardModal';
-import { isConversationalMessage } from '@/lib/ai/nue-director';
+import { humanizeUpstreamError } from '@/lib/ai/nue-director';
 import {
   CreativeProject,
   MediaVersion,
@@ -219,9 +219,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     imageUrl?: string,
     chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
   ) => {
-    const isConversational = isConversationalMessage(promptText) && !imageUrl && !feedbackContext;
     setIsGenerating(true);
-    setGenerationStage(isConversational ? 'thinking' : 'cooking');
+    setGenerationStage('thinking');
 
     const targetIndex = overrideProjectIndex !== undefined ? overrideProjectIndex : currentProjectIndex;
     const targetTitle = overrideProjectTitle || projects[targetIndex]?.title || activeProject?.title || 'Media Project';
@@ -276,6 +275,9 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         const pollIntervalMs = 3000;
         const maxPollAttempts = 300; // 300 * 3s = 900s (15 min window for Seedance takes)
         let completedResult: any = null;
+
+        // Only now (confirmed GPU job) do we transition to the cooking stage
+        setGenerationStage('cooking');
 
         if (data.stageDescription) {
           setServerStageDescription(data.stageDescription);
@@ -357,16 +359,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           ? `\n\n🎵 Soundtrack: ${newVersion.audioStyle.style}.`
           : '';
 
-        let agentContent = data.directorMessage;
-        if (!agentContent) {
-          agentContent = `I generated Version ${newVersion.versionNumber} (${dur}s clip) with ${newVersion.pacing} pacing.${audioNotice}`;
-        } else if (
-          !agentContent.includes(`${dur}s`) &&
-          !agentContent.includes(`${dur}-second`) &&
-          !agentContent.includes(`${dur} second`)
-        ) {
-          agentContent = `${agentContent} (${dur}s clip)${audioNotice}`;
-        } else {
+        let agentContent = data.directorMessage || `Here's Version ${newVersion.versionNumber}!`;
+        if (audioNotice && !agentContent.includes('Soundtrack:')) {
           agentContent = `${agentContent}${audioNotice}`;
         }
 
@@ -415,22 +409,24 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
         setMessages((prev) => [...prev, agentMsg]);
       } else {
-        // API returned an error - show it to the user
+        // API returned an error - humanize and show to the user
+        const friendlyError = humanizeUpstreamError(data?.error || 'Unknown error');
         const errorMsg: ChatMessage = {
           id: `msg-err-${Date.now()}`,
           sender: 'agent',
-          content: `Sorry, generation failed: ${data.error || 'Unknown error'}. Please try again.`,
+          content: friendlyError,
           timestamp: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, errorMsg]);
-        console.error('[AppShell] Generate API error:', data.error);
+        console.error('[AppShell] Generate API error:', data?.error);
       }
     } catch (err: any) {
       console.error('[handleGenerate] Error:', err);
+      const friendlyError = humanizeUpstreamError(err?.message || 'Media generation failed.');
       const errorMsg: ChatMessage = {
         id: `msg-err-${Date.now()}`,
         sender: 'agent',
-        content: `Error: ${err?.message || 'Media generation failed.'}`,
+        content: friendlyError,
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -498,12 +494,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       }));
     chatHistory.push({ role: 'user', content: text });
 
-    // Check if the message is conversational / inquiry
-    const isConversational = isConversationalMessage(text) && !imageUrl;
-    if (isConversational) {
-      await handleGenerate(text, 0, undefined, targetIndex, currentProj.title, undefined, chatHistory);
-      return;
-    }
+    // Delegate ALL intent routing (inquiry, chat, generate, revision) to the server Groq classifier.
+    // Never pre-screen with client-side regex here.
 
     // If project has no versions yet, this is the first generation
     if (currentProj.versions.length === 0) {
@@ -525,13 +517,14 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     const nextVersionNumber = currentProj.versions.length + 1;
     const cleanLower = text.trim().toLowerCase();
     const hasCreationIntent = /\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(cleanLower);
-    const isExplicitRevision =
+    const isCorrectionOrRevision =
       !hasCreationIntent &&
-      cleanLower.length < 80 &&
-      /^(make it|can you make it|change (the|it)|adjust|tweak|tune|speed up|slow down|slower|faster|darker|lighter|more (vibrant|energetic|cinematic)|less|remove (the|subtitles|captions)|add (subtitles|captions))\b/i.test(cleanLower);
+      (/^(make it|can you make it|change (the|it)|adjust|tweak|tune|speed up|slow down|slower|faster|darker|lighter|more (vibrant|energetic|cinematic)|less|remove (the|subtitles|captions)|add (subtitles|captions))\b/i.test(cleanLower) ||
+       /^(but|wait|i said|i asked for|you forgot|why did|how come|no,|actually|instead|make sure|where are the|the lyrics)\b/i.test(cleanLower) ||
+       (/\b(?:60\s*s|30\s*s|minute|lyrics?|full|complete)\b/i.test(cleanLower) && cleanLower.length < 90));
 
-    if (isExplicitRevision) {
-      const activeBrief = currentProj.versions[currentProj.currentVersionIndex]?.brief || currentProj.initialPrompt;
+    if (isCorrectionOrRevision) {
+      const activeBrief = currentProj.versions[currentProj.currentVersionIndex]?.brief || currentProj.initialPrompt || text;
       await handleGenerate(
         activeBrief,
         nextVersionNumber,

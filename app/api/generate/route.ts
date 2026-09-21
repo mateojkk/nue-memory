@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { directCreativeBrief } from '@/lib/ai/nue-director';
+import { directCreativeBrief, humanizeUpstreamError } from '@/lib/ai/nue-director';
 import { livepeerAgent } from '@/lib/livepeer/agent';
 import { supabase } from '@/lib/supabase/client';
 import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
@@ -64,10 +64,11 @@ export async function GET(request: Request) {
         if (!scene.url && scene.jobId) {
           const poll = await livepeerAgent.pollJobStatus(scene.jobId);
           if (poll.status === 'failed') {
-            updateJob(jobId, { status: 'failed', error: poll.error || `Scene ${scene.sceneNumber} render failed.` });
+            const friendlyErr = humanizeUpstreamError(poll.error || `Scene ${scene.sceneNumber} render failed.`);
+            updateJob(jobId, { status: 'failed', error: friendlyErr });
             return NextResponse.json({
               success: true,
-              job: { status: 'failed', error: poll.error || `Scene ${scene.sceneNumber} render failed.` },
+              job: { status: 'failed', error: friendlyErr },
             });
           }
           if (poll.status === 'completed' && poll.url) {
@@ -103,6 +104,8 @@ export async function GET(request: Request) {
             model: modelName,
             expectedSla,
             stageDescription,
+            characterAnchorUrl: job.characterAnchorUrl,
+            scenes: scenesList,
           },
         });
       }
@@ -131,12 +134,12 @@ export async function GET(request: Request) {
       let finalMediaUrl = clips[0]?.src || '';
       let wasMuxed = false;
 
-      // 1. Attempt Livepeer assemble MCP tool
+      // 1. Attempt Livepeer assemble MCP tool with crossfade transition
       try {
         const assembled = await livepeerAgent.assembleTimeline({
           clips,
           audioUrl: finalAudioUrl,
-          transition: 'cut',
+          transition: 'crossfade',
         });
         if (assembled) {
           finalMediaUrl = assembled;
@@ -146,13 +149,14 @@ export async function GET(request: Request) {
         console.warn('[generate:GET] assembleTimeline notice:', e);
       }
 
-      // 2. If Livepeer assemble returned null, use local ffmpeg to stitch scenes and mux soundtrack
+      // 2. If Livepeer assemble returned null, use local ffmpeg to stitch scenes with subtle cross-dissolves and mux soundtrack
       if (!wasMuxed && clips.length > 0) {
         try {
           const ffmpegRes = await stitchTimelineWithFfmpeg({
             jobId,
             clips,
             audioUrl: finalAudioUrl,
+            transition: 'dissolve',
           });
           if (ffmpegRes?.url) {
             finalMediaUrl = ffmpegRes.url;
@@ -197,6 +201,7 @@ export async function GET(request: Request) {
         agentNotes: `Livepeer Agent sequenced ${scenesList.length} scenes into a continuous ${actualDuration}s timeline with synchronized vocals and soundtrack.`,
         generationDurationSeconds: actualDuration,
         livepeerCapability: wasMuxed ? `${modelName} + timeline-assembly` : modelName,
+        characterAnchorUrl: job.characterAnchorUrl,
         scenes: scenesList,
       };
 
@@ -239,10 +244,11 @@ export async function GET(request: Request) {
     const pollResult = await livepeerAgent.pollJobStatus(livepeerJobId);
 
     if (pollResult.status === 'failed') {
-      updateJob(jobId, { status: 'failed', error: pollResult.error || 'Livepeer render failed.' });
+      const friendlyErr = humanizeUpstreamError(pollResult.error || 'Livepeer render failed.');
+      updateJob(jobId, { status: 'failed', error: friendlyErr });
       return NextResponse.json({
         success: true,
-        job: { status: 'failed', error: pollResult.error || 'Livepeer render failed.' },
+        job: { status: 'failed', error: friendlyErr },
       });
     }
 
@@ -322,7 +328,7 @@ export async function GET(request: Request) {
       const versionNumber = job?.versionNumber || 1;
       const actualDuration = job?.singleTakeDuration || 15;
       const requestedDuration = directorBrief?.duration || actualDuration;
-      let truthfulDirectorMessage = directorBrief?.agentMessage || 'Your video take has been composed successfully.';
+      let truthfulDirectorMessage = directorBrief?.agentMessage || `Here is your ${actualDuration}-second video take!`;
 
       if (actualDuration >= 24 || actualDuration >= requestedDuration) {
         truthfulDirectorMessage = truthfulDirectorMessage
@@ -459,28 +465,7 @@ export async function POST(request: Request) {
       validatedImageUrl = imageCheck.sanitized;
     }
 
-    // Step 5: Verify credit balance in Supabase before dispatching compute
-    if (supabase) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credit_balance')
-        .eq('email', effectiveUserId)
-        .maybeSingle();
-
-      const balance = Number(profile?.credit_balance ?? 10.0);
-      if (balance < 0.05) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Insufficient credit balance ($0.05 required for media render). Please top up your balance to continue.',
-            credit_balance: balance,
-          },
-          { status: 402 }
-        );
-      }
-    }
-
-    // Step 6: Direct creative brief via Groq + MemWal (~5s synchronous) with full chat history
+    // Step 5: Direct creative brief via Groq + MemWal (~5s synchronous) with full chat history
     const directorBrief = await directCreativeBrief(sanitizedBrief, {
       email: effectiveUserId,
       feedbackContext: sanitizedFeedback,
@@ -489,7 +474,7 @@ export async function POST(request: Request) {
       chatHistory: Array.isArray(chatHistory) ? chatHistory : undefined,
     });
 
-    // Handle conversational messages immediately without dispatching media
+    // Handle conversational messages immediately without requiring credits or dispatching media
     if (!directorBrief.shouldGenerate) {
       return NextResponse.json({
         success: true,
@@ -503,6 +488,27 @@ export async function POST(request: Request) {
           retrievalCount: 0,
         },
       });
+    }
+
+    // Step 6: Verify credit balance in Supabase before dispatching compute
+    if (supabase) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credit_balance')
+        .eq('email', effectiveUserId)
+        .maybeSingle();
+
+      const balance = Number(profile?.credit_balance ?? 10.0);
+      if (balance < 0.05) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Looks like our studio compute balance is running low ($0.05 needed for a render). Top up your credits and we will keep cooking!',
+            credit_balance: balance,
+          },
+          { status: 402 }
+        );
+      }
     }
 
     // Persist newly discovered creative preferences to decentralized Walrus MemWal
@@ -623,6 +629,30 @@ export async function POST(request: Request) {
       const numScenes = Math.min(4, Math.max(2, Math.ceil(requestedDuration / 15)));
       const totalAssembledDuration = numScenes * 15;
 
+      // Phase 1: Generate Master Concept Anchor Image (Higgsfield Soul ID & Google Character DNA standard)
+      // Creates a canonical visual anchor of characters/environment to condition all downstream takes
+      let characterAnchorUrl: string | undefined;
+      const conceptPrompt = directorBrief.conceptImagePrompt || (
+        directorBrief.characterBible
+          ? `Master character concept sheet: ${directorBrief.characterBible}. 8k resolution, cinematic lighting, neutral composition, front-facing reference.`
+          : null
+      );
+
+      if (conceptPrompt) {
+        try {
+          const anchor = await livepeerAgent.generateCharacterConcept(conceptPrompt);
+          if (anchor) {
+            characterAnchorUrl = anchor;
+            console.log(`[generate:POST] Successfully created character concept anchor: ${characterAnchorUrl}`);
+          }
+        } catch (anchorErr) {
+          console.warn('[generate:POST] Character concept anchor notice:', anchorErr);
+        }
+      }
+
+      // Determine model: use seedance-25-ref2v if we have a character anchor reference, otherwise seedance-25-t2v
+      const multiSceneModel = characterAnchorUrl ? 'seedance-25-ref2v' : modelToUse;
+
       const scenePromptsToUse: string[] = [];
       for (let i = 0; i < numScenes; i++) {
         if (directorBrief.scenePrompts && directorBrief.scenePrompts[i]) {
@@ -639,21 +669,35 @@ export async function POST(request: Request) {
       }
 
       const sceneDispatches = await Promise.all(
-        scenePromptsToUse.map((scenePrompt) =>
-          livepeerAgent.dispatchCreateMedia({
+        scenePromptsToUse.map((scenePrompt) => {
+          const charDna = directorBrief.characterBible ? ` Characters: ${directorBrief.characterBible}.` : '';
+          const fullPrompt = `${scenePrompt}.${charDna} Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
+
+          const sceneArgs: Record<string, any> = {
             action: 'generate',
-            prompt: `${scenePrompt}. Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
-            model_override: modelToUse,
+            prompt: fullPrompt,
+            model_override: multiSceneModel,
             duration: 15,
             async: true,
-          })
-        )
+          };
+
+          if (characterAnchorUrl) {
+            sceneArgs.reference = {
+              reference_url: characterAnchorUrl,
+              mode: 'full',
+              strength: 0.85,
+            };
+            sceneArgs.quality_anchor_url = characterAnchorUrl;
+          }
+
+          return livepeerAgent.dispatchCreateMedia(sceneArgs);
+        })
       );
 
       const anyFailed = sceneDispatches.some(d => d.status === 'failed' || (!d.jobId && !d.url));
       if (anyFailed) {
-        const err = sceneDispatches.find(d => d.error)?.error || 'Failed to dispatch one of the scene takes to Livepeer.';
-        return NextResponse.json({ success: false, error: err }, { status: 500 });
+        const rawErr = sceneDispatches.find(d => d.error)?.error || 'Failed to dispatch one of the scene takes to Livepeer.';
+        return NextResponse.json({ success: false, error: humanizeUpstreamError(rawErr) }, { status: 500 });
       }
 
       const scenes = sceneDispatches.map((disp, idx) => ({
@@ -663,15 +707,19 @@ export async function POST(request: Request) {
         prompt: scenePromptsToUse[idx],
         jobId: disp.jobId,
         url: disp.url,
-        model: modelToUse,
+        model: multiSceneModel,
+        characterAnchorUrl,
       }));
+
+      const stageDesc = `Directing ${totalAssembledDuration}s multi-scene sequence (${numScenes} scenes on ${multiSceneModel}${characterAnchorUrl ? ' with Character Anchor' : ''})...`;
 
       updateJob(jobId, {
         status: 'rendering',
         progress: 20,
-        stageDescription: `Directing ${totalAssembledDuration}s multi-scene sequence (${numScenes} scenes on ${modelToUse})...`,
+        stageDescription: stageDesc,
         isMultiScene: true,
         scenes,
+        characterAnchorUrl,
         scene1JobId: scenes[0]?.jobId,
         scene2JobId: scenes[1]?.jobId,
         scene1Url: scenes[0]?.url,
@@ -683,7 +731,7 @@ export async function POST(request: Request) {
         audioUrl,
         directorBrief,
         syntheticPreferences,
-        modelToUse,
+        modelToUse: multiSceneModel,
         singleTakeDuration: totalAssembledDuration,
         effectiveDuration: totalAssembledDuration,
         expectedSla: '~4 min',
@@ -697,9 +745,11 @@ export async function POST(request: Request) {
         scene2JobId: scenes[1]?.jobId,
         audioJobId,
         isMultiScene: true,
-        model: modelToUse,
+        scenes,
+        characterAnchorUrl,
+        model: multiSceneModel,
         expectedSla: '~4 min',
-        stageDescription: `Directing ${totalAssembledDuration}s multi-scene sequence (${numScenes} scenes on ${modelToUse})...`,
+        stageDescription: stageDesc,
         progress: 20,
       });
     }
@@ -725,7 +775,7 @@ export async function POST(request: Request) {
     if (videoDispatch.status === 'failed') {
       return NextResponse.json({
         success: false,
-        error: videoDispatch.error || 'Failed to dispatch media generation to Livepeer.',
+        error: humanizeUpstreamError(videoDispatch.error || 'Failed to dispatch media generation to Livepeer.'),
       }, { status: 500 });
     }
 
@@ -764,6 +814,6 @@ export async function POST(request: Request) {
       );
     }
     console.error('[generate:POST] Error:', err?.message || error);
-    return NextResponse.json({ success: false, error: err?.message || String(error) }, { status: 500 });
+    return NextResponse.json({ success: false, error: humanizeUpstreamError(err?.message || String(error)) }, { status: 500 });
   }
 }
