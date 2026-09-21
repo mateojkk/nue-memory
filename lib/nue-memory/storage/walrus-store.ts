@@ -47,6 +47,37 @@ export function getUserNamespace(userId?: string): string {
   return clean.startsWith('nue-') ? clean : `nue-${clean}`;
 }
 
+function getLegacyUserNamespace(userId: string): string {
+  const clean = userId
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  if (clean.length > 0 && clean.length <= 48) {
+    return `nue-u-${clean}`;
+  }
+
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  }
+  return `nue-u-${hash.toString(16)}`;
+}
+
+export function getUserNamespaceAliases(userId?: string): string[] {
+  const primary = getUserNamespace(userId);
+  const aliases = [primary];
+  if (userId) {
+    const legacy = getLegacyUserNamespace(userId);
+    if (!aliases.includes(legacy)) {
+      aliases.push(legacy);
+    }
+  }
+  return aliases;
+}
+
 
 /**
  * Encodes a StructuredMemory object into a dual-layer string:
@@ -320,26 +351,26 @@ export class WalrusMemWalStore implements MemoryStore {
    * Performs semantic query against MemWal and applies domain-level filters and ranking
    */
   public async search(query: MemoryQuery): Promise<MemorySearchResult[]> {
-    const targetNamespace = getUserNamespace(query.userId);
-    const client = await this.getClientForNamespace(targetNamespace);
-
     let recalledBlobs: Array<{ blob_id: string; text: string; distance: number; created_at?: string }> = [];
 
-    try {
-      if (client?.recall) {
-        const recallRes = await client.recall({
-          query: query.query,
-          namespace: targetNamespace,
-          topK: (query.limit || 10) * 2, // oversample to allow filtering
-          maxDistance: 1.5,
-        });
+    for (const targetNamespace of getUserNamespaceAliases(query.userId)) {
+      try {
+        const client = await this.getClientForNamespace(targetNamespace);
+        if (client?.recall) {
+          const recallRes = await client.recall({
+            query: query.query,
+            namespace: targetNamespace,
+            topK: (query.limit || 10) * 2, // oversample to allow filtering
+            maxDistance: 1.5,
+          });
 
-        if (recallRes?.results) {
-          recalledBlobs = recallRes.results;
+          if (recallRes?.results) {
+            recalledBlobs = recalledBlobs.concat(recallRes.results);
+          }
         }
+      } catch (err) {
+        console.warn(`[WalrusStore] Error during MemWal recall for namespace ${targetNamespace}:`, err);
       }
-    } catch (err) {
-      console.warn(`[WalrusStore] Error during MemWal recall for namespace ${targetNamespace}:`, err);
     }
 
     const candidateMemories: Array<{ memory: StructuredMemory; distance: number }> = [];
@@ -508,11 +539,11 @@ export class WalrusMemWalStore implements MemoryStore {
     }
     if (filter?.userId) {
       const targetUserId = filter.userId.trim().toLowerCase();
-      const targetNs = getUserNamespace(targetUserId);
+      const namespaceAliases = getUserNamespaceAliases(targetUserId).map((ns) => ns.toLowerCase());
       all = all.filter(
         (m) =>
           m.userId?.toLowerCase() === targetUserId ||
-          m.userId?.toLowerCase() === targetNs ||
+          namespaceAliases.includes(m.userId?.toLowerCase() || '') ||
           m.userId === 'default_user' ||
           !m.userId
       );
@@ -541,25 +572,27 @@ export class WalrusMemWalStore implements MemoryStore {
     domain?: string;
     activeOnly?: boolean;
   }): Promise<StructuredMemory[]> {
-    const targetNamespace = getUserNamespace(filter?.userId);
-    try {
-      const client = await this.getClientForNamespace(targetNamespace);
-      const recallRes = await client.recall({
-        query: 'preference video visual style pacing duration captions audio model layout',
-        namespace: targetNamespace,
-        limit: 50,
-      });
-      if (recallRes?.results) {
-        for (const item of recallRes.results) {
-          const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, targetNamespace);
-          this.memoryCache.set(mem.id, mem);
-          if (item.blob_id) {
-            this.blobToMemoryId.set(item.blob_id, mem.id);
+    for (const targetNamespace of getUserNamespaceAliases(filter?.userId)) {
+      try {
+        const client = await this.getClientForNamespace(targetNamespace);
+        const recallRes = await client.recall({
+          query: 'preference video visual style pacing duration captions audio model layout lyrics vocals soundtrack',
+          namespace: targetNamespace,
+          topK: 50,
+          limit: 50,
+        });
+        if (recallRes?.results) {
+          for (const item of recallRes.results) {
+            const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, targetNamespace);
+            this.memoryCache.set(mem.id, mem);
+            if (item.blob_id) {
+              this.blobToMemoryId.set(item.blob_id, mem.id);
+            }
           }
         }
+      } catch (err) {
+        console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
       }
-    } catch (err) {
-      console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
     }
     return this.listSynchronous(filter);
   }

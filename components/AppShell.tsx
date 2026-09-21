@@ -94,6 +94,59 @@ interface PendingRenderPreflight {
   };
 }
 
+const ACTIONABLE_MEMORY_CATEGORIES = new Set([
+  'visual_style',
+  'audio',
+  'music',
+  'voice',
+  'pacing',
+  'typography',
+  'captions',
+  'color',
+  'transitions',
+  'aspect_ratio',
+  'layout',
+  'duration',
+  'model',
+  'branding',
+  'composition',
+]);
+
+function isActionableMemory(memory: MediaPreference): boolean {
+  const preference = memory.preference?.trim();
+  if (!preference) return false;
+
+  const category = String(memory.category || '').toLowerCase();
+  const lower = preference.toLowerCase();
+
+  if (category === 'general') return false;
+  if (!ACTIONABLE_MEMORY_CATEGORIES.has(category)) return false;
+  if (lower.length < 8) return false;
+
+  // Prompt-specific instructions are not durable taste. They can remain in
+  // Walrus history, but should not be presented as active creative memory.
+  if (/\b(user requested|user specified|the video should|should include|for ages|copyright|watermark|logos?|subtitles?|recognizable|imitate|resemble|nursery rhyme)\b/i.test(lower)) {
+    return false;
+  }
+
+  return true;
+}
+
+function curateMemories(memories: MediaPreference[]): MediaPreference[] {
+  const byKey = new Map<string, MediaPreference>();
+  for (const memory of memories) {
+    if (!isActionableMemory(memory)) continue;
+    const key = `${String(memory.category).toLowerCase()}:${memory.preference.trim().toLowerCase()}`;
+    const existing = byKey.get(key);
+    if (!existing || new Date(memory.updatedAt || memory.createdAt).getTime() > new Date(existing.updatedAt || existing.createdAt).getTime()) {
+      byKey.set(key, memory);
+    }
+  }
+  return Array.from(byKey.values()).sort(
+    (a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
+  );
+}
+
 export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const router = useRouter();
   const currentView = view;
@@ -214,10 +267,10 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     if (!memories.length) return;
     setActiveMemories((prev) => {
       const byKey = new Map<string, MediaPreference>();
-      for (const memory of prev) {
+      for (const memory of curateMemories(prev)) {
         byKey.set(`${memory.category}:${memory.preference}`.toLowerCase(), memory);
       }
-      for (const memory of memories) {
+      for (const memory of curateMemories(memories)) {
         if (!memory.preference?.trim()) continue;
         const key = `${memory.category}:${memory.preference}`.toLowerCase();
         byKey.set(key, {
@@ -292,7 +345,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       const res = await fetch(url);
       const data = await res.json();
       if (data.success && Array.isArray(data.preferences)) {
-        setActiveMemories(data.preferences);
+        setActiveMemories(curateMemories(data.preferences));
       }
       if (data.namespace) {
         setActiveNamespace(data.namespace);

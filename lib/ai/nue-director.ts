@@ -105,6 +105,36 @@ interface DirectorContext {
   chatHistory?: ChatHistoryMessage[];
 }
 
+const ACTIONABLE_MEMORY_CATEGORIES = new Set([
+  'visual_style',
+  'audio',
+  'music',
+  'voice',
+  'pacing',
+  'typography',
+  'captions',
+  'color',
+  'transitions',
+  'aspect_ratio',
+  'layout',
+  'duration',
+  'model',
+  'branding',
+  'composition',
+]);
+
+function isActionableMemoryLike(memory: { category?: string; preference?: string }): boolean {
+  const category = String(memory.category || '').toLowerCase();
+  const preference = memory.preference?.trim();
+  if (!preference) return false;
+  const lower = preference.toLowerCase();
+  if (category === 'general' || !ACTIONABLE_MEMORY_CATEGORIES.has(category)) return false;
+  if (/\b(user requested|user specified|the video should|should include|for ages|copyright|watermark|logos?|subtitles?|recognizable|imitate|resemble|nursery rhyme)\b/i.test(lower)) {
+    return false;
+  }
+  return true;
+}
+
 /**
  * Strips negative disclaimers and legalistic phrasing that trigger false positives
  * in ByteDance Seedance 2.5 and diffusion partner safety filters.
@@ -346,6 +376,7 @@ export async function directCreativeBrief(
       if (mems && mems.length > 0) {
         activeUserMemories = mems
           .filter((m) => m.isActive !== false)
+          .filter(isActionableMemoryLike)
           .slice(0, 8)
           .map((m) => ({ category: m.category || 'visual_style', preference: m.preference }));
       }
@@ -387,19 +418,16 @@ export async function directCreativeBrief(
     fullMessage += `\nProject Title: "${context.projectTitle}"\n`;
   }
 
-  // Only autoSave to Walrus MemWal if user provided creative feedback or revision
-  const shouldAutoSave = Boolean(
-    context.feedbackContext ||
-    /\b(prefer|always|never|my style|i like|i love|pacing|soundtrack|captions?|font|typography|palette|color|cinematic)\b/i.test(userMessage)
-  );
-
   const wrappedModel = withMemWal(groq(modelName), {
     key: process.env.MEMWAL_PRIVATE_KEY,
     accountId: process.env.MEMWAL_ACCOUNT_ID,
     serverUrl: process.env.MEMWAL_SERVER_URL,
     namespace,
     maxMemories: 8,
-    autoSave: shouldAutoSave,
+    // Durable writes are handled by the explicit /api/classify -> /api/memwal
+    // confirmation flow. Letting the LLM middleware auto-save full prompts
+    // creates noisy "general" memories from one-off creative briefs.
+    autoSave: false,
     minRelevance: 0.3,
     debug: process.env.NODE_ENV === 'development',
   });

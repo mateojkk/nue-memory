@@ -7,7 +7,6 @@ import { sanitizeText, validateImageSource } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
 import { MediaPreference, MediaVersion } from '@/lib/types';
-import { memWalService } from '@/lib/walrus-memwal/client';
 import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 
 export const runtime = 'nodejs';
@@ -593,45 +592,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Persist newly discovered creative preferences to decentralized Walrus MemWal
-    if (effectiveUserId) {
-      try {
-        if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Creative Direction') {
-          await memWalService.rememberPreference({
-            id: `pref_visual_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-            userId: effectiveUserId,
-            type: 'media_preference',
-            category: 'visual_style',
-            preference: directorBrief.visualTheme,
-            strength: 'high',
-            scope: 'media',
-            source: 'user_feedback',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            isActive: true,
-          });
-        }
-        if (directorBrief.audioEnabled && directorBrief.audioStyle) {
-          await memWalService.rememberPreference({
-            id: `pref_audio_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-            userId: effectiveUserId,
-            type: 'media_preference',
-            category: 'audio',
-            preference: directorBrief.audioStyle,
-            strength: 'high',
-            scope: 'media',
-            source: 'user_feedback',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            isActive: true,
-          });
-        }
-      } catch (memErr) {
-        console.warn('[Generate] Walrus MemWal decentralized persistence notice:', memErr);
-      }
-    }
-
-    // Build synthetic preferences
+    // Build render trace preferences. These explain what shaped this render,
+    // but are not durable memories unless the user confirms feedback.
     const syntheticPreferences: MediaPreference[] = [];
     const recalledPreferences = Array.isArray(directorBrief.recalledMemories)
       ? directorBrief.recalledMemories.map((memory: any, idx: number) => ({
