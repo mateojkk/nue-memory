@@ -9,7 +9,6 @@ import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
 import { MediaVersion } from '@/lib/types';
 import { memWalService } from '@/lib/walrus-memwal/client';
 import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
-import { sanitizeVisualPromptForVideo, extractFriendlyErrorMessage } from '@/lib/media/prompt-sanitizer';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -65,45 +64,10 @@ export async function GET(request: Request) {
         if (!scene.url && scene.jobId) {
           const poll = await livepeerAgent.pollJobStatus(scene.jobId);
           if (poll.status === 'failed') {
-            if (!(scene as any).retried) {
-              (scene as any).retried = true;
-              console.warn(`[route.ts] Scene ${scene.sceneNumber} failed (${poll.error?.slice(0, 100)}). Auto-retrying with sanitized visual prompt...`);
-              const retryCleanPrompt = sanitizeVisualPromptForVideo(
-                `${job.directorBrief?.visualTheme || 'Cinematic'} aesthetic, animated character motion, joyful playful movements, vibrant lighting.`
-              );
-              try {
-                const retryDispatch = await livepeerAgent.dispatchCreateMedia({
-                  action: 'generate',
-                  prompt: `${retryCleanPrompt}. Visual aesthetic: ${job.directorBrief?.visualTheme || 'Cinematic'}. Pacing: ${job.directorBrief?.pacing || 'moderate'}. Composition: ${job.directorBrief?.aspectRatio || '16:9'}.`,
-                  model_override: job.modelToUse || 'seedance-25-t2v',
-                  duration: 15,
-                  async: true,
-                });
-                if (retryDispatch.jobId) {
-                  scene.jobId = retryDispatch.jobId;
-                  updateJob(jobId, { scenes: scenesList });
-                  allScenesCompleted = false;
-                  continue;
-                }
-              } catch (retryErr) {
-                console.error('[route.ts] Scene retry dispatch error:', retryErr);
-              }
-            }
-
-            // Fallback: If at least one other scene completed, reuse it so user receives the full video without crashing
-            const completedScenes = scenesList.filter(s => Boolean(s.url));
-            if (completedScenes.length > 0) {
-              console.warn(`[route.ts] Scene ${scene.sceneNumber} failed after retry. Using completed scene ${completedScenes[0].sceneNumber} as fallback take.`);
-              scene.url = completedScenes[0].url;
-              updateJob(jobId, { scenes: scenesList });
-              continue;
-            }
-
-            const cleanErr = extractFriendlyErrorMessage(poll.error || `Scene ${scene.sceneNumber} render failed.`);
-            updateJob(jobId, { status: 'failed', error: cleanErr });
+            updateJob(jobId, { status: 'failed', error: poll.error || `Scene ${scene.sceneNumber} render failed.` });
             return NextResponse.json({
               success: true,
-              job: { status: 'failed', error: cleanErr },
+              job: { status: 'failed', error: poll.error || `Scene ${scene.sceneNumber} render failed.` },
             });
           }
           if (poll.status === 'completed' && poll.url) {
@@ -275,11 +239,10 @@ export async function GET(request: Request) {
     const pollResult = await livepeerAgent.pollJobStatus(livepeerJobId);
 
     if (pollResult.status === 'failed') {
-      const cleanErr = extractFriendlyErrorMessage(pollResult.error || 'Livepeer render failed.');
-      updateJob(jobId, { status: 'failed', error: cleanErr });
+      updateJob(jobId, { status: 'failed', error: pollResult.error || 'Livepeer render failed.' });
       return NextResponse.json({
         success: true,
-        job: { status: 'failed', error: cleanErr },
+        job: { status: 'failed', error: pollResult.error || 'Livepeer render failed.' },
       });
     }
 
@@ -663,7 +626,7 @@ export async function POST(request: Request) {
       const scenePromptsToUse: string[] = [];
       for (let i = 0; i < numScenes; i++) {
         if (directorBrief.scenePrompts && directorBrief.scenePrompts[i]) {
-          scenePromptsToUse.push(sanitizeVisualPromptForVideo(directorBrief.scenePrompts[i]));
+          scenePromptsToUse.push(directorBrief.scenePrompts[i]);
         } else {
           const sceneLabels = [
             'Scene 1 Opening: Setting the environment, atmosphere, and initial character motion',
@@ -671,27 +634,25 @@ export async function POST(request: Request) {
             'Scene 3 Climax: Vibrant energy, peak visual detail, and expressive motion',
             'Scene 4 Finale: Celebratory closing sequence and graceful visual ending',
           ];
-          scenePromptsToUse.push(sanitizeVisualPromptForVideo(`${directorBrief.enrichedPrompt} (${sceneLabels[i] || `Scene ${i + 1}`})`));
+          scenePromptsToUse.push(`${directorBrief.enrichedPrompt} (${sceneLabels[i] || `Scene ${i + 1}`})`);
         }
       }
 
       const sceneDispatches = await Promise.all(
-        scenePromptsToUse.map((scenePrompt) => {
-          const cleanPrompt = sanitizeVisualPromptForVideo(scenePrompt);
-          return livepeerAgent.dispatchCreateMedia({
+        scenePromptsToUse.map((scenePrompt) =>
+          livepeerAgent.dispatchCreateMedia({
             action: 'generate',
-            prompt: `${cleanPrompt}. Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
+            prompt: `${scenePrompt}. Visual aesthetic: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`,
             model_override: modelToUse,
             duration: 15,
             async: true,
-          });
-        })
+          })
+        )
       );
 
       const anyFailed = sceneDispatches.some(d => d.status === 'failed' || (!d.jobId && !d.url));
       if (anyFailed) {
-        const rawErr = sceneDispatches.find(d => d.error)?.error || 'Failed to dispatch one of the scene takes to Livepeer.';
-        const err = extractFriendlyErrorMessage(rawErr);
+        const err = sceneDispatches.find(d => d.error)?.error || 'Failed to dispatch one of the scene takes to Livepeer.';
         return NextResponse.json({ success: false, error: err }, { status: 500 });
       }
 
@@ -748,8 +709,7 @@ export async function POST(request: Request) {
       ? Math.min(15, Math.max(5, requestedDuration))
       : Math.min(8, Math.max(3, requestedDuration >= 7 ? 8 : requestedDuration >= 4 ? 5 : 3));
 
-    const cleanSinglePrompt = sanitizeVisualPromptForVideo(directorBrief.enrichedPrompt);
-    const livepeerPrompt = `${cleanSinglePrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
+    const livepeerPrompt = `${directorBrief.enrichedPrompt}. Visual style: ${directorBrief.visualTheme}. Pacing: ${directorBrief.pacing}. Composition: ${directorBrief.aspectRatio}.`;
 
     const dispatchArgs: Record<string, any> = {
       action: isImageToVideo ? 'animate' : 'generate',
