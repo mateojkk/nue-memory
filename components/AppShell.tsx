@@ -521,12 +521,16 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
 
     // Otherwise, project already has versions.
-    // Determine if this is revision feedback on the active version or a brand new scene
+    // Determine if this is a minor revision tweak on the active version or a brand new prompt
     const nextVersionNumber = currentProj.versions.length + 1;
-    const isRevision =
-      /\b(make it|change|darker|lighter|faster|slower|speed up|add|remove|replace|more|less|soundtrack|audio|music|captions?|pacing|color|palette|style|tune|tweak)\b/i.test(text);
+    const cleanLower = text.trim().toLowerCase();
+    const hasCreationIntent = /\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(cleanLower);
+    const isExplicitRevision =
+      !hasCreationIntent &&
+      cleanLower.length < 80 &&
+      /^(make it|can you make it|change (the|it)|adjust|tweak|tune|speed up|slow down|slower|faster|darker|lighter|more (vibrant|energetic|cinematic)|less|remove (the|subtitles|captions)|add (subtitles|captions))\b/i.test(cleanLower);
 
-    if (isRevision) {
+    if (isExplicitRevision) {
       const activeBrief = currentProj.versions[currentProj.currentVersionIndex]?.brief || currentProj.initialPrompt;
       await handleGenerate(
         activeBrief,
@@ -538,7 +542,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         chatHistory
       );
     } else {
-      // Fresh creative prompt within this project with full conversational memory
+      // Fresh creative prompt: always use the user's new prompt text
       await handleGenerate(
         text,
         nextVersionNumber,

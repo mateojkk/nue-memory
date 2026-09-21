@@ -46,12 +46,17 @@ Guidelines:
   * When user asks for 45 seconds: set duration: 45, model: "seedance-25-t2v", and provide 3 scenePrompts.
   * When user asks for 30 seconds: set duration: 30, model: "seedance-25-t2v", and provide 2 scenePrompts.
   * When user asks for quick takes or default: set duration: 15, model: "seedance-25-t2v".
+- MULTI-SCENE CONTINUITY (CRITICAL - ALL SCENES MUST BE DIRECTLY RELATED):
+  * In multi-scene videos (30s, 45s, 60s), all scenes MUST form one single continuous story featuring the EXACT SAME subjects, characters, environment, lighting, and visual theme.
+  * DO NOT create disconnected or unrelated scenes.
+  * Every scenePrompt in scenePrompts MUST explicitly reference the same recurring characters by their physical descriptions and keep them in the same continuous setting.
+  * Scene 1 establishes the setting and characters. Scene 2 continues their actions smoothly. Scene 3 develops the peak narrative movement. Scene 4 resolves the story with a satisfying closing shot.
+- FRESH PROMPTS VS REVISIONS:
+  * If the user introduces a NEW concept, subject, character, or scene, direct the NEW request completely fresh! DO NOT carry over characters, animals, or subjects from previous messages.
+  * Only retain previous characters if the user is explicitly revising or continuing the current scene (e.g. "make them jump higher", "add a sunset to this").
 - CRITICAL LYRICS RULES:
-  * If the user provides lyrics anywhere in their message or conversation history, you MUST use their EXACT lyrics in lyricsPrompt. DO NOT make up new lyrics, DO NOT rewrite them, DO NOT leave out lines. Format with [Verse] / [Chorus] tags.
-  * Ensure the lyrics structure covers the song duration so singing continues across the clip.
-- CONVERSATION CONTINUITY & AESTHETIC FIDELITY:
-  * In a multi-turn chat, you MUST retain the established visual style, characters, world, and theme from earlier messages. Never discard the visual aesthetics explained in previous prompts.
-  * Do NOT replace the user's visual style with generic defaults.
+  * Use lyrics in lyricsPrompt ONLY if the user provided lyrics in their current request. DO NOT invent lyrics, and DO NOT pull lyrics from old conversation topics into a new prompt.
+  * Format user lyrics with [Verse] / [Chorus] tags.
 - Only set shouldGenerate: false for purely conversational greetings ("hi", "hello") with no creative request.
 - Keep agentMessage natural, friendly, and user-focused. Confirm the requested duration (e.g. "Directing your 60-second multi-scene video...").
 - Do NOT use em dashes anywhere. Use standard hyphens only.`;
@@ -411,9 +416,9 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
       scenePrompts = parsedScenes.slice(0, targetSceneCount);
     }
 
-    // Extract singing vocals and lyrics with strict user lyrics priority
-    const userLyrics = extractUserLyrics(userMessage) || extractLyricsFromHistory(context?.chatHistory);
-    const hasLyricsIntent = Boolean(userLyrics) || /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
+    // Extract singing vocals and lyrics ONLY if user provided lyrics or is revising existing song
+    const userLyrics = extractUserLyrics(userMessage) || (context?.feedbackContext ? extractLyricsFromHistory(context?.chatHistory) : null);
+    const hasLyricsIntent = Boolean(userLyrics) || /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|voice)\b/i.test(userMessage);
     const hasVocals = parsed.hasVocals !== undefined ? Boolean(parsed.hasVocals) : hasLyricsIntent;
     const lyricsPrompt = userLyrics || (typeof parsed.lyricsPrompt === 'string' && parsed.lyricsPrompt.trim() ? parsed.lyricsPrompt.trim() : undefined);
 
@@ -458,8 +463,8 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
       scenePrompts = stageTitles.slice(0, targetSceneCount).map((title) => `${userMessage} (${title})`);
     }
 
-    const userLyrics = extractUserLyrics(userMessage) || extractLyricsFromHistory(context?.chatHistory);
-    const hasLyricsIntent = Boolean(userLyrics) || /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|nursery rhyme|voice)\b/i.test(userMessage);
+    const userLyrics = extractUserLyrics(userMessage) || (context?.feedbackContext ? extractLyricsFromHistory(context?.chatHistory) : null);
+    const hasLyricsIntent = Boolean(userLyrics) || /\b(sing|singing|lyrics?|vocals?|vocal|song|rhyme|voice)\b/i.test(userMessage);
 
     return {
       shouldGenerate: shouldGen,
