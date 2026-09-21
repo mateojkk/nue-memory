@@ -1,4 +1,5 @@
 import { MediaPreference, MediaVersion, GenerateMediaRequest } from './types';
+import { extractFriendlyErrorMessage } from '../../media/prompt-sanitizer';
 
 /**
  * Unwraps Livepeer proxy URLs (https://agent.livepeer.org/a/...) to direct cloud storage URLs
@@ -303,9 +304,10 @@ export class LivepeerMediaAgent {
       }
 
       if (content?.status === 'failed' || content?.error) {
+        const rawErr = content.error?.message || (typeof content.error === 'string' ? content.error : 'Render failed');
         return {
           status: 'failed',
-          error: content.error?.message || (typeof content.error === 'string' ? content.error : 'Render failed'),
+          error: extractFriendlyErrorMessage(rawErr),
         };
       }
 

@@ -7,6 +7,7 @@
  */
 import { generateText } from 'ai';
 import { createGroq } from '@ai-sdk/groq';
+import { sanitizeVisualPromptForVideo } from '../media/prompt-sanitizer';
 
 const SYSTEM_PROMPT = `You are Nue, a creative director AI for video production powered by Livepeer's decentralized AI media pipeline.
 
@@ -49,6 +50,12 @@ Guidelines:
 - CRITICAL LYRICS RULES:
   * If the user provides lyrics anywhere in their message or conversation history, you MUST use their EXACT lyrics in lyricsPrompt. DO NOT make up new lyrics, DO NOT rewrite them, DO NOT leave out lines. Format with [Verse] / [Chorus] tags.
   * Ensure the lyrics structure covers the song duration so singing continues across the clip.
+- CRITICAL VISUAL PROMPT RULES (PREVENT COPYRIGHT VIOLATIONS):
+  * Video diffusion models generate video from visual descriptions only.
+  * NEVER include song lyrics, sung words, spoken dialogue, or quoted text ("...") inside scenePrompts or enrichedPrompt!
+  * Video model providers (ByteDance Seedance) run automated copyright filters on prompts and will REJECT generations with partner_validation_failed if lyrics or quotes appear in the video prompt.
+  * Instead, describe visual actions: e.g. "Characters happily dance and clap their hands in rhythm across the sunlit meadow while colorful butterflies flutter."
+  * Put all song lyrics ONLY in the lyricsPrompt field!
 - CONVERSATION CONTINUITY & AESTHETIC FIDELITY:
   * In a multi-turn chat, you MUST retain the established visual style, characters, world, and theme from earlier messages. Never discard the visual aesthetics explained in previous prompts.
   * Do NOT replace the user's visual style with generic defaults.
@@ -419,10 +426,14 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
 
     const model = context?.imageUrl ? 'seedance-25-i2v' : 'seedance-25-t2v';
 
+    const sanitizedScenes = scenePrompts?.map((s) => sanitizeVisualPromptForVideo(s));
+    const rawEnriched = parsed.enrichedPrompt || parsed.prompt || userMessage || text;
+    const sanitizedEnriched = sanitizeVisualPromptForVideo(rawEnriched);
+
     return {
       shouldGenerate: shouldGen,
-      enrichedPrompt: parsed.enrichedPrompt || parsed.prompt || userMessage || text,
-      scenePrompts,
+      enrichedPrompt: sanitizedEnriched,
+      scenePrompts: sanitizedScenes,
       visualTheme: parsed.visualTheme || 'Creative Direction',
       pacing: ['fast', 'moderate', 'cinematic'].includes(parsed.pacing) ? parsed.pacing : 'moderate',
       audioStyle: parsed.audioStyle || 'Ambient modern electronic',
@@ -455,7 +466,7 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
         'Scene 3 Climax: Peak visual motion and energy',
         'Scene 4 Finale: Closing resolution',
       ];
-      scenePrompts = stageTitles.slice(0, targetSceneCount).map((title) => `${userMessage} (${title})`);
+      scenePrompts = stageTitles.slice(0, targetSceneCount).map((title) => sanitizeVisualPromptForVideo(`${userMessage} (${title})`));
     }
 
     const userLyrics = extractUserLyrics(userMessage) || extractLyricsFromHistory(context?.chatHistory);
@@ -463,7 +474,7 @@ function parseDirectorResponse(text: string, userMessage = '', context?: Directo
 
     return {
       shouldGenerate: shouldGen,
-      enrichedPrompt: userMessage,
+      enrichedPrompt: sanitizeVisualPromptForVideo(userMessage),
       scenePrompts,
       visualTheme: 'Creative Direction',
       pacing: 'moderate',
