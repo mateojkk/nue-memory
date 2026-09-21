@@ -451,7 +451,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { brief, versionNumber = 1, projectTitle = 'Media Project', feedbackContext, chatHistory, userId, email, imageUrl } = body;
+    const {
+      brief,
+      versionNumber = 1,
+      projectTitle = 'Media Project',
+      feedbackContext,
+      chatHistory,
+      userId,
+      email,
+      imageUrl,
+      preflightOnly,
+      approvedDirectorBrief,
+    } = body;
 
     // Step 1: Authenticate caller identity
     const auth = await authenticateRequest(request, email || userId);
@@ -506,14 +517,17 @@ export async function POST(request: Request) {
       validatedImageUrl = imageCheck.sanitized;
     }
 
-    // Step 5: Direct creative brief via Groq + MemWal (~5s synchronous) with full chat history
-    const directorBrief = await directCreativeBrief(sanitizedBrief, {
-      email: effectiveUserId,
-      feedbackContext: sanitizedFeedback,
-      projectTitle: sanitizedTitle,
-      imageUrl: validatedImageUrl,
-      chatHistory: Array.isArray(chatHistory) ? chatHistory : undefined,
-    });
+    // Step 5: Direct creative brief via Groq + MemWal (~5s synchronous) with full chat history.
+    // If the user approved a preflight plan, reuse it verbatim so dispatch cannot reinterpret the prompt.
+    const directorBrief = approvedDirectorBrief && typeof approvedDirectorBrief === 'object'
+      ? approvedDirectorBrief
+      : await directCreativeBrief(sanitizedBrief, {
+          email: effectiveUserId,
+          feedbackContext: sanitizedFeedback,
+          projectTitle: sanitizedTitle,
+          imageUrl: validatedImageUrl,
+          chatHistory: Array.isArray(chatHistory) ? chatHistory : undefined,
+        });
 
     // Handle conversational messages immediately without requiring credits or dispatching media
     if (!directorBrief.shouldGenerate) {
@@ -527,6 +541,33 @@ export async function POST(request: Request) {
           appliedMemories: [],
           summaryTokens: [],
           retrievalCount: 0,
+        },
+      });
+    }
+
+    if (preflightOnly) {
+      const requestedDuration = directorBrief.duration || 15;
+      const sceneCount = !validatedImageUrl && requestedDuration > 15
+        ? Math.min(4, Math.max(2, Math.ceil(requestedDuration / 15)))
+        : 1;
+      return NextResponse.json({
+        success: true,
+        preflight: true,
+        directorBrief,
+        plan: {
+          duration: requestedDuration,
+          sceneCount,
+          model: validatedImageUrl ? 'seedance-25-i2v' : 'seedance-25-t2v',
+          aspectRatio: directorBrief.aspectRatio || '16:9',
+          audioEnabled: Boolean(directorBrief.audioEnabled),
+          hasVocals: Boolean(directorBrief.hasVocals || directorBrief.lyricsPrompt),
+          lyricsPrompt: directorBrief.lyricsPrompt,
+          audioStyle: directorBrief.audioStyle,
+          visualTheme: directorBrief.visualTheme,
+          pacing: directorBrief.pacing,
+          scenePrompts: directorBrief.scenePrompts || [],
+          recalledMemories: directorBrief.recalledMemories || [],
+          agentMessage: directorBrief.agentMessage,
         },
       });
     }

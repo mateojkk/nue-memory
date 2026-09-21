@@ -68,6 +68,32 @@ export interface NueAppProps {
   initialProjectId?: string;
 }
 
+interface PendingRenderPreflight {
+  promptText: string;
+  versionNumber: number;
+  feedbackContext?: string;
+  overrideProjectIndex?: number;
+  overrideProjectTitle?: string;
+  imageUrl?: string;
+  chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+  directorBrief: any;
+  plan: {
+    duration: number;
+    sceneCount: number;
+    model: string;
+    aspectRatio: string;
+    audioEnabled: boolean;
+    hasVocals: boolean;
+    lyricsPrompt?: string;
+    audioStyle?: string;
+    visualTheme?: string;
+    pacing?: string;
+    scenePrompts?: string[];
+    recalledMemories?: Array<{ category: string; preference: string }>;
+    agentMessage?: string;
+  };
+}
+
 export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const router = useRouter();
   const currentView = view;
@@ -94,6 +120,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const [pendingPreferences, setPendingPreferences] = useState<
     Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[]
   >([]);
+  const [pendingPreflight, setPendingPreflight] = useState<PendingRenderPreflight | null>(null);
 
   // Loading States
   const [isGenerating, setIsGenerating] = useState(false);
@@ -183,6 +210,25 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   };
 
+  const mergeVisibleMemories = (memories: MediaPreference[]) => {
+    if (!memories.length) return;
+    setActiveMemories((prev) => {
+      const byKey = new Map<string, MediaPreference>();
+      for (const memory of prev) {
+        byKey.set(`${memory.category}:${memory.preference}`.toLowerCase(), memory);
+      }
+      for (const memory of memories) {
+        if (!memory.preference?.trim()) continue;
+        const key = `${memory.category}:${memory.preference}`.toLowerCase();
+        byKey.set(key, {
+          ...memory,
+          isActive: memory.isActive !== false,
+        });
+      }
+      return Array.from(byKey.values());
+    });
+  };
+
   const proposeMemoriesFromFeedback = async (feedback: string, project: CreativeProject | null) => {
     if (!feedback.trim()) return;
     try {
@@ -264,7 +310,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     overrideProjectIndex?: number,
     overrideProjectTitle?: string,
     imageUrl?: string,
-    chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>
+    chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>,
+    options?: { bypassPreflight?: boolean; approvedDirectorBrief?: any }
   ) => {
     setIsGenerating(true);
     setGenerationStage('thinking');
@@ -285,6 +332,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           email: email || undefined,
           userId: email || undefined,
           imageUrl: imageUrl || undefined,
+          preflightOnly: !options?.bypassPreflight,
+          approvedDirectorBrief: options?.approvedDirectorBrief,
         }),
       });
 
@@ -312,6 +361,20 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       // Handle conversational response directly (no video rendering needed)
       if (data.success && data.status === 'completed' && data.result) {
         data = { success: true, ...data.result };
+      }
+      else if (data.success && data.preflight && data.directorBrief && data.plan) {
+        setPendingPreflight({
+          promptText,
+          versionNumber,
+          feedbackContext,
+          overrideProjectIndex,
+          overrideProjectTitle,
+          imageUrl,
+          chatHistory,
+          directorBrief: data.directorBrief,
+          plan: data.plan,
+        });
+        return;
       }
       // Asynchronous Job Polling Architecture
       else if (data.success && data.jobId) {
@@ -395,6 +458,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         deductCredits?.(0.05);
 
         // Re-sync user memories so newly discovered preferences appear in UI immediately
+        mergeVisibleMemories(newVersion.appliedPreferences || []);
         if (email) {
           fetchMemories(email);
         }
@@ -485,6 +549,47 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       setServerModel(undefined);
       setServerExpectedSla(undefined);
     }
+  };
+
+  const handleApprovePreflight = async () => {
+    const pending = pendingPreflight;
+    if (!pending) return;
+    setPendingPreflight(null);
+    await handleGenerate(
+      pending.promptText,
+      pending.versionNumber,
+      pending.feedbackContext,
+      pending.overrideProjectIndex,
+      pending.overrideProjectTitle,
+      pending.imageUrl,
+      pending.chatHistory,
+      { bypassPreflight: true, approvedDirectorBrief: pending.directorBrief }
+    );
+  };
+
+  const handleCancelPreflight = () => {
+    if (!pendingPreflight) return;
+    const cancelMsg: ChatMessage = {
+      id: `msg-preflight-cancel-${Date.now()}`,
+      sender: 'agent',
+      content: 'Paused before rendering. Adjust the prompt and send it again when the plan looks right.',
+      timestamp: new Date().toISOString(),
+    };
+    const targetIndex = pendingPreflight.overrideProjectIndex !== undefined
+      ? pendingPreflight.overrideProjectIndex
+      : currentProjectIndex;
+    setPendingPreflight(null);
+    setMessages((prev) => [...prev, cancelMsg]);
+    setProjects((prev) => {
+      const updated = [...prev];
+      if (updated[targetIndex]) {
+        const proj = { ...updated[targetIndex] };
+        proj.messages = [...(proj.messages || []), cancelMsg];
+        updated[targetIndex] = proj;
+        persistProjectToDb(proj);
+      }
+      return updated;
+    });
   };
 
   // Handle User Message / Feedback
@@ -968,6 +1073,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
             }
           }}
           pendingPreferences={pendingPreferences}
+          pendingPreflight={pendingPreflight?.plan || null}
           onConfirmRemember={handleConfirmRemember}
           onDismissPending={() => {
             setPendingPreferences([]);
@@ -981,6 +1087,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
               },
             ]);
           }}
+          onConfirmPreflight={handleApprovePreflight}
+          onCancelPreflight={handleCancelPreflight}
           isSavingMemory={isSavingMemory}
           onNewProject={(title, prompt) => handleCreateNewProject(title, prompt)}
           onNewChat={handleNewChat}

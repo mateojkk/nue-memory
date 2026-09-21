@@ -52,8 +52,25 @@ interface MediaMemoryWorkspaceProps {
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
   pendingPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
+  pendingPreflight?: {
+    duration: number;
+    sceneCount: number;
+    model: string;
+    aspectRatio: string;
+    audioEnabled: boolean;
+    hasVocals: boolean;
+    lyricsPrompt?: string;
+    audioStyle?: string;
+    visualTheme?: string;
+    pacing?: string;
+    scenePrompts?: string[];
+    recalledMemories?: Array<{ category: string; preference: string }>;
+    agentMessage?: string;
+  } | null;
   onConfirmRemember: () => void;
   onDismissPending: () => void;
+  onConfirmPreflight?: () => void;
+  onCancelPreflight?: () => void;
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
   onNewChat?: () => void;
@@ -87,8 +104,11 @@ export function MediaMemoryWorkspace({
   onSendMessage,
   onRegenerate,
   pendingPreferences,
+  pendingPreflight,
   onConfirmRemember,
   onDismissPending,
+  onConfirmPreflight,
+  onCancelPreflight,
   isSavingMemory,
   onNewProject,
   onNewChat,
@@ -1010,6 +1030,129 @@ export function MediaMemoryWorkspace({
                   onDismiss={onDismissPending}
                   isSaving={isSavingMemory}
                 />
+              </div>
+            )}
+
+            {/* Render Preflight Approval */}
+            {pendingPreflight && (
+              <div className="pl-11 pr-2 animate-fadeIn">
+                <div className="rounded-2xl bg-[var(--surface)] shadow-2xl p-4 sm:p-5 space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-[var(--surface-2)] flex items-center justify-center text-[var(--accent)] shrink-0">
+                        <CheckCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-medium text-[var(--fg)]">Approve render plan</h4>
+                        <p className="text-[11px] text-[var(--fg-muted)] mt-0.5">
+                          Nue parsed your prompt. Review this before spending a render.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onCancelPreflight}
+                      className="p-1 rounded-md text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
+                      title="Cancel render"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="p-2.5 rounded-lg bg-[var(--surface-2)]">
+                      <div className="text-[10px] font-mono uppercase text-[var(--fg-faint)]">Duration</div>
+                      <div className="font-medium text-[var(--fg)]">{pendingPreflight.duration}s</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[var(--surface-2)]">
+                      <div className="text-[10px] font-mono uppercase text-[var(--fg-faint)]">Scenes</div>
+                      <div className="font-medium text-[var(--fg)]">{pendingPreflight.sceneCount}</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[var(--surface-2)]">
+                      <div className="text-[10px] font-mono uppercase text-[var(--fg-faint)]">Model</div>
+                      <div className="font-medium text-[var(--fg)] truncate">{pendingPreflight.model}</div>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[var(--surface-2)]">
+                      <div className="text-[10px] font-mono uppercase text-[var(--fg-faint)]">Audio</div>
+                      <div className="font-medium text-[var(--fg)]">
+                        {pendingPreflight.audioEnabled
+                          ? pendingPreflight.hasVocals
+                            ? 'Vocals'
+                            : 'Soundtrack'
+                          : 'Off'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {pendingPreflight.lyricsPrompt && (
+                    <div className="p-3 rounded-xl bg-[var(--surface-2)]">
+                      <div className="text-[10px] font-mono uppercase text-[var(--accent)] mb-2">
+                        Exact lyrics Nue will send
+                      </div>
+                      <pre className="whitespace-pre-wrap text-[11px] leading-relaxed text-[var(--fg)] font-mono max-h-40 overflow-auto">
+                        {pendingPreflight.lyricsPrompt}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-[11px] text-[var(--fg-muted)]">
+                      <Brain className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      <span>
+                        {pendingPreflight.recalledMemories?.length
+                          ? 'Recalled memory rules for this render'
+                          : 'No prior memory rules recalled for this render'}
+                      </span>
+                    </div>
+                    {pendingPreflight.recalledMemories && pendingPreflight.recalledMemories.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {pendingPreflight.recalledMemories.slice(0, 5).map((memory, idx) => (
+                          <span
+                            key={`${memory.category}-${idx}`}
+                            className="px-2 py-0.5 rounded-md bg-emerald-950/20 text-emerald-400 text-[10px] font-mono max-w-[260px] truncate"
+                            title={memory.preference}
+                          >
+                            {memory.category}: {memory.preference}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {pendingPreflight.scenePrompts && pendingPreflight.scenePrompts.length > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[10px] font-mono uppercase text-[var(--fg-faint)]">
+                        Scene plan
+                      </div>
+                      <div className="space-y-1.5 max-h-36 overflow-auto pr-1">
+                        {pendingPreflight.scenePrompts.map((scene, idx) => (
+                          <div key={idx} className="p-2 rounded-lg bg-[var(--surface-2)] text-[11px] text-[var(--fg-muted)] leading-relaxed">
+                            <span className="text-[var(--fg)] font-medium">Scene {idx + 1}: </span>
+                            {scene}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={onCancelPreflight}
+                      className="px-3 py-1.5 rounded-md text-xs font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition"
+                    >
+                      Edit prompt
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onConfirmPreflight}
+                      className="px-4 py-1.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium flex items-center gap-1.5 shadow-sm transition"
+                    >
+                      <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Approve & render</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

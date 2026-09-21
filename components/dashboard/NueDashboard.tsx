@@ -71,8 +71,25 @@ interface NueDashboardProps {
   onSendMessage: (text: string, imageUrl?: string) => void;
   onRegenerate: () => void;
   pendingPreferences: Omit<MediaPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>[];
+  pendingPreflight?: {
+    duration: number;
+    sceneCount: number;
+    model: string;
+    aspectRatio: string;
+    audioEnabled: boolean;
+    hasVocals: boolean;
+    lyricsPrompt?: string;
+    audioStyle?: string;
+    visualTheme?: string;
+    pacing?: string;
+    scenePrompts?: string[];
+    recalledMemories?: Array<{ category: string; preference: string }>;
+    agentMessage?: string;
+  } | null;
   onConfirmRemember: () => void;
   onDismissPending: () => void;
+  onConfirmPreflight?: () => void;
+  onCancelPreflight?: () => void;
   isSavingMemory: boolean;
   onNewProject: (title?: string, prompt?: string) => void;
   onNewChat?: () => void;
@@ -109,8 +126,11 @@ export function NueDashboard({
   onSendMessage,
   onRegenerate,
   pendingPreferences,
+  pendingPreflight,
   onConfirmRemember,
   onDismissPending,
+  onConfirmPreflight,
+  onCancelPreflight,
   isSavingMemory,
   onNewProject,
   onNewChat,
@@ -265,8 +285,11 @@ export function NueDashboard({
             onSendMessage={onSendMessage}
             onRegenerate={onRegenerate}
             pendingPreferences={pendingPreferences}
+            pendingPreflight={pendingPreflight}
             onConfirmRemember={onConfirmRemember}
             onDismissPending={onDismissPending}
+            onConfirmPreflight={onConfirmPreflight}
+            onCancelPreflight={onCancelPreflight}
             isSavingMemory={isSavingMemory}
             onNewProject={onNewProject}
             onNewChat={onNewChat}
