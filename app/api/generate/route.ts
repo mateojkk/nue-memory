@@ -7,6 +7,7 @@ import { sanitizeText, validateImageSource } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
 import { MediaVersion } from '@/lib/types';
+import { memWalService } from '@/lib/walrus-memwal/client';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -475,33 +476,41 @@ export async function POST(request: Request) {
       });
     }
 
-    // Automatically persist newly discovered creative preferences to Supabase memories table
-    if (supabase && effectiveUserId) {
+    // Persist newly discovered creative preferences to decentralized Walrus MemWal
+    if (effectiveUserId) {
       try {
         if (directorBrief.visualTheme && directorBrief.visualTheme !== 'Creative Direction') {
-          await supabase.from('memories').upsert({
-            id: `pref_visual_${effectiveUserId}`,
-            user_id: effectiveUserId,
+          await memWalService.rememberPreference({
+            id: `pref_visual_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            userId: effectiveUserId,
+            type: 'media_preference',
             category: 'visual_style',
             preference: directorBrief.visualTheme,
             strength: 'high',
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
+            scope: 'media',
+            source: 'user_feedback',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isActive: true,
+          });
         }
         if (directorBrief.audioEnabled && directorBrief.audioStyle) {
-          await supabase.from('memories').upsert({
-            id: `pref_audio_${effectiveUserId}`,
-            user_id: effectiveUserId,
+          await memWalService.rememberPreference({
+            id: `pref_audio_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            userId: effectiveUserId,
+            type: 'media_preference',
             category: 'audio',
             preference: directorBrief.audioStyle,
             strength: 'high',
-            is_active: true,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'id' });
+            scope: 'media',
+            source: 'user_feedback',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isActive: true,
+          });
         }
       } catch (memErr) {
-        console.warn('Memory auto-persist notice:', memErr);
+        console.warn('[Generate] Walrus MemWal decentralized persistence notice:', memErr);
       }
     }
 

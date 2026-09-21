@@ -80,6 +80,7 @@ export interface ChatHistoryMessage {
 
 interface DirectorContext {
   email: string;
+  userId?: string;
   feedbackContext?: string;
   projectTitle?: string;
   imageUrl?: string;
@@ -253,26 +254,21 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
     };
   }
 
-  // 1. Fetch active creative memories for this user
+  // 1. Fetch active creative memories from decentralized Walrus MemWal
   let activeUserMemories: Array<{ category: string; preference: string }> = [];
-  if (context.email) {
+  const userIdentifier = context.email || context.userId;
+  if (userIdentifier) {
     try {
-      const { supabase } = await import('../supabase/client');
-      if (supabase) {
-        const { data: memData } = await supabase
-          .from('memories')
-          .select('category, preference')
-          .eq('user_id', context.email)
-          .eq('is_active', true)
-          .neq('category', 'theme')
-          .order('updated_at', { ascending: false })
-          .limit(8);
-        if (memData && memData.length > 0) {
-          activeUserMemories = memData;
-        }
+      const { memWalService } = await import('../walrus-memwal/client');
+      const mems = await memWalService.getAllPreferencesAsync(userIdentifier, false);
+      if (mems && mems.length > 0) {
+        activeUserMemories = mems
+          .filter((m) => m.isActive !== false)
+          .slice(0, 8)
+          .map((m) => ({ category: m.category || 'visual_style', preference: m.preference }));
       }
     } catch (e) {
-      console.warn('[nue-director] Supabase memory fetch notice:', e);
+      console.warn('[nue-director] Walrus MemWal memory fetch notice:', e);
     }
   }
 
@@ -280,11 +276,11 @@ Do NOT output JSON. Do NOT generate a video. Do NOT use em dashes anywhere. Use 
   let fullMessage = '';
 
   if (activeUserMemories.length > 0) {
-    fullMessage += `=== ACTIVE USER CREATIVE MEMORIES (ESTABLISHED TASTE & PREFERENCES) ===\n`;
+    fullMessage += `=== ACTIVE USER CREATIVE MEMORIES (DECENTRALIZED WALRUS MEMWAL) ===\n`;
     for (const mem of activeUserMemories) {
       fullMessage += `- [${mem.category.toUpperCase()}]: ${mem.preference}\n`;
     }
-    fullMessage += `MANDATORY: Honor and incorporate the user's active creative memories above into the visual style, pacing, and audio mood unless the user explicitly overrides them.\n\n`;
+    fullMessage += `MANDATORY: Honor and incorporate the user's active decentralized creative memories into the visual style, pacing, and audio mood unless the user explicitly overrides them.\n\n`;
   }
 
   if (context.chatHistory && context.chatHistory.length > 0) {
