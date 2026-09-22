@@ -23,7 +23,7 @@ function AnnouncementBar() {
       <div className="max-w-7xl mx-auto px-4 h-11 flex items-center justify-center gap-2 text-xs font-mono text-[var(--fg-muted)]">
         <span className="text-[var(--accent)]">●</span>
         <span>
-          Persistent memory infrastructure for AI agents. Introducing Nue Motion with $10 free credit.
+          Nue Motion remembers your style across every video · $10 free credit to start.
         </span>
         <button
           onClick={() => {
@@ -41,11 +41,7 @@ function AnnouncementBar() {
 }
 import { NueNavbar } from '@/components/NueNavbar';
 import { HeroSection } from '@/components/landing/HeroSection';
-import { QuickstartSection } from '@/components/landing/QuickstartSection';
 import { DifferentiatorSection } from '@/components/landing/DifferentiatorSection';
-import { LifecycleSection } from '@/components/landing/LifecycleSection';
-import { MemoryObjectsSection } from '@/components/landing/MemoryObjectsSection';
-import { EvolutionSection } from '@/components/landing/EvolutionSection';
 import { NueMotionShowcase } from '@/components/landing/NueMotionShowcase';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { NueDashboard, type DashboardTab } from '@/components/dashboard/NueDashboard';
@@ -1333,35 +1329,23 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       <HeroSection
         onGetStarted={() => router.push('/motion')}
         onViewDocs={() => {
-          document.getElementById('docs')?.scrollIntoView({ behavior: 'smooth' });
+          document.getElementById('product')?.scrollIntoView({ behavior: 'smooth' });
         }}
       />
 
-      {/* 3. Quickstart SDK Code Section */}
-      <QuickstartSection />
-
-      {/* 4. Core Differentiator: Memory vs Conversation Storage */}
-      <DifferentiatorSection />
-
-      {/* 5. 7-Stage Memory Lifecycle Architecture */}
-      <LifecycleSection />
-
-      {/* 6. Domain-Agnostic Memory Objects & Schema */}
-      <MemoryObjectsSection />
-
-      {/* 7. Memory Conflict & Evolution */}
-      <EvolutionSection />
-
-      {/* 8. Flagship Shipped Feature: Nue Motion Showcase */}
+      {/* 3. Nue Motion Showcase: the product first */}
       <NueMotionShowcase
         onOpenWorkspace={() => router.push('/motion')}
       />
 
-      {/* 9. Landing Footer */}
+      {/* 4. How learning works (compact band + CTA) */}
+      <DifferentiatorSection onOpenWorkspace={() => router.push('/motion')} />
+
+      {/* 5. Landing Footer */}
       <LandingFooter
         onOpenWorkspace={() => router.push('/motion')}
         onOpenDocs={() => {
-          document.getElementById('docs')?.scrollIntoView({ behavior: 'smooth' });
+          document.getElementById('product')?.scrollIntoView({ behavior: 'smooth' });
         }}
       />
     </div>

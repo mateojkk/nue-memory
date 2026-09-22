@@ -12,7 +12,7 @@ interface LandingFooterProps {
 
 export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProps) {
   return (
-    <footer className="px-6 py-16 bg-[var(--surface-2)] border-t border-[var(--surface-2)] text-xs text-[var(--fg-muted)] font-light">
+    <footer className="px-6 py-16 bg-[var(--surface-2)] text-xs text-[var(--fg-muted)] font-light">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12 text-left">
         {/* Brand Column */}
         <div className="space-y-3">
@@ -48,11 +48,11 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
             </li>
             <li>
               <a href="#product" className="hover:text-[var(--fg)] transition">
-                Differentiator Engine
+                How learning works
               </a>
             </li>
             <li>
-              <a href="#developers" className="hover:text-[var(--fg)] transition">
+              <a href="#product" className="hover:text-[var(--fg)] transition">
                 Additive history
               </a>
             </li>
@@ -77,7 +77,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
           <ul className="space-y-2 text-[var(--fg-muted)] font-light mb-5">
             <li>
               <button onClick={onOpenDocs} className="hover:text-[var(--fg)] transition text-left">
-                Documentation
+                How it works
               </button>
             </li>
             <li>
@@ -112,7 +112,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto pt-6 border-t border-[var(--surface-2)] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[var(--fg-faint)] gap-4">
+      <div className="max-w-7xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-[11px] text-[var(--fg-faint)] gap-4">
         <div>
           &copy; 2026 Nue &middot; Founded by NextMathLabs. All rights reserved.
         </div>

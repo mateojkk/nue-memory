@@ -15,15 +15,15 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       {/* Background ambient radial glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[var(--accent)]/40 pointer-events-none rounded-full blur-3xl" />
 
-      {/* Headline: Infrastructure-First */}
+      {/* Headline: creator-first */}
       <h1 className="text-4xl sm:text-6xl md:text-[64px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans">
-        The memory infrastructure layer for AI agents.
+        Direct video with an agent that remembers your style.
       </h1>
 
       {/* Supporting Copy */}
       <Reveal delay={120}>
         <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-          AI agents forget between sessions. Nue gives them durable, append-only memory - extracting what matters, deduping repeats, and persisting preferences across projects and sessions.
+          Nue Motion is a video agent with specialized memory. Tell it your taste once - pacing, music, captions - and it applies it to every render. Your rules live in Nue Motion memory, durably stored on Walrus.
         </p>
       </Reveal>
 
@@ -40,9 +40,9 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
 
           <button
             onClick={onViewDocs}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--fg-soft)] hover:text-[var(--fg)] text-sm font-medium border border-[var(--border)] transition"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-2)] text-[var(--fg-soft)] hover:text-[var(--fg)] text-sm font-medium transition"
           >
-            <span>Developer Quickstart</span>
+            <span>How it learns</span>
           </button>
         </div>
       </Reveal>
@@ -51,8 +51,8 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       <Reveal delay={320}>
         <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch text-left">
           {/* Left Column: Architecture Pipeline (5 cols) */}
-          <div className="lg:col-span-5 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden shadow-xs">
-            <div className="flex items-center justify-between pb-4 border-b border-[var(--border)]">
+          <div className="lg:col-span-5 rounded-xl bg-[var(--surface)] p-6 sm:p-7 flex flex-col justify-between relative overflow-hidden shadow-xs">
+            <div className="flex items-center justify-between pb-4">
               <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--fg-muted)]">
                 Architecture Pipeline
               </span>
@@ -64,7 +64,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
 
             {/* Memory Flow Diagram */}
             <div className="py-6 flex flex-col items-center justify-center font-mono text-xs">
-              <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-center text-[var(--fg)] font-medium shadow-xs">
+              <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] text-center text-[var(--fg)] font-medium shadow-xs">
                 AGENT RUNTIME
               </div>
 
@@ -72,7 +72,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
                 <div className="absolute bottom-0 -left-1 text-[10px] text-[var(--fg-muted)]">▼</div>
               </div>
 
-              <div className="w-full max-w-[240px] p-4 rounded-md bg-[var(--surface-2)] border border-[var(--accent)]/40 text-center shadow-xs">
+              <div className="w-full max-w-[240px] p-4 rounded-md bg-[var(--surface-2)] text-center shadow-xs">
                 <span className="text-[var(--fg)] font-medium block">NUE MEMORY ENGINE</span>
                 <span className="text-[10px] text-[var(--fg-muted)] block mt-1">
                   extract · dedupe · persist
@@ -83,25 +83,25 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
                 <div className="absolute bottom-0 -left-1 text-[10px] text-[var(--fg-muted)]">▼</div>
               </div>
 
-              <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-center text-[var(--fg)] font-medium shadow-xs">
+              <div className="w-full max-w-[240px] px-4 py-2.5 rounded-md bg-[var(--surface-2)] text-center text-[var(--fg)] font-medium shadow-xs">
                 DURABLE STORAGE
               </div>
             </div>
 
-            <div className="pt-4 border-t border-[var(--border)] text-xs text-[var(--fg-muted)] font-light flex items-center justify-between">
+            <div className="pt-4 text-xs text-[var(--fg-muted)] font-light flex items-center justify-between">
               <span>Decentralized blob persistence</span>
               <span className="text-[var(--fg-faint)] font-medium text-[10px]">Zero Lock-in</span>
             </div>
           </div>
 
           {/* Right Column: Live Memory Extraction Visual (7 cols) */}
-          <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] border border-[var(--border)] overflow-hidden flex flex-col p-6 sm:p-7 shadow-xs justify-between">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)] mb-4">
+          <div className="lg:col-span-7 rounded-xl bg-[var(--surface)] overflow-hidden flex flex-col p-6 sm:p-7 shadow-xs justify-between">
+            <div className="flex items-center justify-between pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
                 <span className="text-xs font-medium text-[var(--fg)]">Continuous Memory Extraction</span>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--fg-muted)] border border-[var(--border)]">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--fg-muted)]">
                 Illustrated example
               </span>
             </div>
@@ -112,7 +112,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
                 <div className="text-[10px] font-mono text-[var(--fg-muted)] uppercase tracking-wider">
                   1. Unstructured User Interaction
                 </div>
-                <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs text-[var(--fg-soft)] font-mono">
+                <div className="p-3 rounded-lg bg-[var(--surface-2)] text-xs text-[var(--fg-soft)] font-mono">
                   &ldquo;Make the captions larger, the pacing faster, and drop the dramatic music.&rdquo;
                 </div>
               </div>
@@ -124,11 +124,11 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
                   <span className="text-emerald-500 text-[9px] font-medium">Confidence &gt; 90%</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div className="p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs font-mono">
+                  <div className="p-2.5 rounded-lg bg-[var(--surface-2)] text-xs font-mono">
                     <div className="text-[9px] text-[var(--accent)] uppercase font-semibold">Typography</div>
                     <div className="text-[var(--fg)] text-[11px] mt-0.5 truncate">Prefer large, high-contrast captions</div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs font-mono">
+                  <div className="p-2.5 rounded-lg bg-[var(--surface-2)] text-xs font-mono">
                     <div className="text-[9px] text-[var(--accent)] uppercase font-semibold">Pacing</div>
                     <div className="text-[var(--fg)] text-[11px] mt-0.5 truncate">Prefer fast, energetic introductions</div>
                   </div>
@@ -136,7 +136,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
               </div>
 
               {/* Step 3: Persistence & Automatic Recall */}
-              <div className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--accent)]/30 flex items-center justify-between text-xs font-mono">
+              <div className="p-3 rounded-lg bg-[var(--surface-2)] flex items-center justify-between text-xs font-mono">
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span className="text-[var(--fg)] text-[11px]">
@@ -149,7 +149,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
               </div>
             </div>
 
-            <div className="pt-3.5 mt-4 border-t border-[var(--border)] text-[11px] text-[var(--fg-muted)] flex items-center justify-between">
+            <div className="pt-3.5 mt-4 text-[11px] text-[var(--fg-muted)] flex items-center justify-between">
               <span>Eliminates repeating creative preferences across projects</span>
               <span className="text-[var(--fg-faint)] font-mono text-[10px]">Active Memory Ledger</span>
             </div>

@@ -58,7 +58,7 @@ export function LifecycleSection() {
   ];
 
   return (
-    <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
+    <section className="py-24 px-4 max-w-7xl mx-auto font-light">
       {/* Section Header */}
       <Reveal>
         <div className="text-left mb-16">
@@ -80,10 +80,10 @@ export function LifecycleSection() {
           {stages.map((st, idx) => (
             <Reveal key={st.name} delay={idx * 80}>
               <div
-                className="p-5 rounded-lg bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-accent)] transition flex flex-col justify-between group min-h-[220px] relative"
+                className="p-5 rounded-lg bg-[var(--surface)] transition flex flex-col justify-between group min-h-[220px] relative shadow-xs"
               >
               <div>
-                <div className="flex items-center justify-between pb-3 mb-3 border-b border-[var(--border)]">
+                <div className="flex items-center justify-between pb-3 mb-3">
                   <span className="text-[11px] font-medium text-[var(--fg-muted)] font-medium">
                     {st.step}
                   </span>
@@ -103,7 +103,7 @@ export function LifecycleSection() {
                 </p>
               </div>
 
-              <div className="pt-3 border-t border-[var(--surface-2)] text-[10px] font-medium text-[var(--fg-faint)] flex items-center justify-between">
+              <div className="pt-3 text-[10px] font-medium text-[var(--fg-faint)] flex items-center justify-between">
                 <span>Stage {st.step}</span>
                 {idx < stages.length - 1 ? (
                   <span className="text-[var(--fg-faint)]">→</span>

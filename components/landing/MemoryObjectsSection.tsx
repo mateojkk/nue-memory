@@ -68,7 +68,7 @@ export function MemoryObjectsSection() {
   };
 
   return (
-    <section className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
+    <section className="py-24 px-4 max-w-7xl mx-auto font-light">
       <div className="text-left mb-12">
         <div className="text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider mb-2">
           Structured Schema

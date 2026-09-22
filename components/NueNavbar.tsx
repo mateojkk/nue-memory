@@ -29,14 +29,11 @@ export function NueNavbar({}: NueNavbarProps = {}) {
 
           {/* Minimal Navigation */}
           <nav className="hidden md:flex items-center gap-6 text-[13px] font-medium text-[var(--fg-muted)]">
+            <a href="/#nue-motion" className="hover:text-[var(--fg)] transition">
+              Nue Motion
+            </a>
             <a href="/#product" className="hover:text-[var(--fg)] transition">
-              Product
-            </a>
-            <a href="/#developers" className="hover:text-[var(--fg)] transition">
-              Developers
-            </a>
-            <a href="/#docs" className="hover:text-[var(--fg)] transition">
-              Docs
+              How it learns
             </a>
           </nav>
         </div>

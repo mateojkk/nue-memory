@@ -10,7 +10,7 @@ interface NueMotionShowcaseProps {
 
 export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
   return (
-    <section id="nue-motion" className="py-24 px-4 max-w-7xl mx-auto border-t border-[var(--border)] font-light">
+    <section id="nue-motion" className="py-24 px-4 max-w-7xl mx-auto font-light">
       {/* Section Header */}
       <Reveal>
         <div className="text-left mb-14">
@@ -33,9 +33,9 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
       <Reveal delay={120}>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch mb-14">
         {/* Project 01 Card */}
-        <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col justify-between shadow-xl">
+        <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] p-6 flex flex-col justify-between shadow-xl">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between pb-3">
               <span className="text-xs font-medium text-[var(--fg-muted)] font-medium">PROJECT 01</span>
               <span className="text-[11px] font-medium text-[var(--fg-faint)]">SaaS App Promo</span>
             </div>
@@ -44,7 +44,7 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
               <span className="text-[11px] font-medium text-[var(--fg-muted)] uppercase tracking-wider block">
                 User Review Feedback:
               </span>
-              <div className="p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] font-medium text-xs text-[var(--fg-soft)] space-y-1.5">
+              <div className="p-3 rounded bg-[var(--surface-2)] font-medium text-xs text-[var(--fg-soft)] space-y-1.5">
                 <div>&bull; &ldquo;Make the captions larger.&rdquo;</div>
                 <div>&bull; &ldquo;Remove dramatic music.&rdquo;</div>
                 <div>&bull; &ldquo;Keep the visual style minimal.&rdquo;</div>
@@ -56,7 +56,7 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
             </p>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-medium text-[var(--fg-faint)] flex items-center justify-between">
+          <div className="pt-4 mt-6 text-xs font-medium text-[var(--fg-faint)] flex items-center justify-between">
             <span>Feedback parsed</span>
             <span className="text-[var(--fg-muted)]">Extracted →</span>
           </div>
@@ -65,7 +65,7 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
         {/* Central Nue Memory Layer */}
         <div className="lg:col-span-4 rounded-xl bg-[var(--border)] border border-[var(--accent)]/40 p-6 flex flex-col justify-between shadow-xl shadow-[var(--accent)]/5 relative overflow-hidden">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between pb-3">
               <span className="text-xs font-medium text-[var(--fg)] font-medium flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-[var(--fg-muted)]" />
                 NUE MEMORY
@@ -101,16 +101,16 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
             </p>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-medium text-[var(--fg-muted)] flex items-center justify-between">
+          <div className="pt-4 mt-6 text-xs font-medium text-[var(--fg-muted)] flex items-center justify-between">
             <span>Durable encrypted storage</span>
             <span className="text-emerald-400">Durable →</span>
           </div>
         </div>
 
         {/* Project 02 Card */}
-        <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-6 flex flex-col justify-between shadow-xl">
+        <div className="lg:col-span-4 rounded-xl bg-[var(--surface)] p-6 flex flex-col justify-between shadow-xl">
           <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div className="flex items-center justify-between pb-3">
               <span className="text-xs font-medium text-emerald-400 font-medium">PROJECT 02</span>
               <span className="text-[11px] font-medium text-[var(--fg-faint)]">New Product Launch</span>
             </div>
@@ -119,12 +119,12 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
               <span className="text-[11px] font-medium text-[var(--fg-muted)] uppercase tracking-wider block">
                 User Prompt (Zero Reprompt):
               </span>
-              <div className="p-3 rounded bg-[var(--surface-2)] border border-[var(--border)] font-medium text-xs text-[var(--fg)]">
+              <div className="p-3 rounded bg-[var(--surface-2)] font-medium text-xs text-[var(--fg)]">
                 &ldquo;Create a launch video for my new product.&rdquo;
               </div>
             </div>
 
-            <div className="p-3 rounded bg-[var(--border)] border border-emerald-900/50 text-xs font-medium text-emerald-300 space-y-1">
+            <div className="p-3 rounded bg-[var(--border)] text-xs font-medium text-emerald-300 space-y-1">
               <span className="text-[10px] text-emerald-400 font-medium uppercase block">
                 Nue Motion Recalls For Your Approval:
               </span>
@@ -138,7 +138,7 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
             </p>
           </div>
 
-          <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-medium text-emerald-400 flex items-center justify-between">
+          <div className="pt-4 mt-6 text-xs font-medium text-emerald-400 flex items-center justify-between">
             <span>Result: Style Continuity</span>
             <span>Zero Re-prompting</span>
           </div>
@@ -148,7 +148,7 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
 
       {/* Try Interactive Nue Motion CTA */}
       <Reveal delay={120}>
-        <div className="p-8 rounded-xl bg-[var(--surface)] border border-[var(--border)] flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="p-8 rounded-xl bg-[var(--surface)] flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="text-left space-y-1">
           <h3 className="text-lg font-medium text-[var(--fg)] font-sans">
             Ready to direct video with persistent style memory?
