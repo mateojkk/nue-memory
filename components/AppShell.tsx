@@ -1325,7 +1325,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       {/* 1. Navbar */}
       <NueNavbar />
 
-      {/* 2. Hero Section */}
+      {/* 2. Hero Section (Nue Memory, creator language) */}
       <HeroSection
         onGetStarted={() => router.push('/motion')}
         onViewDocs={() => {
@@ -1333,7 +1333,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         }}
       />
 
-      {/* 3. Nue Motion Showcase: the product first */}
+      {/* 3. Nue Motion Showcase: first app built on Nue Memory */}
       <NueMotionShowcase
         onOpenWorkspace={() => router.push('/motion')}
       />

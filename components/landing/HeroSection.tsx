@@ -15,15 +15,15 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       {/* Background ambient radial glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[var(--accent)]/40 pointer-events-none rounded-full blur-3xl" />
 
-      {/* Headline: creator-first */}
+      {/* Headline: Nue Memory positioning, creator language */}
       <h1 className="text-4xl sm:text-6xl md:text-[64px] font-medium tracking-tight text-[var(--fg)] mb-6 max-w-5xl mx-auto leading-[1.08] font-sans">
-        Direct video with an agent that remembers your style.
+        AI agents that remember you.
       </h1>
 
       {/* Supporting Copy */}
       <Reveal delay={120}>
         <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-          Nue Motion is a video agent with specialized memory. Tell it your taste once - pacing, music, captions - and it applies it to every render. Your rules live in Nue Motion memory, durably stored on Walrus.
+          Nue Memory is the memory layer that lets agents keep your taste across every project. Nue Motion - video that remembers your style - is the first app built on it.
         </p>
       </Reveal>
 

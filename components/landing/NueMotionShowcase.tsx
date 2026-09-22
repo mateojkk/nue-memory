@@ -15,7 +15,7 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
       <Reveal>
         <div className="text-left mb-14">
         <div className="text-xs font-medium text-[var(--accent)] uppercase tracking-wider mb-2 font-mono">
-          Flagship Creative Video · Powered by Livepeer
+          First app built on Nue Memory · Powered by Livepeer
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
           Nue Motion
