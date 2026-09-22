@@ -26,12 +26,12 @@ export function DifferentiatorSection() {
       persistentExplanation: 'Global styling directive · Persisted durably · Applied across all new projects',
     },
     {
-      rawInput: 'Fix the syntax error in line 42, and enforce strict typing without any across this repo.',
-      temporaryPart: 'Fix the syntax error in line 42.',
-      temporaryExplanation: 'One-off debugging fix · No cross-session storage needed',
-      persistentPart: 'Enforce strict typing without any.',
-      persistentCategory: 'coding_style',
-      persistentExplanation: 'Architectural convention · Auto-injected in future coding agent sessions',
+      rawInput: 'Make this take 2 seconds longer, and always fade the music out at the end.',
+      temporaryPart: 'Make this take 2 seconds longer.',
+      temporaryExplanation: 'One-off length tweak for this render · Used for this task · Not persisted',
+      persistentPart: 'Always fade the music out at the end.',
+      persistentCategory: 'music',
+      persistentExplanation: 'Standing taste · Stored in Nue Memory · Recalled for every future render',
     },
   ];
 
@@ -49,7 +49,7 @@ export function DifferentiatorSection() {
           Memory is more than storing conversations.
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-4 max-w-3xl leading-relaxed font-light">
-          Chat logs in a vector DB is not memory. Nue decides what is worth remembering, filters noise, and evolves stored context.
+          Chat logs in a vector DB is not memory. Nue decides what is worth remembering, filters noise, and appends standing taste as history.
         </p>
         </div>
       </Reveal>
@@ -82,7 +82,7 @@ export function DifferentiatorSection() {
         <div key={selectedExample} className="nue-fade-swap">
           <div className="text-xs font-medium text-[var(--fg-muted)] mb-2 flex items-center justify-between">
             <span>RAW AGENT INTERACTION STREAM</span>
-            <span className="text-[var(--fg-muted)] text-[11px]">Nue Real-Time Parser</span>
+            <span className="text-[var(--fg-muted)] text-[11px]">Memory extraction</span>
           </div>
           <div className="p-4 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] font-medium text-sm text-[var(--fg)] leading-relaxed shadow-inner">
             &ldquo;{active.rawInput}&rdquo;
@@ -164,7 +164,7 @@ export function DifferentiatorSection() {
           <div>
             <span className="text-[var(--fg-muted)] block mb-1">03. Conflict Resolution</span>
             <p className="text-[var(--fg-muted)] font-sans text-xs font-light">
-              When preferences shift, older records are superseded rather than accumulating contradictions.
+              When preferences shift, both records are kept as history and recency-weighted ranking serves the current taste.
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { ArrowRight, Check, Shield, Sparkles } from 'lucide-react';
 import { Reveal } from '@/components/motion';
 
@@ -10,14 +10,6 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
-  const [copiedPip, setCopiedPip] = useState(false);
-
-  const handleCopyPip = () => {
-    navigator.clipboard.writeText('pip install nue-ai');
-    setCopiedPip(true);
-    setTimeout(() => setCopiedPip(false), 2000);
-  };
-
   return (
     <section className="relative pt-20 pb-28 px-4 max-w-7xl mx-auto text-center font-light overflow-hidden">
       {/* Background ambient radial glow */}
@@ -31,7 +23,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
       {/* Supporting Copy */}
       <Reveal delay={120}>
         <p className="text-base sm:text-lg md:text-[19px] text-[var(--fg-muted)] max-w-3xl mx-auto mb-10 leading-relaxed font-light">
-          AI agents forget between sessions. Nue gives them durable, evolving memory - extracting what matters, resolving conflicts, and persisting preferences across models and workflows.
+          AI agents forget between sessions. Nue gives them durable, append-only memory - extracting what matters, deduping repeats, and persisting preferences across projects and sessions.
         </p>
       </Reveal>
 
@@ -83,7 +75,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
               <div className="w-full max-w-[240px] p-4 rounded-md bg-[var(--surface-2)] border border-[var(--accent)]/40 text-center shadow-xs">
                 <span className="text-[var(--fg)] font-medium block">NUE MEMORY ENGINE</span>
                 <span className="text-[10px] text-[var(--fg-muted)] block mt-1">
-                  extract · resolve · evolve
+                  extract · dedupe · persist
                 </span>
               </div>
 
@@ -109,8 +101,8 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
                 <Sparkles className="w-3.5 h-3.5 text-[var(--accent)]" />
                 <span className="text-xs font-medium text-[var(--fg)]">Continuous Memory Extraction</span>
               </div>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-emerald-500 border border-[var(--border)]">
-                Live Pipeline
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[var(--surface-2)] text-[var(--fg-muted)] border border-[var(--border)]">
+                Illustrated example
               </span>
             </div>
 
@@ -134,11 +126,11 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs font-mono">
                     <div className="text-[9px] text-[var(--accent)] uppercase font-semibold">Typography</div>
-                    <div className="text-[var(--fg)] text-[11px] mt-0.5 truncate">Large high-contrast captions</div>
+                    <div className="text-[var(--fg)] text-[11px] mt-0.5 truncate">Prefer large, high-contrast captions</div>
                   </div>
                   <div className="p-2.5 rounded-lg bg-[var(--surface-2)] border border-[var(--border)] text-xs font-mono">
                     <div className="text-[9px] text-[var(--accent)] uppercase font-semibold">Pacing</div>
-                    <div className="text-[var(--fg)] text-[11px] mt-0.5 truncate">Fast 0-5s video intro</div>
+                    <div className="text-[var(--fg)] text-[11px] mt-0.5 truncate">Prefer fast, energetic introductions</div>
                   </div>
                 </div>
               </div>
@@ -148,7 +140,7 @@ export function HeroSection({ onGetStarted, onViewDocs }: HeroSectionProps) {
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span className="text-[var(--fg)] text-[11px]">
-                    Persisted to decentralized storage · Auto-injected in next session
+                    Persisted to decentralized storage · Recalled for your next session
                   </span>
                 </div>
                 <span className="text-[10px] text-[var(--accent)] font-medium shrink-0 ml-2">

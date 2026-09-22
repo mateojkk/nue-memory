@@ -53,7 +53,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
             </li>
             <li>
               <a href="#developers" className="hover:text-[var(--fg)] transition">
-                Memory Evolution
+                Additive history
               </a>
             </li>
           </ul>
@@ -92,8 +92,13 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
               </a>
             </li>
             <li>
-              <a href="#developers" className="hover:text-[var(--fg)] transition">
-                SDK (pip install nue-ai)
+              <a
+                href="https://github.com/mateojkk/nue-memory"
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-[var(--fg)] transition"
+              >
+                SDK source on GitHub
               </a>
             </li>
           </ul>

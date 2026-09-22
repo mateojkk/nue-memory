@@ -11,7 +11,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Nue · The Memory Infrastructure Layer for AI Agents',
   description:
-    'Nue is the memory infrastructure layer for AI agents, giving agents persistent memory to retain what matters, learn from previous interactions, and evolve context over time with durable Walrus storage.',
+    'Nue is the memory infrastructure layer for AI agents, giving agents persistent memory to retain what matters, learn from previous interactions, and accumulate history over time with durable Walrus storage.',
   icons: {
     icon: '/logo.jpg',
     shortcut: '/favicon.ico',

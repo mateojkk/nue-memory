@@ -126,11 +126,11 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
 
             <div className="p-3 rounded bg-[var(--border)] border border-emerald-900/50 text-xs font-medium text-emerald-300 space-y-1">
               <span className="text-[10px] text-emerald-400 font-medium uppercase block">
-                Nue Memory Applied Automatically:
+                Nue Motion Recalls For Your Approval:
               </span>
-              <div>✓ Large captions applied</div>
-              <div>✓ Avoid dramatic music applied</div>
-              <div>✓ Minimal aesthetic applied</div>
+              <div>✓ Large captions recalled</div>
+              <div>✓ Avoid dramatic music recalled</div>
+              <div>✓ Minimal aesthetic recalled</div>
             </div>
 
             <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed">
@@ -139,7 +139,7 @@ export function NueMotionShowcase({ onOpenWorkspace }: NueMotionShowcaseProps) {
           </div>
 
           <div className="pt-4 mt-6 border-t border-[var(--border)] text-xs font-medium text-emerald-400 flex items-center justify-between">
-            <span>Result: Perfect Continuity</span>
+            <span>Result: Style Continuity</span>
             <span>Zero Re-prompting</span>
           </div>
         </div>

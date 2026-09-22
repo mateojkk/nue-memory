@@ -50,10 +50,10 @@ export function LifecycleSection() {
     },
     {
       step: '07',
-      name: 'EVOLUTION',
-      title: 'Update & Supersede Conflicting Records',
-      description: 'When users express updated preferences, Nue marks older conflicting records as superseded while maintaining an audit trail.',
-      tag: 'Zero Contradiction',
+      name: 'HISTORY',
+      title: 'Append, Never Overwrite',
+      description: 'Updated preferences are appended as new facts with full history preserved. Recency-weighted ranking serves the current taste; explicit deletes remove records permanently.',
+      tag: 'Additive Memory',
     },
   ];
 
@@ -69,7 +69,7 @@ export function LifecycleSection() {
           The Memory Lifecycle
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
-          Seven deterministic stages, from raw interaction to durable recall.
+          Seven stages, from raw interaction to durable recall.
         </p>
         </div>
       </Reveal>

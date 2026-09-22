@@ -17,10 +17,10 @@ export function EvolutionSection() {
           Dynamic Lifecycle
         </div>
         <h2 className="text-3xl sm:text-[40px] font-medium text-[var(--fg)] tracking-tight font-sans">
-          Continuous Memory Evolution
+          Memory That Keeps History
         </h2>
         <p className="text-[var(--fg-muted)] text-sm sm:text-base mt-2 max-w-2xl font-light">
-          Preferences change. Nue supersedes conflicts instead of accumulating them.
+          Preferences change. Nue appends the new rule and ranks the newest first - nothing is overwritten.
         </p>
         </div>
       </Reveal>
@@ -66,7 +66,7 @@ export function EvolutionSection() {
             </div>
 
             <p className="text-xs text-[var(--fg-muted)] font-light leading-relaxed pt-3 border-t border-[var(--border)]">
-              Nue creates a supersession pointer instead of returning both memories.
+              Both memories are kept. Retrieval ranks the current rule first by recency.
             </p>
           </div>
         </div>
@@ -79,16 +79,12 @@ export function EvolutionSection() {
             </span>
             <span className="text-emerald-400 text-[11px] flex items-center gap-1">
               <Check className="w-3 h-3" />
-              Effective Context: Zero Conflict
+              Effective Context: Newest First
             </span>
           </div>
 
-          {/* Memory A */}
-          <div className={`p-4 rounded-lg border transition-all ${
-            activeStage === 'updated'
-              ? 'bg-[var(--border)] border-red-900/30 opacity-60'
-              : 'bg-[var(--surface-2)] border-[var(--accent)]/40'
-          }`}>
+          {/* Memory A (stays active as history in both stages) */}
+          <div className="p-4 rounded-lg border transition-all bg-[var(--surface-2)] border-[var(--accent)]/40">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="text-[var(--fg-muted)] font-medium">Memory 0x4A1F</span>
@@ -96,17 +92,11 @@ export function EvolutionSection() {
                   Category: UI_THEME
                 </span>
               </div>
-              {activeStage === 'updated' ? (
-                <span className="px-2 py-0.5 rounded text-[10px] bg-red-950/60 text-red-400 border border-red-900/50">
-                  SUPERSEDED
-                </span>
-              ) : (
-                <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 text-emerald-400 border border-emerald-900/50">
-                  ACTIVE
-                </span>
-              )}
+              <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950/60 text-emerald-400 border border-emerald-900/50">
+                ACTIVE · HISTORY
+              </span>
             </div>
-            <div className={`${activeStage === 'updated' ? 'line-through text-[var(--fg-faint)]' : 'text-[var(--fg)]'}`}>
+            <div className="text-[var(--fg)]">
               value: &quot;I prefer dark, high-contrast interfaces&quot;
             </div>
             <div className="mt-2 text-[10px] text-[var(--fg-faint)] flex items-center justify-between">
@@ -115,11 +105,11 @@ export function EvolutionSection() {
             </div>
           </div>
 
-          {/* Supersession Connector */}
+          {/* History Connector */}
           {activeStage === 'updated' && (
             <div className="flex flex-col items-center py-1">
               <div className="text-[10px] text-[var(--fg-muted)] flex items-center gap-1">
-                <span>↓ superseded_by (Pointer: 0x9B8C)</span>
+                <span>↓ same category · newer ranks first</span>
               </div>
             </div>
           )}
@@ -143,7 +133,7 @@ export function EvolutionSection() {
               </div>
               <div className="mt-2 text-[10px] text-[var(--fg-muted)] flex items-center justify-between">
                 <span>Source: Session 04 Explicit Update</span>
-                <span>supersedes_id: 0x4A1F</span>
+                <span>Ranked first by recency</span>
               </div>
             </div>
           )}

@@ -38,10 +38,10 @@ export function MemoryCompressionVisual() {
         Execution Workflow
       </span>
 
-      {/* Token compression bar */}
+      {/* Token compression bar (illustrative scale) */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between font-mono text-[11px]">
-          <span className="text-[var(--fg-faint)] uppercase tracking-wider">Context tokens</span>
+          <span className="text-[var(--fg-faint)] uppercase tracking-wider">Context tokens · illustrative</span>
           <span className="text-[var(--fg-soft)] tabular-nums">{tokens.toLocaleString()}</span>
         </div>
         <div className="h-1.5 rounded-full bg-[var(--surface-2)] overflow-hidden">

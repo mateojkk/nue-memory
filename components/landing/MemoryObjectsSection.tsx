@@ -34,7 +34,7 @@ export function MemoryObjectsSection() {
     color: { value: 'warm amber undertones with desaturated background', strength: 'medium', scope: 'media' },
     transitions: { value: 'match-cut on motion with zero disorienting zooms', strength: 'high', scope: 'media' },
     aspect_ratio: { value: '16:9 cinematic widescreen by default', strength: 'high', scope: 'media' },
-    duration: { value: 'target 15 to 30 seconds for product teasers', strength: 'medium', scope: 'media' },
+    duration: { value: 'prefer a 15 second video duration', strength: 'high', scope: 'media' },
     branding: { value: 'watermark in top-right with 80% opacity', strength: 'high', scope: 'media' },
     coding_style: { value: 'strict TypeScript, no any, prefer functional components', strength: 'high', scope: 'coding' },
     tool_preferences: { value: 'pnpm for package management, biome for formatting', strength: 'high', scope: 'coding' },
@@ -44,16 +44,19 @@ export function MemoryObjectsSection() {
   const sample = categoryExamples[activeCategory] || categoryExamples['visual_style'];
 
   const memoryJson = {
+    id: 'mem_8f2a1c4b',
+    userId: 'creator_123',
     type: 'preference',
     category: activeCategory,
     value: sample.value,
-    strength: sample.strength,
     confidence: 0.96,
+    scope: 'domain',
+    domain: 'media',
     source: 'user_feedback',
-    scope: sample.scope,
-    created_at: '2026-09-13T12:00:00Z',
-    updated_at: '2026-09-13T12:00:00Z',
-    blob_id: 'nue://store/0x8f2a...c4b1',
+    createdAt: '2026-09-13T12:00:00Z',
+    updatedAt: '2026-09-13T12:00:00Z',
+    isActive: true,
+    storageBlobId: 'k0na2QvKR3Q7spfUTLnxhttSgjKdBzMXR',
   };
 
   const formattedJson = JSON.stringify(memoryJson, null, 2);
