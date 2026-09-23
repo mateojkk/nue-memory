@@ -26,7 +26,12 @@ export function useAuth() {
     return null;
   });
 
-  const [creditBalance, setCreditBalance] = useState<number>(10.0);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+  const [livepeerKey, setLivepeerKey] = useState<{ has: boolean; tail: string | null }>({
+    has: false,
+    tail: null,
+  });
 
   useEffect(() => {
     checkUser();
@@ -52,10 +57,14 @@ export function useAuth() {
   const authenticated = Boolean(user?.email || demoUser?.email);
   const email = user?.email || demoUser?.email || null;
 
-  // Load and sync user-specific credit balance from database (/api/profile)
+  // Load and sync user-specific credit balance from database (/api/profile).
+  // Balance starts unknown (null), never at the $10 grant default - showing
+  // the default first is what flashed $10 over real balances.
   useEffect(() => {
     if (email) {
       loadProfile(email);
+    } else {
+      setCreditsLoading(false);
     }
   }, [email]);
 
@@ -65,6 +74,10 @@ export function useAuth() {
       const data = await res.json();
       if (data.success && data.profile) {
         setCreditBalance(Number(data.profile.credit_balance ?? 10.0));
+        setLivepeerKey({
+          has: Boolean(data.profile.hasLivepeerKey),
+          tail: typeof data.profile.livepeerKeyTail === 'string' ? data.profile.livepeerKeyTail : null,
+        });
         if (data.profile.theme === 'light' || data.profile.theme === 'dark') {
           const isDarkTheme = data.profile.theme === 'dark';
           document.documentElement.classList.toggle('dark', isDarkTheme);
@@ -76,24 +89,44 @@ export function useAuth() {
       }
     } catch (e) {
       console.warn('Failed to load user profile credit balance:', e);
+    } finally {
+      setCreditsLoading(false);
     }
   };
 
-  const topupCredits = async (amount = 5.0) => {
+  const saveLivepeerKey = async (key: string): Promise<string | null> => {
+    if (!email) return 'Sign in first.';
+    try {
+      const res = await fetch('/api/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, action: 'set_livepeer_key', key }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.success) {
+        return data?.error || 'Could not save the key.';
+      }
+      setLivepeerKey({ has: true, tail: data.livepeerKeyTail || null });
+      return null;
+    } catch {
+      return 'Network error saving the key.';
+    }
+  };
+
+  const removeLivepeerKey = async (): Promise<void> => {
     if (!email) return;
     try {
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, action: 'topup', amount }),
+        body: JSON.stringify({ email, action: 'remove_livepeer_key' }),
       });
-      const data = await res.json();
-      if (data.success && data.credit_balance !== undefined) {
-        setCreditBalance(Number(data.credit_balance));
-        return data.credit_balance;
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        setLivepeerKey({ has: false, tail: null });
       }
     } catch (e) {
-      console.warn('Failed to topup credits:', e);
+      console.warn('Failed to remove Livepeer key:', e);
     }
   };
 
@@ -152,6 +185,9 @@ export function useAuth() {
     }
     setUser(null);
     setDemoUser(null);
+    setCreditBalance(null);
+    setCreditsLoading(false);
+    setLivepeerKey({ has: false, tail: null });
     if (typeof window !== 'undefined') {
       localStorage.removeItem('nue_demo_user');
       sessionStorage.removeItem('nue_demo_user');
@@ -164,7 +200,10 @@ export function useAuth() {
     user: user || demoUser,
     email,
     creditBalance,
-    topupCredits,
+    creditsLoading,
+    livepeerKey,
+    saveLivepeerKey,
+    removeLivepeerKey,
     deductCredits,
     refreshCredits: () => email && loadProfile(email),
     loginWithMagic,

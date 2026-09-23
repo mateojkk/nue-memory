@@ -36,6 +36,16 @@ export interface GenerationJob {
   syntheticPreferences?: any[];
   modelToUse?: string;
   expectedSla?: string;
+  /** Livepeer-reported estimate at dispatch (USD). Used for the 402 gate. */
+  estimatedCostUsd?: number;
+  /** Amount held at dispatch; released on failure/expiry, settled at completion. */
+  heldCostUsd?: number;
+  /** Soundtrack estimate at dispatch (USD), itemized next to the video charge. */
+  audioEstimatedCostUsd?: number;
+  /** True when rendering on the caller's own Livepeer key ($0 on our ledger). */
+  useOwnKey?: boolean;
+  /** Final billed amount; set once, when the take completes. */
+  billedCostUsd?: number;
   singleTakeDuration?: number;
   effectiveDuration?: number;
   isMultiScene?: boolean;

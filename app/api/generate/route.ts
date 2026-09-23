@@ -38,6 +38,90 @@ function isDurationRejection(message?: string): boolean {
   );
 }
 
+/**
+ * Conservative pre-dispatch estimate (USD) for one take. Seedance bills
+ * ~$0.23153/s on the observed rate card (15s = ~$3.47); anything unknown is
+ * estimated high so the 402 gate never lets a render start unpaid.
+ * The final charge always uses Livepeer's reported actual, not this.
+ */
+function estimateTakeCostUsd(modelToUse: string, seconds: number): number {
+  const rate = modelToUse.includes('seedance') ? 0.23153 : 0.25;
+  return Math.round(rate * Math.max(3, seconds) * 100) / 100;
+}
+
+/**
+ * Server-authoritative render charge. Deducts the Livepeer-reported amount
+ * from the Supabase credit ledger, floored at zero. Only ever called once per
+ * completed take (failed renders are never billed).
+ */
+async function deductRenderCost(email: string, amountUsd: number): Promise<number | null> {  if (!supabase) return null;
+  const amount = Math.max(0, Math.round(Number(amountUsd || 0) * 100) / 100);
+  if (amount <= 0) return null;
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('credit_balance')
+      .eq('email', email)
+      .maybeSingle();
+    const current = Number(profile?.credit_balance ?? 10.0);
+    const next = Math.max(0, Number((current - amount).toFixed(2)));
+    await supabase.from('profiles').upsert({ email, credit_balance: next }, { onConflict: 'email' });
+    return next;
+  } catch (err) {
+    console.warn('[generate:billing] Deduct notice:', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
+ * Refund path for holds: credits back a previously held estimate (failed
+ * renders, expired jobs). Same ledger, opposite direction.
+ */
+async function creditBack(email: string, amountUsd: number): Promise<number | null> {
+  if (!supabase) return null;
+  const amount = Math.max(0, Math.round(Number(amountUsd || 0) * 100) / 100);
+  if (amount <= 0) return null;
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('credit_balance')
+      .eq('email', email)
+      .maybeSingle();
+    const current = Number(profile?.credit_balance ?? 10.0);
+    const next = Number((current + amount).toFixed(2));
+    await supabase.from('profiles').upsert({ email, credit_balance: next }, { onConflict: 'email' });
+    return next;
+  } catch (err) {
+    console.warn('[generate:billing] Refund notice:', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
+ * Resolves the caller's own Livepeer key (BYOK). Returns the plaintext key
+ * for this request only - it is never logged, never stored in the job
+ * registry, never returned to clients. Falls back to shared demo credit.
+ */
+async function resolveCallerLivepeerKey(email: string): Promise<{ key: string | null; ownKey: boolean }> {
+  if (!supabase) return { key: null, ownKey: false };
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('livepeer_api_key')
+      .eq('email', email)
+      .maybeSingle();
+    const sealed = (profile as any)?.livepeer_api_key;
+    if (typeof sealed === 'string' && sealed) {
+      const { unsealCredential } = await import('@/lib/security/credentials');
+      const key = unsealCredential(sealed);
+      if (key) return { key, ownKey: true };
+    }
+  } catch (err) {
+    console.warn('[generate:billing] Caller key notice:', err instanceof Error ? err.message : err);
+  }
+  return { key: null, ownKey: false };
+}
+
 function buildMediaVersion(params: {
   versionNumber: number;
   mediaUrl: string;
@@ -105,6 +189,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, job });
     }
 
+    // Polls must bill under the same key the dispatch used. Re-resolved per
+    // poll so a key added later still applies; falls back to shared credit.
+    const jobBearer = job?.userId
+      ? (await resolveCallerLivepeerKey(job.userId)).key ?? undefined
+      : undefined;
+
     // DYNAMIC MULTI-SCENE PIPELINE (15s to 60s+)
     if (job?.isMultiScene) {
       const scenesList = Array.isArray(job.scenes) && job.scenes.length > 0
@@ -134,7 +224,7 @@ export async function GET(request: Request) {
       let allScenesCompleted = true;
       for (const scene of scenesList) {
         if (!scene.url && scene.jobId) {
-          const poll = await livepeerAgent.pollJobStatus(scene.jobId);
+          const poll = await livepeerAgent.pollJobStatus(scene.jobId, jobBearer);
           if (poll.status === 'failed') {
             const friendlyErr = humanizeUpstreamError(poll.error || `Scene ${scene.sceneNumber} render failed.`);
             updateJob(jobId, { status: 'failed', error: friendlyErr });
@@ -190,7 +280,7 @@ export async function GET(request: Request) {
 
       const audioJobId = job.audioJobId || paramAudioJobId;
       if (!finalAudioUrl && audioJobId) {
-        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId);
+        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId, jobBearer);
         if (audioPoll.status === 'completed' && audioPoll.url) {
           finalAudioUrl = audioPoll.url;
           updateJob(jobId, { audioUrl: finalAudioUrl });
@@ -212,7 +302,7 @@ export async function GET(request: Request) {
           clips,
           audioUrl: finalAudioUrl,
           transition: 'crossfade',
-        });
+        }, jobBearer);
         if (assembled) {
           finalMediaUrl = assembled;
           wasMuxed = true;
@@ -305,6 +395,14 @@ export async function GET(request: Request) {
         result,
       });
 
+      // Charge the estimate once the assembled timeline lands. Failed renders
+      // are never billed; own-key renders skip our ledger; the early return
+      // above on completed jobs prevents double-charging repeat polls.
+      if (job?.userId && !job.useOwnKey && !job.billedCostUsd && job.estimatedCostUsd) {
+        const billed = await deductRenderCost(job.userId, job.estimatedCostUsd);
+        if (billed !== null) updateJob(jobId, { billedCostUsd: job.estimatedCostUsd });
+      }
+
       return NextResponse.json({
         success: true,
         job: {
@@ -324,12 +422,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Job not found or expired' }, { status: 404 });
     }
 
-    // Active 150ms check of Livepeer MCP
-    const pollResult = await livepeerAgent.pollJobStatus(livepeerJobId);
+    // Active 150ms check of Livepeer MCP (under the dispatch key)
+    const pollResult = await livepeerAgent.pollJobStatus(livepeerJobId, jobBearer);
+
+    // Release any hold when the take demonstrably fails.
+    const releaseHold = async () => {
+      if (job?.userId && !job.useOwnKey && job.heldCostUsd && !job.billedCostUsd) {
+        await creditBack(job.userId, job.heldCostUsd);
+        updateJob(jobId, { heldCostUsd: 0 });
+      }
+    };
 
     if (pollResult.status === 'failed') {
       const friendlyErr = humanizeUpstreamError(pollResult.error || 'Livepeer render failed.');
       updateJob(jobId, { status: 'failed', error: friendlyErr });
+      await releaseHold();
       return NextResponse.json({
         success: true,
         job: { status: 'failed', error: friendlyErr },
@@ -338,6 +445,16 @@ export async function GET(request: Request) {
 
     if (pollResult.status === 'running') {
       const elapsedSec = job ? Math.max(1, Math.round((Date.now() - new Date(job.createdAt).getTime()) / 1000)) : 10;
+      // Stale holds must not linger: past 20 minutes the take is abandoned,
+      // the hold is refunded, and the job fails honestly.
+      if (elapsedSec > 1200) {
+        updateJob(jobId, { status: 'failed', error: 'Render timed out after 20 minutes.' });
+        await releaseHold();
+        return NextResponse.json({
+          success: true,
+          job: { status: 'failed', error: 'Render timed out after 20 minutes.' },
+        });
+      }
       const modelName = job?.modelToUse || 'seedance-25-t2v';
       const expectedSla = '~4 min';
       const maxEstimatedSec = 240;
@@ -367,11 +484,15 @@ export async function GET(request: Request) {
 
       // If audio was dispatched asynchronously, check if audio is ready
       const audioJobId = job?.audioJobId || paramAudioJobId;
+      let audioActualCostUsd = 0;
       if (!finalAudioUrl && audioJobId) {
-        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId);
+        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId, jobBearer);
         if (audioPoll.status === 'completed' && audioPoll.url) {
           finalAudioUrl = audioPoll.url;
         }
+        audioActualCostUsd = audioPoll.costUsd ?? job?.audioEstimatedCostUsd ?? 0;
+      } else if (finalAudioUrl) {
+        audioActualCostUsd = job?.audioEstimatedCostUsd ?? 0;
       }
 
       // Assemble timeline if audio is present
@@ -383,7 +504,7 @@ export async function GET(request: Request) {
             clips: [{ src: videoUrl }],
             audioUrl: finalAudioUrl,
             transition: 'cut',
-          });
+          }, jobBearer);
           if (assembled) {
             finalMediaUrl = assembled;
             wasMuxed = true;
@@ -446,6 +567,22 @@ export async function GET(request: Request) {
         result,
       });
 
+      // Settle the hold against reported actuals, soundtrack itemized next
+      // to the video charge. Own-key renders skip our ledger entirely.
+      // Completed jobs return from cache above, so repeat polls settle once.
+      if (job?.userId && !job.useOwnKey && !job.billedCostUsd) {
+        const videoActual = pollResult.costUsd ?? job.estimatedCostUsd ?? estimateTakeCostUsd(modelName, actualDuration);
+        const totalActual = Math.round((videoActual + audioActualCostUsd) * 100) / 100;
+        const held = job.heldCostUsd ?? 0;
+        const delta = Math.round((totalActual - held) * 100) / 100;
+        if (delta > 0) {
+          await deductRenderCost(job.userId, delta);
+        } else if (delta < 0) {
+          await creditBack(job.userId, -delta);
+        }
+        updateJob(jobId, { billedCostUsd: totalActual, heldCostUsd: 0 });
+      }
+
       return NextResponse.json({
         success: true,
         job: {
@@ -490,6 +627,13 @@ export async function POST(request: Request) {
     }
 
     const effectiveUserId = auth.email;
+
+    // Resolve the caller's own Livepeer key (BYOK) once per request. When
+    // present, every Livepeer call below bills their account and our ledger
+    // stays at $0. Otherwise the shared demo credit applies with estimates,
+    // holds, and actual-cost settlement.
+    const { key: callerKey, ownKey } = await resolveCallerLivepeerKey(effectiveUserId);
+    const requestBearer = callerKey ?? undefined;
 
     // Step 2: Rate limit GPU generation (10 renders per 3 minutes)
     const clientId = getClientIdentifier(request, effectiveUserId);
@@ -599,30 +743,12 @@ export async function POST(request: Request) {
           scenePrompts: directorBrief.scenePrompts || [],
           timelineNote,
           recalledMemories: directorBrief.recalledMemories || [],
-          agentMessage: directorBrief.agentMessage,
+          agentMessage: ownKey
+            ? `${directorBrief.agentMessage || ''} Rendering on your Livepeer key - billed to your account, $0 on our ledger.`.trim()
+            : directorBrief.agentMessage,
+          billingSource: ownKey ? 'own_key' : 'demo_credit',
         },
       });
-    }
-
-    // Step 6: Verify credit balance in Supabase before dispatching compute
-    if (supabase) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credit_balance')
-        .eq('email', effectiveUserId)
-        .maybeSingle();
-
-      const balance = Number(profile?.credit_balance ?? 10.0);
-      if (balance < 0.05) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Looks like our studio compute balance is running low ($0.05 needed for a render). Top up your credits and we will keep cooking!',
-            credit_balance: balance,
-          },
-          { status: 402 }
-        );
-      }
     }
 
     // Build render trace preferences. These explain what shaped this render,
@@ -696,6 +822,33 @@ export async function POST(request: Request) {
     // activates by itself if the provider ever raises the per-call duration limit.
     const isMultiScene = !isImageToVideo && requestedDuration > MAX_TAKE_SECONDS;
 
+    // Step 6 (moved post-brief): gate on the honest pre-dispatch estimate for
+    // this exact model + length. Livepeer reserves cost at dispatch, so the
+    // check must happen before any billable call. Own-key renders skip the
+    // gate and the ledger entirely ($0 here; Livepeer bills their account).
+    // The final charge uses the reported actual at completion, never this.
+    const estimatedCostUsd = ownKey ? 0 : estimateTakeCostUsd(modelToUse, requestedDuration);
+    if (supabase && !ownKey) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credit_balance')
+        .eq('email', effectiveUserId)
+        .maybeSingle();
+
+      const balance = Number(profile?.credit_balance ?? 10.0);
+      if (balance < estimatedCostUsd) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Looks like our studio compute balance is too low for this take (about $${estimatedCostUsd.toFixed(2)} for ${requestedDuration}s on ${modelToUse}). Each account starts with a complimentary $10.00 grant.`,
+            credit_balance: balance,
+            estimatedCostUsd,
+          },
+          { status: 402 }
+        );
+      }
+    }
+
     // Never let the reply imply a length we cannot render. If the user asked for more than one
     // take and the director did not already explain the limit, say it once here.
     const askedDuration = Math.max(askedFromPrompt || 0, rawRequestedDuration);
@@ -703,9 +856,11 @@ export async function POST(request: Request) {
       directorBrief.agentMessage = `${directorBrief.agentMessage || ''} Heads up: a single Livepeer render caps at ${MAX_TAKE_SECONDS}s, so this delivers one continuous ${requestedDuration}s chapter. The next beats can be directed as follow-up takes that continue the same shot, characters, and lighting.`.trim();
     }
 
-    // Dispatch background soundtrack in parallel if requested (with singing vocals / lyrics support)
+    // Dispatch background soundtrack in parallel if requested (with singing vocals / lyrics support).
+    // Its cost is itemized next to the video charge at completion.
     let audioJobId: string | undefined;
     let audioUrl: string | undefined;
+    let audioEstimatedCostUsd: number | undefined;
     if (directorBrief.audioEnabled && directorBrief.audioStyle) {
       const isVocal = Boolean(directorBrief.hasVocals || directorBrief.lyricsPrompt);
       const audioPrompt = isVocal
@@ -727,13 +882,15 @@ export async function POST(request: Request) {
       }
 
       try {
-        const audioDispatch = await livepeerAgent.dispatchCreateMedia(audioArgs);
+        const audioDispatch = await livepeerAgent.dispatchCreateMedia(audioArgs, requestBearer);
         if (audioDispatch.status === 'failed') {
           console.warn('[generate:POST] audio dispatch notice:', audioDispatch.error);
         } else if (audioDispatch.url) {
           audioUrl = audioDispatch.url;
+          audioEstimatedCostUsd = audioDispatch.costUsd;
         } else if (audioDispatch.jobId) {
           audioJobId = audioDispatch.jobId;
+          audioEstimatedCostUsd = audioDispatch.costUsd;
         }
       } catch (audioErr) {
         console.warn('[generate:POST] audio dispatch notice:', audioErr);
@@ -767,7 +924,7 @@ export async function POST(request: Request) {
 
       if (conceptPrompt) {
         try {
-          const anchor = await livepeerAgent.generateCharacterConcept(conceptPrompt);
+          const anchor = await livepeerAgent.generateCharacterConcept(conceptPrompt, requestBearer);
           if (anchor) {
             characterAnchorUrl = anchor;
             console.log(`[generate:POST] Successfully created character concept anchor: ${characterAnchorUrl}`);
@@ -816,7 +973,7 @@ export async function POST(request: Request) {
             model_override: multiSceneModel,
             duration: nativeTakeDuration,
             async: true,
-          });
+          }, requestBearer);
         })
       );
 
@@ -860,6 +1017,8 @@ export async function POST(request: Request) {
         modelToUse: multiSceneModel,
         singleTakeDuration: totalAssembledDuration,
         effectiveDuration: totalAssembledDuration,
+        estimatedCostUsd: estimateTakeCostUsd(multiSceneModel, totalAssembledDuration),
+        useOwnKey: ownKey || undefined,
         expectedSla: '~4 min',
       });
 
@@ -905,7 +1064,7 @@ export async function POST(request: Request) {
       ...(validatedImageUrl ? { source_url: validatedImageUrl } : {}),
     };
 
-    let videoDispatch = await livepeerAgent.dispatchCreateMedia(dispatchArgs);
+    let videoDispatch = await livepeerAgent.dispatchCreateMedia(dispatchArgs, requestBearer);
     let effectiveSingleTakeDuration = singleTakeDuration;
 
     if (
@@ -918,7 +1077,7 @@ export async function POST(request: Request) {
         ...dispatchArgs,
         duration: FALLBACK_SAFE_TAKE_SECONDS,
         prompt: `${videoPrompt} The provider refused a ${singleTakeDuration}s clip length, so render this as a shorter continuous take. Preserve exact subject identity, setting, lighting, camera language, and action state.`,
-      });
+      }, requestBearer);
     }
 
     // Self-healing retry for safety-scanner false positives. A retry only has a chance if the
@@ -931,7 +1090,7 @@ export async function POST(request: Request) {
         videoDispatch = await livepeerAgent.dispatchCreateMedia({
           ...dispatchArgs,
           prompt: retryPrompt,
-        });
+        }, requestBearer);
       }
     }
 
@@ -949,7 +1108,7 @@ export async function POST(request: Request) {
       let wasMuxed = false;
 
       if (!finalAudioUrl && audioJobId) {
-        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId);
+        const audioPoll = await livepeerAgent.pollJobStatus(audioJobId, requestBearer);
         if (audioPoll.status === 'completed' && audioPoll.url) {
           finalAudioUrl = audioPoll.url;
         }
@@ -961,7 +1120,7 @@ export async function POST(request: Request) {
             clips: [{ src: videoDispatch.url }],
             audioUrl: finalAudioUrl,
             transition: 'cut',
-          });
+          }, requestBearer);
           if (assembled) {
             finalMediaUrl = assembled;
             wasMuxed = true;
@@ -1007,6 +1166,18 @@ export async function POST(request: Request) {
         result,
       });
 
+      // Immediately completed takes bill here: reported video actual plus any
+      // immediately-resolved soundtrack, else the dispatch estimate. Own-key
+      // renders skip our ledger (Livepeer bills their account). Failures never
+      // reach this branch.
+      if (!ownKey) {
+        const chargeUsd = (videoDispatch.costUsd ?? estimatedCostUsd) + (audioEstimatedCostUsd ?? 0);
+        const billed = await deductRenderCost(effectiveUserId, chargeUsd);
+        if (billed !== null) updateJob(jobId, { billedCostUsd: chargeUsd });
+      } else {
+        updateJob(jobId, { useOwnKey: true, billedCostUsd: 0 });
+      }
+
       return NextResponse.json({
         success: true,
         jobId,
@@ -1034,8 +1205,21 @@ export async function POST(request: Request) {
       modelToUse,
       singleTakeDuration: effectiveSingleTakeDuration,
       effectiveDuration: effectiveSingleTakeDuration,
+      estimatedCostUsd: videoDispatch.costUsd ?? estimatedCostUsd,
+      audioEstimatedCostUsd,
+      useOwnKey: ownKey || undefined,
       expectedSla,
     });
+
+    // Hold the video estimate now that Livepeer has reserved the render.
+    // Settled (adjusted to actuals, audio itemized) or refunded at completion.
+    // Own-key renders hold nothing on our ledger.
+    let heldCostUsd = 0;
+    if (!ownKey) {
+      const held = await deductRenderCost(effectiveUserId, videoDispatch.costUsd ?? estimatedCostUsd);
+      if (held !== null) heldCostUsd = videoDispatch.costUsd ?? estimatedCostUsd;
+      updateJob(jobId, { heldCostUsd });
+    }
 
     return NextResponse.json({
       success: true,

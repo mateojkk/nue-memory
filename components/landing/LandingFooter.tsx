@@ -21,7 +21,7 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
             The memory infrastructure layer for AI agents.
           </p>
           <div className="pt-1">
-            <span className="text-[11px] font-mono text-[var(--fg-muted)] bg-[var(--border)] px-2.5 py-1 rounded border border-[var(--border)]">
+            <span className="text-[11px] font-mono text-[var(--fg-muted)] bg-[var(--border)] px-2.5 py-1 rounded">
               Founded by NextMathLabs
             </span>
           </div>
@@ -34,11 +34,6 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
           </h4>
           <ul className="space-y-2 text-[var(--fg-muted)] font-light">
             <li>
-              <a href="#product" className="hover:text-[var(--fg)] transition">
-                Nue Memory
-              </a>
-            </li>
-            <li>
               <button
                 onClick={onOpenWorkspace}
                 className="hover:text-[var(--fg)] transition text-left"
@@ -49,11 +44,6 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
             <li>
               <a href="#product" className="hover:text-[var(--fg)] transition">
                 How learning works
-              </a>
-            </li>
-            <li>
-              <a href="#product" className="hover:text-[var(--fg)] transition">
-                Additive history
               </a>
             </li>
           </ul>
@@ -82,23 +72,13 @@ export function LandingFooter({ onOpenWorkspace, onOpenDocs }: LandingFooterProp
             </li>
             <li>
               <a
-                href="https://github.com/NextMathLabs"
+                href="https://github.com/mateojkk/nue-memory"
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-[var(--fg)] transition inline-flex items-center gap-1"
               >
                 <span>GitHub</span>
                 <ExternalLink className="w-3 h-3 text-[var(--fg-faint)]" />
-              </a>
-            </li>
-            <li>
-              <a
-                href="https://github.com/mateojkk/nue-memory"
-                target="_blank"
-                rel="noreferrer"
-                className="hover:text-[var(--fg)] transition"
-              >
-                SDK source on GitHub
               </a>
             </li>
           </ul>

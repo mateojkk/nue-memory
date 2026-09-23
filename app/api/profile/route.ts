@@ -82,12 +82,32 @@ export async function GET(request: Request) {
       }
     }
 
+    // Caller Livepeer key status. The sealed value is NEVER returned; only a
+    // masked tail so the UI can show what is attached.
+    let hasLivepeerKey = false;
+    let livepeerKeyTail: string | null = null;
+    if (supabase && typeof profile?.livepeer_api_key === 'string' && profile.livepeer_api_key) {
+      try {
+        const { unsealCredential, maskCredentialTail } = await import('@/lib/security/credentials');
+        livepeerKeyTail = maskCredentialTail(unsealCredential(profile.livepeer_api_key));
+        hasLivepeerKey = true;
+      } catch {
+        hasLivepeerKey = true;
+      }
+    }
+
+    // Strip the sealed secret before responding (defense in depth: even the
+    // ciphertext must never reach clients).
+    const { livepeer_api_key: _sealed, ...safeProfile } = (profile || {}) as Record<string, unknown>;
+
     return NextResponse.json({
       success: true,
       profile: {
-        ...profile,
-        credit_balance: Number(profile.credit_balance ?? 10.0),
+        ...safeProfile,
+        credit_balance: Number((profile as any)?.credit_balance ?? 10.0),
         theme,
+        hasLivepeerKey,
+        livepeerKeyTail,
       },
     });
   } catch (err: any) {
@@ -140,9 +160,50 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, theme: themeValue });
     }
 
-    // Validate credit action
-    if (action !== 'topup' && action !== 'deduct') {
-      return NextResponse.json({ success: false, error: 'Invalid action: must be topup, deduct, or set_theme' }, { status: 400 });
+    // Validate credit action. Top-ups are disabled: there is no billing
+    // pipeline, so any topup would mint free credits out of thin air.
+    if (action === 'topup') {
+      return NextResponse.json(
+        { success: false, error: 'Credit top-ups are not available yet. Each account starts with a complimentary $10.00 grant.' },
+        { status: 400 }
+      );
+    }
+    // Handle Livepeer BYOK wiring (sealed at rest; validated before storage).
+    // Separated from credit actions: keys are secrets, amounts are ledger.
+    if (action === 'set_livepeer_key' || action === 'remove_livepeer_key') {
+      if (!supabase) {
+        return NextResponse.json({ success: false, error: 'Profile storage unavailable.' }, { status: 503 });
+      }
+      if (action === 'remove_livepeer_key') {
+        const { error: rmErr } = await supabase
+          .from('profiles')
+          .upsert({ email, livepeer_api_key: null, updated_at: new Date().toISOString() }, { onConflict: 'email' });
+        if (rmErr) {
+          return NextResponse.json({ success: false, error: 'Could not remove the key.' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, hasLivepeerKey: false, livepeerKeyTail: null });
+      }
+      const rawKey = typeof body?.key === 'string' ? body.key.trim() : '';
+      if (rawKey.length < 16 || rawKey.length > 512 || /\s/.test(rawKey)) {
+        return NextResponse.json({ success: false, error: 'That key looks malformed (expect a single Livepeer token).' }, { status: 400 });
+      }
+      try {
+        const { sealCredential, maskCredentialTail } = await import('@/lib/security/credentials');
+        const sealed = sealCredential(rawKey);
+        const { error: upErr } = await supabase
+          .from('profiles')
+          .upsert({ email, livepeer_api_key: sealed, updated_at: new Date().toISOString() }, { onConflict: 'email' });
+        if (upErr) {
+          return NextResponse.json({ success: false, error: 'Could not save the key.' }, { status: 500 });
+        }
+        return NextResponse.json({ success: true, hasLivepeerKey: true, livepeerKeyTail: maskCredentialTail(rawKey) });
+      } catch (e: any) {
+        return NextResponse.json({ success: false, error: e?.message || 'Could not seal the key.' }, { status: 500 });
+      }
+    }
+
+    if (action !== 'deduct' && action !== 'set_theme') {
+      return NextResponse.json({ success: false, error: 'Invalid action: must be deduct or set_theme' }, { status: 400 });
     }
 
     // Strict amount validation: must be a finite positive number
@@ -151,18 +212,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Amount must be a positive finite number' }, { status: 400 });
     }
 
-    // Security bounds: cap deduct at $1.00 per single operation, cap topup at $50.00
+    // Security bounds: cap deduct at $1.00 per single operation.
     if (action === 'deduct' && parsedAmount > 1.0) {
       return NextResponse.json({ success: false, error: 'Deduction exceeds maximum single unit limit ($1.00)' }, { status: 400 });
-    }
-    if (action === 'topup' && parsedAmount > 50.0) {
-      return NextResponse.json({ success: false, error: 'Top-up exceeds maximum single grant limit ($50.00)' }, { status: 400 });
     }
 
     if (!supabase) {
       return NextResponse.json({
         success: true,
-        credit_balance: 10.0 + (action === 'topup' ? parsedAmount : -parsedAmount),
+        credit_balance: 10.0 - parsedAmount,
         fallback: true,
       });
     }
@@ -176,14 +234,12 @@ export async function POST(request: Request) {
 
     let currentBalance = Number(profile?.credit_balance ?? 10.0);
 
-    if (action === 'topup') {
-      currentBalance = Number((currentBalance + parsedAmount).toFixed(2));
-    } else if (action === 'deduct') {
+    if (action === 'deduct') {
       if (currentBalance < parsedAmount) {
         return NextResponse.json(
           {
             success: false,
-            error: 'Insufficient credit balance. Please top up your balance to continue generating media.',
+            error: 'Insufficient credit balance. Each account starts with a complimentary $10.00 grant.',
             credit_balance: currentBalance,
           },
           { status: 402 }

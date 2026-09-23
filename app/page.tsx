@@ -1,9 +1,9 @@
 import { NueApp } from '@/components/AppShell';
 
 export const metadata = {
-  title: 'Nue · The Memory Infrastructure Layer for AI Agents',
+  title: 'Nue · AI Agents That Remember You',
   description:
-    'Nue is the memory infrastructure layer for AI agents: durable, evolving memory with extraction, conflict resolution, and durable decentralized storage.',
+    'Nue Memory is the memory layer that lets agents keep your taste across every project. Nue Motion, video that remembers your style, is the first app built on it.',
 };
 
 export default function Home() {

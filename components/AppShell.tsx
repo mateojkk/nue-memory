@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 /** mem0-style expandable announcement bar ("Introducing …") above the navbar. */
 function AnnouncementBar() {
@@ -146,8 +146,34 @@ function curateMemories(memories: MotionPreference[]): MotionPreference[] {
 
 export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const currentView = view;
-  const { ready, authenticated, email, deductCredits } = useAuth();
+  const { ready, authenticated, email, refreshCredits } = useAuth();
+
+  // Returning creators skip the pitch: root (/) forwards authenticated
+  // studio veterans straight to /motion. /landing never forwards, so the
+  // logo and shared links always have a stable home.
+  useEffect(() => {
+    if (pathname !== '/' || !ready || !authenticated) return;
+    try {
+      if (window.localStorage.getItem('nue_seen_studio') === '1') {
+        router.push('/motion');
+      }
+    } catch {
+      // Restricted storage: stay on the landing.
+    }
+  }, [pathname, ready, authenticated, router]);
+
+  // Mark studio veterans (dashboard reached while signed in).
+  useEffect(() => {
+    if (currentView === 'dashboard' && authenticated && email) {
+      try {
+        window.localStorage.setItem('nue_seen_studio', '1');
+      } catch {
+        // Restricted storage: landing stays the entry point.
+      }
+    }
+  }, [currentView, authenticated, email]);
 
   // Projects State (Saved and retrieved from Supabase DB)
   const [projects, setProjects] = useState<CreativeProject[]>([]);
@@ -572,8 +598,9 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       if (data.success && data.mediaVersion) {
         const newVersion: MediaVersion = data.mediaVersion;
 
-        // Deduct compute cost ($0.05) from user profile in Supabase
-        deductCredits?.(0.05);
+        // Billing is server-authoritative now: the take was already charged at
+        // its reported Livepeer cost on completion. Just refresh the display.
+        refreshCredits?.();
 
         // Re-sync durable memories only. Render traces are shown on the video card but are not memory.
         if (email) {

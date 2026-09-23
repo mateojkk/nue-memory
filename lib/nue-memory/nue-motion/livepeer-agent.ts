@@ -41,6 +41,20 @@ export class LivepeerMediaAgent {
     this.bearer = process.env.LIVEPEER_API_KEY || process.env.LIVEPEER_AGENT_KEY;
   }
 
+  /**
+   * Per-request auth headers. A caller-supplied bearer (the user's own
+   * Livepeer key) overrides the server default, so those renders bill the
+   * caller's account instead of shared demo credit.
+   */
+  private authHeaders(bearer?: string): Record<string, string> {
+    const token = bearer || this.bearer;
+    return {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  }
+
   private async initializeMcp(): Promise<void> {
     if (this.isInitialized) return;
     try {
@@ -75,16 +89,12 @@ export class LivepeerMediaAgent {
    * Generates a master character concept/anchor image via fast image diffusion (flux-schnell, ~2-3s)
    * used to condition all downstream scene takes for 100% character identity consistency.
    */
-  public async generateCharacterConcept(conceptPrompt: string): Promise<string | null> {
+  public async generateCharacterConcept(conceptPrompt: string, bearer?: string): Promise<string | null> {
     try {
       console.log(`[LivepeerAgent] Generating character concept anchor: "${conceptPrompt.slice(0, 100)}..."`);
       const res = await fetch(this.endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json, text/event-stream',
-          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-        },
+        headers: this.authHeaders(bearer),
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),
@@ -197,7 +207,7 @@ export class LivepeerMediaAgent {
     clips: Array<{ src: string; title?: string }>;
     audioUrl?: string | null;
     transition?: 'cut' | 'crossfade' | 'fade';
-  }): Promise<string | null> {
+  }, bearer?: string): Promise<string | null> {
     try {
       const args: Record<string, any> = {
         clips: options.clips,
@@ -210,11 +220,7 @@ export class LivepeerMediaAgent {
 
       const res = await fetch(this.endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json, text/event-stream',
-          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-        },
+        headers: this.authHeaders(bearer),
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),
@@ -243,13 +249,15 @@ export class LivepeerMediaAgent {
   /**
    * Dispatches create_media tool call and returns immediately (<5s) with either URL or jobId
    */
-  public async dispatchCreateMedia(args: Record<string, any>): Promise<{
+  public async dispatchCreateMedia(args: Record<string, any>, bearer?: string): Promise<{
     status: 'completed' | 'running' | 'failed';
     url?: string;
     jobId?: string;
     capability?: string;
     error?: string;
     etaSeconds?: number;
+    /** Livepeer-reported estimated USD cost for this dispatch, when provided. */
+    costUsd?: number;
   }> {
     try {
       const callArgs = {
@@ -259,11 +267,7 @@ export class LivepeerMediaAgent {
 
       const res = await fetch(this.endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json, text/event-stream',
-          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-        },
+        headers: this.authHeaders(bearer),
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),
@@ -300,11 +304,13 @@ export class LivepeerMediaAgent {
       }
 
       const jobId = content?.job_id;
+      const costUsd = typeof content?.cost_usd_estimated === 'number' ? content.cost_usd_estimated : undefined;
       if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
         return {
           status: 'completed',
           url: unwrapLivepeerUrl(content.url),
           capability: content.capability || args.model_override,
+          costUsd,
         };
       }
 
@@ -314,6 +320,7 @@ export class LivepeerMediaAgent {
           jobId,
           capability: content?.capability || args.model_override,
           etaSeconds: content?.eta_seconds || (args.model_override?.includes('seedance') ? 240 : 40),
+          costUsd,
         };
       }
 
@@ -326,20 +333,18 @@ export class LivepeerMediaAgent {
   /**
    * Fast 150ms check of get_create_media for a given jobId
    */
-  public async pollJobStatus(jobId: string): Promise<{
+  public async pollJobStatus(jobId: string, bearer?: string): Promise<{
     status: 'running' | 'completed' | 'failed';
     url?: string;
     capability?: string;
     error?: string;
+    /** Actual paid USD cost when reported, else the estimate. */
+    costUsd?: number;
   }> {
     try {
       const res = await fetch(this.endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json, text/event-stream',
-          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-        },
+        headers: this.authHeaders(bearer),
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),
@@ -358,10 +363,13 @@ export class LivepeerMediaAgent {
       const data = await res.json();
       const content = data.result?.structuredContent;
       if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
+        const paid = typeof content?.cost_paid_usd === 'number' ? content.cost_paid_usd : undefined;
+        const estimated = typeof content?.cost_usd_estimated === 'number' ? content.cost_usd_estimated : undefined;
         return {
           status: 'completed',
           url: unwrapLivepeerUrl(content.url),
           capability: content.capability,
+          costUsd: paid ?? estimated,
         };
       }
 
@@ -792,7 +800,7 @@ export class LivepeerMediaAgent {
   /**
    * Uploads an image (base64 data URL or external URL) to Livepeer storage via MCP upload_image tool
    */
-  public async uploadImage(imageSource: string): Promise<string | null> {
+  public async uploadImage(imageSource: string, bearer?: string): Promise<string | null> {
     try {
       await this.initializeMcp();
       let dataPayload: string | undefined;
@@ -825,11 +833,7 @@ export class LivepeerMediaAgent {
 
       const res = await fetch(this.endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json, text/event-stream',
-          ...(this.bearer ? { Authorization: `Bearer ${this.bearer}` } : {}),
-        },
+        headers: this.authHeaders(bearer),
         body: JSON.stringify({
           jsonrpc: '2.0',
           id: Date.now(),

@@ -15,6 +15,8 @@ export function AuthButton({ creditBalance: propCreditBalance, className = '' }:
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const { authenticated, email, logout, creditBalance: userCreditBalance } = useAuth();
   const creditBalance = propCreditBalance !== undefined ? propCreditBalance : userCreditBalance;
+  const balanceLabel =
+    creditBalance === null || creditBalance === undefined ? '…' : `$${creditBalance.toFixed(2)}`;
 
   if (!authenticated) {
     return (
@@ -40,7 +42,7 @@ export function AuthButton({ creditBalance: propCreditBalance, className = '' }:
           {userEmail[0].toUpperCase()}
         </div>
         <span className="text-[var(--fg)] max-w-[120px] truncate">{userEmail}</span>
-        <span className="text-emerald-500 font-medium">${creditBalance.toFixed(2)}</span>
+        <span className="text-emerald-500 font-medium">{balanceLabel}</span>
         <ChevronDown className="w-3 h-3 text-[var(--fg-muted)]" />
       </button>
 
@@ -51,7 +53,7 @@ export function AuthButton({ creditBalance: propCreditBalance, className = '' }:
             <span className="text-[var(--fg)] font-medium truncate block mt-0.5">{userEmail}</span>
             <div className="flex items-center justify-between mt-2 pt-2 text-[11px] font-mono">
               <span className="text-[var(--fg-muted)]">Balance</span>
-              <span className="text-emerald-400 font-semibold">${creditBalance.toFixed(2)}</span>
+              <span className="text-emerald-400 font-semibold">{balanceLabel}</span>
             </div>
           </div>
 

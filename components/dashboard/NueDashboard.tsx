@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { NueMotionWorkspace } from './NueMotionWorkspace';
 import { ProjectsView } from './ProjectsView';
-import { ApiKeysView } from './ApiKeysView';
 import { GalleryView } from './GalleryView';
 import { MemoriesView } from './MemoriesView';
 import { UsageView } from './OverviewView';
@@ -18,7 +17,6 @@ import {
   Film,
   Layers,
   Brain,
-  Key,
   CreditCard,
 } from 'lucide-react';
 
@@ -27,10 +25,9 @@ export type DashboardTab =
   | 'gallery'
   | 'projects'
   | 'usage'
-  | 'memories'
-  | 'api-keys';
+  | 'memories';
 
-const VALID_TABS: DashboardTab[] = ['motion', 'gallery', 'projects', 'usage', 'memories', 'api-keys'];
+const VALID_TABS: DashboardTab[] = ['motion', 'gallery', 'projects', 'usage', 'memories'];
 
 /** Legacy slug from before the Media Memory -> Nue Motion rename. */
 const LEGACY_TAB_SLUG = 'media-memory';
@@ -223,7 +220,6 @@ export function NueDashboard({
     { id: 'projects' as DashboardTab, label: 'Projects', icon: Layers, badge: projects.length },
     { id: 'memories' as DashboardTab, label: 'Memory', icon: Brain, badge: activeMemories.filter((m) => m.isActive).length },
     { id: 'usage' as DashboardTab, label: 'Credits', icon: CreditCard },
-    { id: 'api-keys' as DashboardTab, label: 'API Keys', icon: Key },
   ];
 
   return (
@@ -359,8 +355,6 @@ export function NueDashboard({
             userEmail={userEmail}
           />
         )}
-
-        {activeTab === 'api-keys' && <ApiKeysView />}
       </main>
     </div>
   );

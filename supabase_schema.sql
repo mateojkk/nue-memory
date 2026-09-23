@@ -6,9 +6,15 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email TEXT UNIQUE NOT NULL,
     credit_balance NUMERIC(10, 2) DEFAULT 10.00,
+    -- Sealed (AES-256-GCM) user-supplied Livepeer key. NEVER plaintext:
+    -- profiles rows are readable with the public anon key.
+    livepeer_api_key TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Migration for existing deployments (run once in the SQL editor):
+-- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS livepeer_api_key TEXT;
 
 -- 2. Projects Table (Video projects in Nue Motion)
 CREATE TABLE IF NOT EXISTS public.projects (

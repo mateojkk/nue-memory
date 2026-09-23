@@ -302,7 +302,7 @@ export function humanizeUpstreamError(raw: any): string {
   }
 
   if (normalized.includes('Insufficient credit') || normalized.includes('402')) {
-    return "Looks like our studio compute balance is running low ($0.05 needed for a render). Top up your credits and we'll keep cooking!";
+    return "Looks like our studio compute balance has run out for a full take (about $3.47 for 15s on Seedance). Each account starts with a complimentary $10.00 grant.";
   }
 
   if (normalized.length > 80 && (normalized.includes('{') || normalized.includes('SDK') || normalized.includes('HTTP') || normalized.includes('Error:'))) {
