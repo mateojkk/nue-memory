@@ -623,7 +623,11 @@ export class WalrusMemWalStore implements MemoryStore {
       throw err instanceof Error ? err : new Error(String(err));
     }
 
-    this.memoryCache.delete(id);
+    // Keep the tombstone IN the cache (rather than deleting the id): on a
+    // warm instance a later recall that misses the tombstone blob must still
+    // lose to it in latest-wins dedupe instead of resurrecting the original.
+    // listSynchronous filters tombstones from every view regardless.
+    this.memoryCache.set(id, tombstone);
     if (existing.storageBlobId) {
       this.blobToMemoryId.delete(existing.storageBlobId);
     }

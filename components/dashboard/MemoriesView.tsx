@@ -94,6 +94,11 @@ export function MemoriesView({
           <p className="text-[var(--fg-muted)] text-xs sm:text-sm mt-1">
             Review and manage the creative preferences your agent has learned from your feedback.
           </p>
+          {(userNamespace || userEmail) && (
+            <p className="text-[10px] font-mono text-[var(--fg-faint)] mt-1.5">
+              vault: {userNamespace || '…'} · {userEmail || 'signed out'}
+            </p>
+          )}
         </div>
 
         {/* Filter Tabs */}

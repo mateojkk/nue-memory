@@ -340,11 +340,36 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   };
 
+  // Union-merge incoming memories into state by id (then category:text).
+  // A blind overwrite would drop just-saved rules whenever the vector index
+  // lags behind the write (Mem0 has the same async-indexing class: confirmed
+  // stored does not mean immediately recallable).
+  const mergeMemoriesIntoState = (
+    prev: MotionPreference[],
+    incoming: MotionPreference[]
+  ): MotionPreference[] => {
+    const seenIds = new Set(prev.map((p) => p.id).filter(Boolean));
+    const keys = new Set(prev.map((p) => `${p.category}:${p.preference}`.toLowerCase()));
+    const next = [...prev];
+    for (const mem of incoming) {
+      const key = `${mem.category}:${mem.preference}`.toLowerCase();
+      if ((mem.id && seenIds.has(mem.id)) || keys.has(key)) continue;
+      if (mem.id) seenIds.add(mem.id);
+      keys.add(key);
+      next.push(mem);
+    }
+    return next;
+  };
+
   // Mem0-style auto-save: an explicit standing preference is self-confirming,
   // so it persists immediately (toast + undo in the Memory tab) instead of
-  // waiting on a Remember click. Returns the saved preference texts.
-  const rememberNow = async (text: string, project: CreativeProject | null): Promise<string[]> => {
-    if (!text.trim()) return [];
+  // waiting on a Remember click. Distinguishes extract / save failures so the
+  // user is never told "couldn't distill" when storage actually failed.
+  const rememberNow = async (
+    text: string,
+    project: CreativeProject | null
+  ): Promise<{ saved: string[]; error: 'extract' | 'save' | null }> => {
+    if (!text.trim()) return { saved: [], error: null };
     setIsSavingMemory(true);
     try {
       const res = await fetch('/api/classify', {
@@ -362,10 +387,10 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           existingMemories: activeMemories.map((m) => ({ category: m.category, preference: m.preference })),
         }),
       });
-      if (!res.ok) return [];
+      if (!res.ok) return { saved: [], error: 'extract' };
       const data = await res.json();
       const extracted = data?.classification?.extractedPreferences;
-      if (!Array.isArray(extracted) || extracted.length === 0) return [];
+      if (!Array.isArray(extracted) || extracted.length === 0) return { saved: [], error: null };
 
       const existingKeys = new Set(
         activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase())
@@ -383,7 +408,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           existingKeys.add(key);
           return true;
         });
-      if (fresh.length === 0) return [];
+      if (fresh.length === 0) return { saved: [], error: null };
 
       const saveRes = await fetch('/api/memwal', {
         method: 'POST',
@@ -396,26 +421,29 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         }),
       });
       const saveData = await saveRes.json().catch(() => null);
-      if (!saveRes.ok || !saveData?.success) return [];
+      if (!saveRes.ok || !saveData?.success) return { saved: [], error: 'save' };
 
-      if (email) await fetchMemories(email);
-      else {
-        const stored: MotionPreference[] = (saveData.storedPreferences || []).map((p: any, i: number) => ({
-          ...fresh[i],
-          ...p,
-          isActive: true,
-        }));
-        setActiveMemories((prev) => [...prev, ...stored]);
+      const stored: MotionPreference[] = (saveData.storedPreferences || []).map((p: any, i: number) => ({
+        ...fresh[i],
+        ...p,
+        isActive: true,
+      }));
+      // Union, never overwrite: the vector index can lag the confirmed write,
+      // and a blind refetch would drop the rule you just watched save.
+      if (email) {
+        await fetchMemories(email);
+        setActiveMemories((prev) => mergeMemoriesIntoState(prev, stored));
+      } else {
+        setActiveMemories((prev) => mergeMemoriesIntoState(prev, stored));
       }
-      return fresh.map((p: { preference: string }) => p.preference);
+      return { saved: stored.map((p) => p.preference), error: null };
     } catch (e) {
       console.warn('Failed to auto-save memory:', e);
-      return [];
+      return { saved: [], error: 'save' };
     } finally {
       setIsSavingMemory(false);
     }
   };
-
   // Load memories directly from MemWal on Walrus for the current user's namespace
   useEffect(() => {
     if (email) {
@@ -795,13 +823,15 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         !/\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(text.trim().toLowerCase()) &&
         /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default|in all (my |future )|for (all |future ))/i.test(text)
       ) {
-        const saved = await rememberNow(text, newProj);
+        const { saved, error: saveError } = await rememberNow(text, newProj);
         const note: ChatMessage = {
           id: `msg-mem-${Date.now()}`,
           sender: 'agent',
           content:
             saved.length > 0
               ? `Remembered: "${saved.join(', ')}" - applies to future renders. Undo anytime in the Memory tab. No video rendered.`
+              : saveError === 'save'
+              ? `Couldn't store that just now - memory storage is busy. Your words are kept in this chat; say "remember that" again in a bit and I'll store it. No video rendered.`
               : `I hear you, but I couldn't distill that into a lasting rule. Tell me a video idea whenever you're ready. No video rendered.`,
           timestamp: new Date().toISOString(),
         };
@@ -891,13 +921,15 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       // Standing taste statement, not a render request: auto-save it as memory
       // (explicit preferences are self-confirming) and stop here. Never spend
       // a GPU render on a preference sentence.
-      const saved = await rememberNow(text, currentProj);
+      const { saved, error: saveError } = await rememberNow(text, currentProj);
       const note: ChatMessage = {
         id: `msg-mem-${Date.now()}`,
         sender: 'agent',
         content:
           saved.length > 0
             ? `Remembered: "${saved.join(', ')}" - applies to future renders. Undo anytime in the Memory tab. No video rendered.`
+            : saveError === 'save'
+            ? `Couldn't store that just now - memory storage is busy. Your words are kept in this chat; say "remember that" again in a bit and I'll store it. No video rendered.`
             : `I hear you, but I couldn't distill that into a lasting rule${email ? '' : ' (sign in so I can persist it)'}. Phrase it as one (e.g. "always fade the music out over 2s") or tell me to apply it to this video and I'll re-render. No video rendered.`,
         timestamp: new Date().toISOString(),
       };
@@ -946,12 +978,19 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
 
       const data = await res.json();
       if (data.success) {
+        const confirmed: MotionPreference[] = (data.storedPreferences || pendingPreferences).map((p: any) => ({
+          ...p,
+          isActive: true,
+        }));
         const getUrl = email ? `/api/memwal?email=${encodeURIComponent(email)}` : '/api/memwal';
         const getRes = await fetch(getUrl);
         const getData = await getRes.json();
         if (getData.success && getData.preferences) {
-          setActiveMemories(getData.preferences);
+          // Union, never overwrite: confirmed writes may not be recallable
+          // yet while the vector index catches up.
+          setActiveMemories((prev) => mergeMemoriesIntoState(prev, curateMemories(getData.preferences)));
         }
+        setActiveMemories((prev) => mergeMemoriesIntoState(prev, confirmed));
 
         const prefSummary = pendingPreferences.map((p) => p.preference).join(', ');
         const memSavedMsg: ChatMessage = {
