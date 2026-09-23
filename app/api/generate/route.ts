@@ -770,6 +770,7 @@ export async function POST(request: Request) {
     if (!directorBrief.shouldGenerate) {
       let savedMemory: any = null;
       let saveError: string | null = null;
+      let saveVerified = false;
       const candidate = (directorBrief as any).memoryCandidate;
       if (candidate && typeof candidate.preference === 'string' && candidate.preference.trim().length > 3) {
         try {
@@ -790,6 +791,15 @@ export async function POST(request: Request) {
           };
           const stored = await memWalService.rememberPreference(toSave as any);
           savedMemory = stored.preference;
+          // Write-verify like /api/memwal: a confirmed blob is not yet
+          // searchable while the vector index catches up. Check visibility so
+          // the UI never presents a phantom rule as stored.
+          try {
+            const hits = await memWalService.recallPreferences(savedMemory.preference, effectiveUserId);
+            saveVerified = hits.some((h) => h.id === savedMemory.id);
+          } catch (e) {
+            console.warn('[generate:memory] Verify notice:', e instanceof Error ? e.message : e);
+          }
         } catch (e: any) {
           saveError = e?.message || 'Memory storage unavailable.';
         }
@@ -804,6 +814,7 @@ export async function POST(request: Request) {
           pendingMemory: savedMemory ? null : directorBrief.memoryCandidate || null,
           savedMemory,
           saveError,
+          saveVerified,
           appliedMemories: [],
           summaryTokens: [],
           retrievalCount: 0,

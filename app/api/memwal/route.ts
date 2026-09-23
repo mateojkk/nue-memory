@@ -123,6 +123,20 @@ export async function POST(request: Request) {
           storedItems.push(result);
         }
 
+        // Write-verify: a confirmed blob upload is NOT yet searchable - the
+        // vector index lags the write (Mem0 has the same async class, tracked
+        // via PENDING events). A targeted recall of the exact text either
+        // confirms visibility or honestly reports indexing-in-progress,
+        // instead of letting the UI present a phantom rule.
+        let verified = false;
+        try {
+          const probe = storedItems[storedItems.length - 1];
+          const hits = await memWalService.recallPreferences(probe.preference.preference, effectiveUserId);
+          verified = hits.some((h) => h.id === probe.preference.id);
+        } catch (e) {
+          console.warn('[memwal:remember] Verify notice:', e instanceof Error ? e.message : e);
+        }
+
         const activeList = memWalService.getAllPreferences(effectiveUserId, false);
 
         return NextResponse.json({
@@ -134,6 +148,7 @@ export async function POST(request: Request) {
           namespace: storedItems[storedItems.length - 1]?.namespace,
           superseded: [],
           warnings: [],
+          verified,
           totalActiveCount: activeList.length,
         });
       }

@@ -760,7 +760,9 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           content:
             data.directorMessage +
             (data.savedMemory && typeof data.savedMemory.preference === 'string'
-              ? `\n\nRemembered: "${data.savedMemory.preference}" - applies to future renders. Undo anytime in the Memory tab.`
+              ? data.saveVerified === false
+                ? `\n\nSaved: "${data.savedMemory.preference}" - still indexing on Walrus, showing locally until the Memory tab catches up.`
+                : `\n\nRemembered: "${data.savedMemory.preference}" - applies to future renders. Undo anytime in the Memory tab.`
               : data.saveError
               ? `\n\nCouldn't store the rule just now - memory storage is busy. Say "remember that" again in a bit.`
               : ''),
@@ -1045,7 +1047,10 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         const memSavedMsg: ChatMessage = {
           id: `msg-saved-${Date.now()}`,
           sender: 'agent',
-          content: `✨ Remembered: "${prefSummary}".`,
+          content:
+            data.verified === false
+              ? `✨ Saved: "${prefSummary}" - still indexing on Walrus, showing locally until the Memory tab catches up.`
+              : `✨ Remembered: "${prefSummary}".`,
           timestamp: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, memSavedMsg]);
