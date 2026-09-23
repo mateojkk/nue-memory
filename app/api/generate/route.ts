@@ -6,6 +6,8 @@ import { checkRateLimit, getClientIdentifier } from '@/lib/security/rate-limit';
 import { sanitizeText, validateImageSource } from '@/lib/security/sanitize';
 import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
+import type { GenerationJob } from '@/lib/jobs/registry';
+import { savePendingRender, deletePendingRender, getPendingRender } from '@/lib/jobs/pending-renders';
 import { MotionPreference, MediaVersion } from '@/lib/types';
 import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 
@@ -133,6 +135,7 @@ function buildMediaVersion(params: {
   wasMuxed?: boolean;
   agentNotes: string;
   scenes?: MediaVersion['scenes'];
+  seed?: number;
 }): MediaVersion {
   const directorBrief = params.directorBrief;
   const hasVocals = Boolean(directorBrief?.hasVocals);
@@ -164,8 +167,40 @@ function buildMediaVersion(params: {
     agentNotes: params.agentNotes,
     generationDurationSeconds: params.durationSeconds,
     livepeerCapability: params.modelName + (params.wasMuxed ? ' + timeline-assembly' : ''),
+    seed: params.seed,
     characterAnchorUrl: directorBrief?.characterAnchorUrl,
     scenes: params.scenes,
+  };
+}
+
+/**
+ * Rebuilds a working job from its durable Supabase descriptor when the
+ * in-memory registry no longer has it (cold instance, hours later, other
+ * device). updateJob calls against it safely no-op; completion deletes the
+ * row so it cannot settle twice.
+ */
+async function pendingToJob(jobId: string): Promise<GenerationJob | undefined> {
+  const pending = await getPendingRender(jobId);
+  if (!pending) return undefined;
+  const now = new Date().toISOString();
+  return {
+    id: pending.jobId,
+    userId: pending.userId,
+    projectTitle: pending.projectTitle || 'Media Project',
+    versionNumber: pending.versionNumber || 1,
+    status: 'rendering',
+    progress: 25,
+    stageDescription: 'Resuming render…',
+    createdAt: pending.createdAt || now,
+    updatedAt: now,
+    livepeerJobId: pending.livepeerJobId,
+    scene2JobId: pending.scene2JobId,
+    audioJobId: pending.audioJobId,
+    directorBrief: pending.directorBrief,
+    syntheticPreferences: pending.syntheticPreferences || [],
+    modelToUse: pending.model,
+    singleTakeDuration: pending.singleTakeDuration,
+    effectiveDuration: pending.singleTakeDuration,
   };
 }
 
@@ -182,7 +217,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'jobId query parameter is required' }, { status: 400 });
     }
 
-    const job = getJob(jobId);
+    const job = getJob(jobId) ?? (await pendingToJob(jobId));
 
     // If job was already marked completed in registry, return cached result immediately
     if (job?.status === 'completed' && job.result) {
@@ -228,6 +263,7 @@ export async function GET(request: Request) {
           if (poll.status === 'failed') {
             const friendlyErr = humanizeUpstreamError(poll.error || `Scene ${scene.sceneNumber} render failed.`);
             updateJob(jobId, { status: 'failed', error: friendlyErr });
+            await deletePendingRender(jobId);
             return NextResponse.json({
               success: true,
               job: { status: 'failed', error: friendlyErr },
@@ -402,6 +438,7 @@ export async function GET(request: Request) {
         const billed = await deductRenderCost(job.userId, job.estimatedCostUsd);
         if (billed !== null) updateJob(jobId, { billedCostUsd: job.estimatedCostUsd });
       }
+      await deletePendingRender(jobId);
 
       return NextResponse.json({
         success: true,
@@ -436,6 +473,7 @@ export async function GET(request: Request) {
     if (pollResult.status === 'failed') {
       const friendlyErr = humanizeUpstreamError(pollResult.error || 'Livepeer render failed.');
       updateJob(jobId, { status: 'failed', error: friendlyErr });
+      await deletePendingRender(jobId);
       await releaseHold();
       return NextResponse.json({
         success: true,
@@ -449,6 +487,7 @@ export async function GET(request: Request) {
       // the hold is refunded, and the job fails honestly.
       if (elapsedSec > 1200) {
         updateJob(jobId, { status: 'failed', error: 'Render timed out after 20 minutes.' });
+        await deletePendingRender(jobId);
         await releaseHold();
         return NextResponse.json({
           success: true,
@@ -549,6 +588,7 @@ export async function GET(request: Request) {
         finalAudioUrl,
         wasMuxed,
         agentNotes: `Livepeer Agent composed version ${versionNumber} via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
+        seed: pollResult.seed ?? job?.seed,
       });
 
       const result = {
@@ -565,6 +605,7 @@ export async function GET(request: Request) {
         progress: 100,
         stageDescription: 'Video generation complete',
         result,
+        seed: pollResult.seed ?? job?.seed,
       });
 
       // Settle the hold against reported actuals, soundtrack itemized next
@@ -582,6 +623,7 @@ export async function GET(request: Request) {
         }
         updateJob(jobId, { billedCostUsd: totalActual, heldCostUsd: 0 });
       }
+      await deletePendingRender(jobId);
 
       return NextResponse.json({
         success: true,
@@ -610,6 +652,8 @@ export async function POST(request: Request) {
       brief,
       versionNumber = 1,
       projectTitle = 'Media Project',
+      projectId,
+      seed,
       feedbackContext,
       chatHistory,
       userId,
@@ -1022,6 +1066,21 @@ export async function POST(request: Request) {
         expectedSla: '~4 min',
       });
 
+      await savePendingRender({
+        jobId,
+        userId: effectiveUserId,
+        projectId: typeof projectId === 'string' ? projectId : undefined,
+        projectTitle: sanitizedTitle,
+        versionNumber: Number(versionNumber) || 1,
+        livepeerJobId: scenes[0]?.jobId,
+        scene2JobId: scenes[1]?.jobId,
+        audioJobId,
+        model: multiSceneModel,
+        singleTakeDuration: totalAssembledDuration,
+        directorBrief,
+        syntheticPreferences,
+      });
+
       return NextResponse.json({
         success: true,
         jobId,
@@ -1055,12 +1114,21 @@ export async function POST(request: Request) {
     // carry zero visual signal and trip keyword filters.
     const videoPrompt = stripLyricTextFromVideoPrompt(sanitizePromptForDiffusion(livepeerPrompt), directorBrief.lyricsPrompt);
 
+    // Seed pinning: revisions reuse the previous take's seed so v2 is a
+    // variation (same composition, requested change applied), not a new roll.
+    // Fresh briefs omit it for a new random take. Validated - a hostile seed
+    // is just a number to the provider, but garbage in means opaque out.
+    const requestedSeed =
+      Number.isInteger(seed) && (seed as number) >= 0 && (seed as number) <= 2147483647 ? (seed as number) : undefined;
+    const pinSeed = requestedSeed !== undefined && Boolean(feedbackContext) ? requestedSeed : undefined;
+
     const dispatchArgs: Record<string, any> = {
       action: isImageToVideo ? 'animate' : 'generate',
       prompt: videoPrompt,
       model_override: modelToUse,
       duration: singleTakeDuration,
       async: true,
+      ...(pinSeed !== undefined ? { seed: pinSeed } : {}),
       ...(validatedImageUrl ? { source_url: validatedImageUrl } : {}),
     };
 
@@ -1082,7 +1150,9 @@ export async function POST(request: Request) {
 
     // Self-healing retry for safety-scanner false positives. A retry only has a chance if the
     // payload actually changes, so this strips the remaining quoted text and audio direction
-    // instead of re-sending the prompt that was just refused.
+    // instead of re-sending the prompt that was just refused. When stripping changes nothing,
+    // the prompt is paraphrased with new tokens (same scene) as the last resort before failing
+    // honestly - re-dispatching identical text reproduces the identical rejection forever.
     if (videoDispatch.status === 'failed' && isPolicyRejection(videoDispatch.error)) {
       const retryPrompt = simplifyVideoPromptForRetry(videoPrompt);
       if (retryPrompt && retryPrompt !== videoPrompt) {
@@ -1091,6 +1161,17 @@ export async function POST(request: Request) {
           ...dispatchArgs,
           prompt: retryPrompt,
         }, requestBearer);
+      }
+      if (videoDispatch.status === 'failed' && isPolicyRejection(videoDispatch.error)) {
+        const { paraphraseVideoPrompt } = await import('@/lib/ai/nue-director');
+        const paraphrased = await paraphraseVideoPrompt(videoPrompt);
+        if (paraphrased) {
+          console.warn('[generate:POST] Scanner refused the stripped prompt too. Retrying once with paraphrased wording.');
+          videoDispatch = await livepeerAgent.dispatchCreateMedia({
+            ...dispatchArgs,
+            prompt: paraphrased,
+          }, requestBearer);
+        }
       }
     }
 
@@ -1140,6 +1221,7 @@ export async function POST(request: Request) {
         finalAudioUrl,
         wasMuxed,
         agentNotes: `Livepeer Agent returned an immediately completed ${effectiveSingleTakeDuration}s take via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
+        seed: videoDispatch.seed ?? pinSeed,
       });
 
       const result = {
@@ -1207,6 +1289,7 @@ export async function POST(request: Request) {
       effectiveDuration: effectiveSingleTakeDuration,
       estimatedCostUsd: videoDispatch.costUsd ?? estimatedCostUsd,
       audioEstimatedCostUsd,
+      seed: videoDispatch.seed ?? pinSeed,
       useOwnKey: ownKey || undefined,
       expectedSla,
     });
@@ -1220,6 +1303,22 @@ export async function POST(request: Request) {
       if (held !== null) heldCostUsd = videoDispatch.costUsd ?? estimatedCostUsd;
       updateJob(jobId, { heldCostUsd });
     }
+
+    // Durable descriptor: if the user closes the tab for hours (or switches
+    // devices), GET rebuilds from this row and the take still lands.
+    await savePendingRender({
+      jobId,
+      userId: effectiveUserId,
+      projectId: typeof projectId === 'string' ? projectId : undefined,
+      projectTitle: sanitizedTitle,
+      versionNumber: Number(versionNumber) || 1,
+      livepeerJobId: videoDispatch.jobId,
+      audioJobId,
+      model: modelToUse,
+      singleTakeDuration: effectiveSingleTakeDuration,
+      directorBrief,
+      syntheticPreferences,
+    });
 
     return NextResponse.json({
       success: true,

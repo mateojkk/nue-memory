@@ -258,6 +258,8 @@ export class LivepeerMediaAgent {
     etaSeconds?: number;
     /** Livepeer-reported estimated USD cost for this dispatch, when provided. */
     costUsd?: number;
+    /** Determinism seed echoed by the provider (present when the model accepts seeds). */
+    seed?: number;
   }> {
     try {
       const callArgs = {
@@ -305,12 +307,14 @@ export class LivepeerMediaAgent {
 
       const jobId = content?.job_id;
       const costUsd = typeof content?.cost_usd_estimated === 'number' ? content.cost_usd_estimated : undefined;
+      const seed = typeof content?.seed === 'number' ? content.seed : undefined;
       if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
         return {
           status: 'completed',
           url: unwrapLivepeerUrl(content.url),
           capability: content.capability || args.model_override,
           costUsd,
+          seed,
         };
       }
 
@@ -321,6 +325,7 @@ export class LivepeerMediaAgent {
           capability: content?.capability || args.model_override,
           etaSeconds: content?.eta_seconds || (args.model_override?.includes('seedance') ? 240 : 40),
           costUsd,
+          seed,
         };
       }
 
@@ -340,6 +345,8 @@ export class LivepeerMediaAgent {
     error?: string;
     /** Actual paid USD cost when reported, else the estimate. */
     costUsd?: number;
+    /** Determinism seed echoed by the provider. */
+    seed?: number;
   }> {
     try {
       const res = await fetch(this.endpoint, {
@@ -365,11 +372,13 @@ export class LivepeerMediaAgent {
       if (content?.url && content?.status !== 'pending' && content?.status !== 'running') {
         const paid = typeof content?.cost_paid_usd === 'number' ? content.cost_paid_usd : undefined;
         const estimated = typeof content?.cost_usd_estimated === 'number' ? content.cost_usd_estimated : undefined;
+        const doneSeed = typeof content?.seed === 'number' ? content.seed : undefined;
         return {
           status: 'completed',
           url: unwrapLivepeerUrl(content.url),
           capability: content.capability,
           costUsd: paid ?? estimated,
+          seed: doneSeed,
         };
       }
 

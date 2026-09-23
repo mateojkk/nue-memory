@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
 /** mem0-style expandable announcement bar ("Introducing …") above the navbar. */
@@ -142,6 +142,22 @@ function curateMemories(memories: MotionPreference[]): MotionPreference[] {
   return Array.from(byKey.values()).sort(
     (a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
   );
+}
+
+/**
+ * True for standing-taste statements ("I like...", "next time...", "my videos
+ * should...") that must save, not render. Imperative revision verbs take
+ * precedence so "make it darker" still re-renders the current video.
+ */
+function statesStandingTaste(text: string): boolean {
+  const cleanLower = text.trim().toLowerCase();
+  if (/\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(cleanLower)) {
+    return false;
+  }
+  if (/^(make|change|fix|adjust|tweak|redo|regenerate|edit|update|add|remove|try|give|speed up|slow down)\b/i.test(cleanLower)) {
+    return false;
+  }
+  return /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default|in all (my |future )|for (all |future )|next time|my videos? (should|always|never)|keep (it|them|things|the ))/i.test(text);
 }
 
 export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
@@ -454,6 +470,72 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   }, [email]);
 
+  // Resume renders abandoned by navigation or refresh. Livepeer kept working;
+  // reattach polling so finished takes land instead of vanishing. Merges the
+  // same-browser localStorage list with the durable Supabase list so renders
+  // survive hours away and device switches.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current || !email || projects.length === 0) return;
+    resumedRef.current = true;
+    (async () => {
+      const local = readPersistedJobs();
+      let remote: PersistedJob[] = [];
+      try {
+        const res = await fetch(`/api/pending-renders?email=${encodeURIComponent(email)}`);
+        const data = await res.json().catch(() => null);
+        if (res.ok && data?.success && Array.isArray(data.pending)) {
+          remote = data.pending.map((p: any) => ({
+            jobId: String(p.jobId),
+            livepeerJobId: p.livepeerJobId || undefined,
+            scene2JobId: p.scene2JobId || undefined,
+            audioJobId: p.audioJobId || undefined,
+            targetIndex: -1,
+            projectId: p.projectId || undefined,
+            projectTitle: p.projectTitle || undefined,
+            versionNumber: Number(p.versionNumber) || 1,
+            startedAt: p.startedAt || new Date().toISOString(),
+          }));
+        }
+      } catch {
+        // Server list unavailable: local entries still resume.
+      }
+      const seen = new Set<string>();
+      const pending = [...local, ...remote].filter((j) => {
+        if (!j.jobId || seen.has(j.jobId)) return false;
+        seen.add(j.jobId);
+        return true;
+      });
+      if (pending.length === 0) return;
+      for (const pj of pending) {
+        const byId = pj.projectId ? projects.findIndex((p) => p.id === pj.projectId) : -1;
+        const targetIndex =
+          byId >= 0 ? byId : pj.targetIndex >= 0 && pj.targetIndex < projects.length ? pj.targetIndex : -1;
+        // Already landed (e.g. finished in another tab): drop silently.
+        if (targetIndex < 0 || projects[targetIndex].versions.length >= pj.versionNumber) {
+          clearPersistedJob(pj.jobId);
+          continue;
+        }
+        setGenerationStage('cooking');
+        setServerStageDescription('Reattached to your running render…');
+        try {
+          const completedResult = await pollGenerationJob(pj);
+          applyCompletedMedia({ success: true, ...completedResult }, targetIndex, true);
+        } catch (e) {
+          console.warn('[resume] Reattached render did not complete:', e instanceof Error ? e.message : e);
+        } finally {
+          clearPersistedJob(pj.jobId);
+        }
+      }
+      setGenerationStage(null);
+      setServerStageDescription(undefined);
+      setServerProgress(undefined);
+      setServerModel(undefined);
+      setServerExpectedSla(undefined);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [email, projects.length]);
+
   const fetchMemories = async (userEmail: string) => {
     setIsLoadingMemories(true);
     try {
@@ -474,6 +556,216 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
   };
 
   // Generate Media via Livepeer Agent
+
+  // Persisted in-flight renders. Livepeer keeps rendering after we navigate
+  // away or refresh - without this the finished take has nowhere to land.
+  interface PersistedJob {
+    jobId: string;
+    livepeerJobId?: string;
+    scene2JobId?: string;
+    audioJobId?: string;
+    targetIndex: number;
+    projectId?: string;
+    projectTitle?: string;
+    versionNumber: number;
+    promptText?: string;
+    startedAt: string;
+  }
+
+  const PERSISTED_JOBS_KEY = 'nue_active_jobs';
+  const PERSISTED_JOB_TTL_MS = 30 * 60 * 1000;
+
+  const readPersistedJobs = (): PersistedJob[] => {
+    try {
+      const raw = window.localStorage.getItem(PERSISTED_JOBS_KEY);
+      if (!raw) return [];
+      const list = JSON.parse(raw);
+      if (!Array.isArray(list)) return [];
+      const now = Date.now();
+      return list.filter(
+        (j) => j && typeof j.jobId === 'string' && now - new Date(j.startedAt).getTime() < PERSISTED_JOB_TTL_MS
+      );
+    } catch {
+      return [];
+    }
+  };
+
+  const persistActiveJob = (job: PersistedJob) => {
+    try {
+      const rest = readPersistedJobs().filter((j) => j.jobId !== job.jobId);
+      window.localStorage.setItem(PERSISTED_JOBS_KEY, JSON.stringify([...rest, job].slice(-5)));
+    } catch {
+      // Storage unavailable: resume simply won't happen.
+    }
+  };
+
+  const clearPersistedJob = (jobId: string) => {
+    try {
+      window.localStorage.setItem(
+        PERSISTED_JOBS_KEY,
+        JSON.stringify(readPersistedJobs().filter((j) => j.jobId !== jobId))
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+  };
+
+  // Shared poll loop: follows one GPU job to completion. Used live by
+  // handleGenerate and on return by the resume effect. Throws on failure or
+  // after the 15-minute window so callers handle both identically.
+  const pollGenerationJob = async (keys: {
+    jobId: string;
+    livepeerJobId?: string;
+    scene2JobId?: string;
+    audioJobId?: string;
+  }): Promise<any> => {
+    const pollIntervalMs = 3000;
+    const maxPollAttempts = 300; // 300 * 3s = 900s (15 min window for Seedance takes)
+    for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+      try {
+        const pollUrl =
+          `/api/generate?jobId=${encodeURIComponent(keys.jobId)}` +
+          (keys.livepeerJobId ? `&livepeerJobId=${encodeURIComponent(keys.livepeerJobId)}` : '') +
+          (keys.scene2JobId ? `&scene2JobId=${encodeURIComponent(keys.scene2JobId)}` : '') +
+          (keys.audioJobId ? `&audioJobId=${encodeURIComponent(keys.audioJobId)}` : '');
+
+        const pollRes = await fetch(pollUrl);
+        if (pollRes.ok) {
+          const pollData = await pollRes.json();
+          if (pollData.success && pollData.job) {
+            const job = pollData.job;
+            if (job.status === 'completed') {
+              return job.result;
+            }
+            if (job.status === 'failed') {
+              throw new Error(job.error || 'Video generation failed.');
+            }
+            if (job.stageDescription) {
+              setServerStageDescription(job.stageDescription);
+            }
+            if (job.progress !== undefined) {
+              setServerProgress(job.progress);
+            }
+            if (job.model) {
+              setServerModel(job.model);
+            }
+            if (job.expectedSla) {
+              setServerExpectedSla(job.expectedSla);
+            }
+          }
+        }
+      } catch (pollErr: any) {
+        if (pollErr.message && !pollErr.message.includes('fetch')) {
+          throw pollErr;
+        }
+      }
+    }
+    throw new Error('Video generation took longer than expected due to remote GPU queue congestion. Please check your gallery in a moment.');
+  };
+
+  // Applies one finished take to a project: version, agent message, credit
+  // refresh, persistence. Shared by live renders and resumed ones so a render
+  // you walked away from lands exactly where a watched one would.
+  const applyCompletedMedia = (data: any, targetIndex: number, resumed = false) => {
+    const newVersion: MediaVersion = data.mediaVersion;
+
+    // Billing is server-authoritative now: the take was already charged at
+    // its reported Livepeer cost on completion. Just refresh the display.
+    refreshCredits?.();
+
+    // Re-sync durable memories only. Render traces are shown on the video card but are not memory.
+    if (email) {
+      fetchMemories(email);
+    }
+
+    const audioNotice = newVersion.audioStyle?.audioUrl
+      ? `\n\n🎵 Soundtrack: ${newVersion.audioStyle.style}.`
+      : '';
+
+    let agentContent = data.directorMessage || `Here's Version ${newVersion.versionNumber}!`;
+    if (resumed) {
+      agentContent = `Welcome back - your render finished while you were away. ${agentContent}`;
+    }
+    if (audioNotice && !agentContent.includes('Soundtrack:')) {
+      agentContent = `${agentContent}${audioNotice}`;
+    }
+
+    const agentMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      sender: 'agent',
+      content: agentContent,
+      timestamp: new Date().toISOString(),
+      versionNumber: newVersion.versionNumber,
+    };
+
+    // Update Project with new Version and Agent message, then persist directly to Supabase DB
+    setProjects((prev) => {
+      const updated = [...prev];
+      if (updated[targetIndex]) {
+        const proj = { ...updated[targetIndex] };
+        proj.versions = [...proj.versions, newVersion];
+        proj.currentVersionIndex = proj.versions.length - 1;
+        proj.messages = [...(proj.messages || []), agentMsg];
+        updated[targetIndex] = proj;
+        persistProjectToDb(proj);
+      }
+      return updated;
+    });
+
+    setMessages((prev) => [...prev, agentMsg]);
+  };
+
+  // Grabs the last frame of the current take as a JPEG data URL so revisions
+  // continue from v1's pixels (seedance-25-i2v) instead of re-rolling blind.
+  // Returns null on anything (CORS taint, no video, seek failure) - the caller
+  // then falls back to the text-only revision path. No render depends on this.
+  const captureActiveFrame = async (): Promise<string | null> => {
+    try {
+      const video = document.querySelector('video[data-nue-capture="active"]') as HTMLVideoElement | null;
+      if (!video || !video.src) return null;
+      const originalTime = video.currentTime;
+      const dur = Number.isFinite(video.duration) ? video.duration : 0;
+      if (dur > 0.3) {
+        await new Promise<void>((resolve) => {
+          const timer = window.setTimeout(() => resolve(), 1500);
+          const onSeeked = () => {
+            window.clearTimeout(timer);
+            resolve();
+          };
+          video.addEventListener('seeked', onSeeked, { once: true });
+          try {
+            video.currentTime = Math.max(0, dur - 0.15);
+          } catch {
+            resolve();
+          }
+        });
+      }
+      await new Promise((r) => requestAnimationFrame(() => r(null)));
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (!w || !h) return null;
+      const scale = Math.min(1, 1280 / w);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      try {
+        if (Number.isFinite(originalTime)) video.currentTime = originalTime;
+      } catch {
+        // Restore playback position best-effort only.
+      }
+      const url = canvas.toDataURL('image/jpeg', 0.82);
+      // Livepeer inlines base64 source frames up to ~3MB - stay well under.
+      if (url.length > 3.5 * 1024 * 1024) return null;
+      return url;
+    } catch {
+      return null;
+    }
+  };
+
   const handleGenerate = async (
     promptText: string,
     versionNumber = 1,
@@ -482,7 +774,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     overrideProjectTitle?: string,
     imageUrl?: string,
     chatHistory?: Array<{ role: 'user' | 'assistant'; content: string }>,
-    options?: { bypassPreflight?: boolean; approvedDirectorBrief?: any; applyRecalledMemories?: boolean }
+    options?: { bypassPreflight?: boolean; approvedDirectorBrief?: any; applyRecalledMemories?: boolean; seed?: number }
   ) => {
     setIsGenerating(true);
     setGenerationStage('thinking');
@@ -498,6 +790,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           brief: promptText,
           versionNumber,
           projectTitle: targetTitle,
+          projectId: projects[targetIndex]?.id || activeProject?.id || undefined,
           feedbackContext,
           chatHistory,
           email: email || undefined,
@@ -506,6 +799,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           preflightOnly: !options?.bypassPreflight,
           approvedDirectorBrief: options?.approvedDirectorBrief,
           applyRecalledMemories: Boolean(options?.applyRecalledMemories),
+          seed: options?.seed,
         }),
       });
 
@@ -548,15 +842,12 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         });
         return;
       }
-      // Asynchronous Job Polling Architecture
+      // Asynchronous Job Polling Architecture (shared helper also used on resume)
       else if (data.success && data.jobId) {
         const jobId = data.jobId;
         const livepeerJobId = data.livepeerJobId;
         const scene2JobId = data.scene2JobId;
         const audioJobId = data.audioJobId;
-        const pollIntervalMs = 3000;
-        const maxPollAttempts = 300; // 300 * 3s = 900s (15 min window for Seedance takes)
-        let completedResult: any = null;
 
         // Only now (confirmed GPU job) do we transition to the cooking stage
         setGenerationStage('cooking');
@@ -574,102 +865,32 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
           setServerExpectedSla(data.expectedSla);
         }
 
-        for (let attempt = 0; attempt < maxPollAttempts; attempt++) {
-          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-          try {
-            const pollUrl =
-              `/api/generate?jobId=${encodeURIComponent(jobId)}` +
-              (livepeerJobId ? `&livepeerJobId=${encodeURIComponent(livepeerJobId)}` : '') +
-              (scene2JobId ? `&scene2JobId=${encodeURIComponent(scene2JobId)}` : '') +
-              (audioJobId ? `&audioJobId=${encodeURIComponent(audioJobId)}` : '');
+        // Persist so a refresh or tab switch resumes instead of abandoning.
+        persistActiveJob({
+          jobId,
+          livepeerJobId,
+          scene2JobId,
+          audioJobId,
+          targetIndex,
+          projectId: activeProject?.id,
+          projectTitle: targetTitle,
+          versionNumber,
+          promptText,
+          startedAt: new Date().toISOString(),
+        });
 
-            const pollRes = await fetch(pollUrl);
-            if (pollRes.ok) {
-              const pollData = await pollRes.json();
-              if (pollData.success && pollData.job) {
-                const job = pollData.job;
-                if (job.status === 'completed') {
-                  completedResult = job.result;
-                  break;
-                }
-                if (job.status === 'failed') {
-                  throw new Error(job.error || 'Video generation failed.');
-                }
-                if (job.stageDescription) {
-                  setServerStageDescription(job.stageDescription);
-                }
-                if (job.progress !== undefined) {
-                  setServerProgress(job.progress);
-                }
-                if (job.model) {
-                  setServerModel(job.model);
-                }
-                if (job.expectedSla) {
-                  setServerExpectedSla(job.expectedSla);
-                }
-              }
-            }
-          } catch (pollErr: any) {
-            if (pollErr.message && !pollErr.message.includes('fetch')) {
-              throw pollErr;
-            }
-          }
-        }
-
-        if (!completedResult) {
-          throw new Error('Video generation took longer than expected due to remote GPU queue congestion. Please check your gallery in a moment.');
+        let completedResult: any = null;
+        try {
+          completedResult = await pollGenerationJob({ jobId, livepeerJobId, scene2JobId, audioJobId });
+        } finally {
+          clearPersistedJob(jobId);
         }
 
         data = { success: true, ...completedResult };
       }
 
       if (data.success && data.mediaVersion) {
-        const newVersion: MediaVersion = data.mediaVersion;
-
-        // Billing is server-authoritative now: the take was already charged at
-        // its reported Livepeer cost on completion. Just refresh the display.
-        refreshCredits?.();
-
-        // Re-sync durable memories only. Render traces are shown on the video card but are not memory.
-        if (email) {
-          fetchMemories(email);
-        }
-
-        // Build agent response truthfully
-        const dur = newVersion.generationDurationSeconds || 15;
-        const cap = newVersion.livepeerCapability || 'seedance-25-t2v';
-        const audioNotice = newVersion.audioStyle?.audioUrl
-          ? `\n\n🎵 Soundtrack: ${newVersion.audioStyle.style}.`
-          : '';
-
-        let agentContent = data.directorMessage || `Here's Version ${newVersion.versionNumber}!`;
-        if (audioNotice && !agentContent.includes('Soundtrack:')) {
-          agentContent = `${agentContent}${audioNotice}`;
-        }
-
-        const agentMsg: ChatMessage = {
-          id: `msg-${Date.now()}`,
-          sender: 'agent',
-          content: agentContent,
-          timestamp: new Date().toISOString(),
-          versionNumber: newVersion.versionNumber,
-        };
-
-        // Update Project with new Version and Agent message, then persist directly to Supabase DB
-        setProjects((prev) => {
-          const updated = [...prev];
-          if (updated[targetIndex]) {
-            const proj = { ...updated[targetIndex] };
-            proj.versions = [...proj.versions, newVersion];
-            proj.currentVersionIndex = proj.versions.length - 1;
-            proj.messages = [...(proj.messages || []), agentMsg];
-            updated[targetIndex] = proj;
-            persistProjectToDb(proj);
-          }
-          return updated;
-        });
-
-        setMessages((prev) => [...prev, agentMsg]);
+        applyCompletedMedia(data, targetIndex);
       } else if (data.success && data.directorMessage) {
         // Conversational agent reply (greeting, clarification) without GPU render
         const agentMsg: ChatMessage = {
@@ -751,6 +972,13 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     const pending = pendingPreflight;
     if (!pending) return;
     setPendingPreflight(null);
+    // Carry the active take's seed through approval so the approved render
+    // still revises rather than re-rolling when feedback is present.
+    const approveIdx = pending.overrideProjectIndex !== undefined ? pending.overrideProjectIndex : currentProjectIndex;
+    const approveProj = projects[approveIdx];
+    const approveSeed = pending.feedbackContext
+      ? approveProj?.versions[approveProj.currentVersionIndex]?.seed
+      : undefined;
     await handleGenerate(
       pending.promptText,
       pending.versionNumber,
@@ -759,7 +987,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       pending.overrideProjectTitle,
       pending.imageUrl,
       pending.chatHistory,
-      { bypassPreflight: true, approvedDirectorBrief: pending.directorBrief, applyRecalledMemories }
+      { bypassPreflight: true, approvedDirectorBrief: pending.directorBrief, applyRecalledMemories, seed: pending.imageUrl ? undefined : approveSeed }
     );
   };
 
@@ -821,7 +1049,7 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       // a brief - auto-save it and stop instead of burning a render on it.
       if (
         !/\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(text.trim().toLowerCase()) &&
-        /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default|in all (my |future )|for (all |future ))/i.test(text)
+        statesStandingTaste(text)
       ) {
         const { saved, error: saveError } = await rememberNow(text, newProj);
         const note: ChatMessage = {
@@ -905,18 +1133,26 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     if (isCorrectionOrRevision) {
       proposeMemoriesFromFeedback(text, currentProj);
       const activeBrief = currentProj.versions[currentProj.currentVersionIndex]?.brief || currentProj.initialPrompt || text;
+      // Revision continuity, strongest first: (1) continue from v1's last frame
+      // via image-to-video, (2) pin v1's seed so the take varies instead of
+      // re-rolling. Frame wins when available - seed is skipped with a chained
+      // frame since i2v seed support is unconfirmed and loud on rejection.
+      const chainedFrame = imageUrl ? null : await captureActiveFrame();
+      const activeSeed = currentProj.versions[currentProj.currentVersionIndex]?.seed;
       await handleGenerate(
         activeBrief,
         nextVersionNumber,
         text,
         targetIndex,
         currentProj.title,
-        imageUrl,
-        chatHistory
+        chainedFrame || imageUrl,
+        chatHistory,
+        chainedFrame || typeof activeSeed !== 'number' ? undefined : { seed: activeSeed }
       );
     } else if (
       !hasCreationIntent &&
-      /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default|in all (my |future )|for (all |future ))/i.test(text)
+      !isCorrectionOrRevision &&
+      statesStandingTaste(text)
     ) {
       // Standing taste statement, not a render request: auto-save it as memory
       // (explicit preferences are self-confirming) and stop here. Never spend

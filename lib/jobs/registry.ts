@@ -36,6 +36,8 @@ export interface GenerationJob {
   syntheticPreferences?: any[];
   modelToUse?: string;
   expectedSla?: string;
+  /** Determinism seed for this take; reused by revisions for continuity. */
+  seed?: number;
   /** Livepeer-reported estimate at dispatch (USD). Used for the 402 gate. */
   estimatedCostUsd?: number;
   /** Amount held at dispatch; released on failure/expiry, settled at completion. */

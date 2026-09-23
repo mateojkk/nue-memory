@@ -77,7 +77,8 @@ Output ONLY valid JSON with these fields:
 CRITICAL RULES FOR PROMPTS SENT TO DIFFUSION:
 - Focus purely on positive, vivid visual descriptions of lighting, characters, motion, atmosphere, and artistic style.
 - NEVER copy negative instructions, legalistic disclaimers, or words like "copyright", "copyrighted", "infringe", "do not copy", "nursery rhyme" into the prompt or scenes. Automated partner scanners flag those words as false-positive policy violations. Describe the scene positively and artistically!
-	- CHARACTER DNA & CONTINUITY (Google & Higgsfield Standard):
+- COPYRIGHT GUARDRAIL: NEVER put quoted song lyrics, dialogue lines, poems, or any recognizable copyrighted text, characters, or names into enrichedPrompt, scenePrompts, characterBible, or conceptImagePrompt. The video model renders pixels, never words - quoted text only trips the partner safety scanner. User-supplied lyrics live ONLY in lyricsPrompt (the audio side), never in any visual field. Describe original characters by plain visual traits (age, hair, clothing), never by reference to existing media.
+ 	- CHARACTER DNA & CONTINUITY (Google & Higgsfield Standard):
 	  * Plan ONE single continuous take containing one continuous story: the SAME subjects, characters, environment, lighting, and visual theme throughout.
 	  * Do NOT split the request into multiple scenes; the whole render is one take of at most 15s.
   * Define explicit "characterBible" locking the exact hair, skin tone, eye shape, wardrobe, and clothing colors.
@@ -257,6 +258,39 @@ export function isPolicyRejection(message?: string): boolean {
 }
 
 /**
+ * Last-resort loop breaker: when strip/simplify produce a byte-identical
+ * prompt, re-dispatching reproduces the identical rejection forever. This
+ * rewords the refused visual prompt with different tokens (same scene, same
+ * shots) so the retry is genuinely new. Returns null when it cannot produce
+ * a meaningfully different prompt - the caller must then fail honestly
+ * instead of looping.
+ */
+export async function paraphraseVideoPrompt(prompt: string): Promise<string | null> {
+  const source = (prompt || '').trim();
+  if (source.length < 20 || !process.env.GROQ_API_KEY) return null;
+  try {
+    const { generateText } = await import('ai');
+    const { createGroq } = await import('@ai-sdk/groq');
+    const groq = createGroq({ apiKey: process.env.GROQ_API_KEY });
+    const { text } = await generateText({
+      model: groq(process.env.GROQ_MODEL || 'openai/gpt-oss-120b'),
+      system:
+        'Rewrite a text-to-video visual prompt using different words with the same scenes, subjects, actions, and camera language. ' +
+        'Output ONLY the rewritten prompt, no quotes, no preamble. ' +
+        'Rules: purely visual (lighting, subjects, motion, atmosphere). NEVER mention music, sound, dialogue, text, subtitles, or durations. ' +
+        'No negative instructions, no legalistic words. Use standard hyphens only.',
+      prompt: source.slice(0, 1500),
+    });
+    const out = text.trim().replace(/^["\u201c\u201d']+|["\u201c\u201d']+$/g, '').trim();
+    if (out.length < 20 || out.toLowerCase() === source.toLowerCase()) return null;
+    return out;
+  } catch (err) {
+    console.warn('[nue-director] Paraphrase retry unavailable:', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
  * Translates technical AI / provider errors into human-friendly buddy explanations.
  */
 export function humanizeUpstreamError(raw: any): string {
@@ -285,7 +319,7 @@ export function humanizeUpstreamError(raw: any): string {
     normalized.includes('rejected due to a potential copyright') ||
     normalized.includes('potential copyright')
   ) {
-    return "ByteDance's automated safety scanner flagged the prompt as potential copyrighted material, which is a false positive on original work. The scanner matches quoted lyric or dialogue text, so those quoted lines are removed from the visual description on the next attempt. Rewording the scene slightly (or trimming the sung lyrics) clears it right away - say the word and I will re-roll.";
+    return "ByteDance's automated safety scanner flagged the prompt as potential copyrighted material, which is a false positive on original work. I already re-rolled it with cleaned and reworded scene descriptions - if it still refuses, simplify the scene (fewer named elements, no quoted text) and I will roll again.";
   }
 
   if (

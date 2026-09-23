@@ -43,10 +43,35 @@ CREATE TABLE IF NOT EXISTS public.memories (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 4. Pending Renders Table (durable in-flight render descriptors)
+-- Lets a render started on one device finish into the gallery from any other
+-- device hours later: everything GET needs to poll Livepeer to completion.
+CREATE TABLE IF NOT EXISTS public.pending_renders (
+    job_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    project_id TEXT,
+    project_title TEXT,
+    version_number INT DEFAULT 1,
+    livepeer_job_id TEXT,
+    scene2_job_id TEXT,
+    audio_job_id TEXT,
+    model TEXT,
+    single_take_duration INT,
+    director_brief JSONB,
+    synthetic_preferences JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Migration for existing deployments (run once in the SQL editor):
+-- ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS livepeer_api_key TEXT;
+-- (pending_renders is covered by the CREATE TABLE IF NOT EXISTS above.)
+
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pending_renders ENABLE ROW LEVEL SECURITY;
 
 -- Production Security Policies:
 -- Restricts rows so callers can only view and update their own records matching their verified identity.
@@ -69,9 +94,16 @@ CREATE POLICY "User memories self access"
     USING (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role')
     WITH CHECK (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role');
 
+CREATE POLICY "User pending renders self access"
+    ON public.pending_renders
+    FOR ALL
+    USING (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role')
+    WITH CHECK (user_id = auth.jwt() ->> 'email' OR auth.role() = 'service_role');
+
 -- Performance and Security Indexes
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles (email);
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON public.projects (user_id);
 CREATE INDEX IF NOT EXISTS idx_memories_user_id ON public.memories (user_id);
 CREATE INDEX IF NOT EXISTS idx_memories_is_active ON public.memories (user_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_pending_renders_user_id ON public.pending_renders (user_id);
 

@@ -988,6 +988,12 @@ export function NueMotionWorkspace({
                             projectId={activeProject?.id}
                             userEmail={userEmail}
                             onRefreshProjects={onRefreshProjects}
+                            captureKey={
+                              matchingVersion.versionNumber ===
+                              activeProject?.versions?.[activeProject?.currentVersionIndex ?? -1]?.versionNumber
+                                ? 'active'
+                                : undefined
+                            }
                             isGloballyPlaying={activePlayingVersionNumber === matchingVersion.versionNumber}
                             onGlobalPlay={() => setActivePlayingVersionNumber(matchingVersion.versionNumber)}
                             onGlobalPause={() => {

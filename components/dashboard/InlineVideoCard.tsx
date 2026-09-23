@@ -13,6 +13,8 @@ interface InlineVideoCardProps {
   isGloballyPlaying?: boolean;
   onGlobalPlay?: () => void;
   onGlobalPause?: () => void;
+  /** When set, rendered as data-nue-capture so revisions can grab this frame. */
+  captureKey?: string;
 }
 
 function resolveMediaUrl(url?: string): string {
@@ -39,6 +41,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
   isGloballyPlaying,
   onGlobalPlay,
   onGlobalPause,
+  captureKey,
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -274,6 +277,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
           playsInline
           preload="auto"
           crossOrigin="anonymous"
+          {...(captureKey ? { 'data-nue-capture': captureKey } : {})}
           muted={isMuted}
           onPlay={() => {
             setIsPlaying(true);

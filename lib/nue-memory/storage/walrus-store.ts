@@ -85,10 +85,14 @@ async function rememberWithRetry(
  * Deterministically derives a MemWal namespace for a given user.
  * Each signed up user gets their own dedicated namespace under the master account key.
  *
+ * Strict single-vault rule: saves AND reads touch ONLY `nue-{email}`.
+ * No legacy aliases, no fallbacks - a memory outside the user's own vault is
+ * invisible by design, never silently merged in.
+ *
  * Pattern:
- * - Empty or "default_user" or "global": falls back to "nue-memory"
- * - Valid email or user id: converts to a sanitized string prefixed with "nue-u-"
- *   e.g. "alice@example.com" -> "nue-u-alice-example-com"
+ * - Empty or "default_user" or "global": throws (identity required).
+ * - Valid email or user id: lowercased `nue-` prefixed namespace,
+ *   e.g. "alice@example.com" -> "nue-alice@example.com"
  */
 export function getUserNamespace(userId?: string): string {
   if (!userId || userId === 'default_user' || userId === 'global') {
@@ -96,37 +100,6 @@ export function getUserNamespace(userId?: string): string {
   }
   const clean = userId.trim().toLowerCase();
   return clean.startsWith('nue-') ? clean : `nue-${clean}`;
-}
-
-function getLegacyUserNamespace(userId: string): string {
-  const clean = userId
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-
-  if (clean.length > 0 && clean.length <= 48) {
-    return `nue-u-${clean}`;
-  }
-
-  let hash = 0;
-  for (let i = 0; i < userId.length; i++) {
-    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
-  }
-  return `nue-u-${hash.toString(16)}`;
-}
-
-export function getUserNamespaceAliases(userId?: string): string[] {
-  const primary = getUserNamespace(userId);
-  const aliases = [primary];
-  if (userId) {
-    const legacy = getLegacyUserNamespace(userId);
-    if (!aliases.includes(legacy)) {
-      aliases.push(legacy);
-    }
-  }
-  return aliases;
 }
 
 
@@ -407,28 +380,22 @@ export class WalrusMemWalStore implements MemoryStore {
   public async search(query: MemoryQuery): Promise<MemorySearchResult[]> {
     let recalledBlobs: Array<{ blob_id: string; text: string; distance: number; created_at?: string }> = [];
 
-    // Alias namespaces (current + legacy) are independent - recall in parallel.
-    const recallResults = await Promise.all(
-      getUserNamespaceAliases(query.userId).map(async (targetNamespace) => {
-        try {
-          const client = await this.getClientForNamespace(targetNamespace);
-          if (client?.recall) {
-            const recallRes = await client.recall({
-              query: query.query,
-              namespace: targetNamespace,
-              topK: (query.limit || 10) * 2, // oversample to allow filtering
-              maxDistance: 1.5,
-            });
-            return recallRes?.results || [];
-          }
-        } catch (err) {
-          console.warn(`[WalrusStore] Error during MemWal recall for namespace ${targetNamespace}:`, err);
-        }
-        return [];
-      })
-    );
-    for (const results of recallResults) {
-      recalledBlobs = recalledBlobs.concat(results);
+    // Strict single vault: only the user's own `nue-{email}` namespace is
+    // ever read. Anything outside it is invisible by design.
+    const targetNamespace = getUserNamespace(query.userId);
+    try {
+      const client = await this.getClientForNamespace(targetNamespace);
+      if (client?.recall) {
+        const recallRes = await client.recall({
+          query: query.query,
+          namespace: targetNamespace,
+          topK: (query.limit || 10) * 2, // oversample to allow filtering
+          maxDistance: 1.5,
+        });
+        recalledBlobs = recallRes?.results || [];
+      }
+    } catch (err) {
+      console.warn(`[WalrusStore] Error during MemWal recall for namespace ${targetNamespace}:`, err);
     }
 
     const candidateMemories: Array<{ memory: StructuredMemory; distance: number }> = [];
@@ -456,10 +423,12 @@ export class WalrusMemWalStore implements MemoryStore {
       }
     }
 
-    // Fallback: Check cached memories belonging to this user for keyword overlap
+    // Fallback: Check cached memories belonging to this user for keyword overlap.
+    // Strict vault rule: only the queried user's own id matches (case-insensitive).
+    const queryUserId = query.userId?.trim().toLowerCase();
     for (const mem of Array.from(this.memoryCache.values())) {
       if (isHardDeleted(mem)) continue;
-      if (query.userId && mem.userId !== query.userId && mem.userId !== 'default_user') {
+      if (queryUserId && (mem.userId || '').trim().toLowerCase() !== queryUserId) {
         continue;
       }
       if (!seenIds.has(mem.id)) {
@@ -490,8 +459,8 @@ export class WalrusMemWalStore implements MemoryStore {
         continue;
       }
 
-      // 2. User ID filter
-      if (query.userId && memory.userId !== query.userId) {
+      // 2. User ID filter (strict, case-insensitive: own vault only)
+      if (queryUserId && (memory.userId || '').trim().toLowerCase() !== queryUserId) {
         continue;
       }
 
@@ -653,15 +622,10 @@ export class WalrusMemWalStore implements MemoryStore {
       all = all.filter((m) => m.isActive);
     }
     if (filter?.userId) {
+      // Strict vault rule: only memories whose owner id is this user
+      // (case-insensitive). Nothing foreign, nothing unowned, ever.
       const targetUserId = filter.userId.trim().toLowerCase();
-      const namespaceAliases = getUserNamespaceAliases(targetUserId).map((ns) => ns.toLowerCase());
-      all = all.filter(
-        (m) =>
-          m.userId?.toLowerCase() === targetUserId ||
-          namespaceAliases.includes(m.userId?.toLowerCase() || '') ||
-          m.userId === 'default_user' ||
-          !m.userId
-      );
+      all = all.filter((m) => (m.userId || '').trim().toLowerCase() === targetUserId);
     }
     if (filter?.domain) {
       const targetDomain = filter.domain;
@@ -680,7 +644,7 @@ export class WalrusMemWalStore implements MemoryStore {
   }
 
   /**
-   * Lists memories according to filters, querying live MemWal storage via recall in user's namespace.
+   * Lists memories according to filters, querying live MemWal storage via recall in the user's own namespace.
    * Recalled blobs are deduplicated by id (latest updatedAt wins) so a tombstone
    * or supersession marker written later overrides the original active blob.
    * Hard-deleted ids are dropped from the cache so they cannot reappear.
@@ -691,36 +655,27 @@ export class WalrusMemWalStore implements MemoryStore {
     activeOnly?: boolean;
   }): Promise<StructuredMemory[]> {
     const recalled: StructuredMemory[] = [];
-    // Alias namespaces (current + legacy) are independent - recall in parallel.
-    const listResults = await Promise.all(
-      getUserNamespaceAliases(filter?.userId).map(async (targetNamespace) => {
-        const mems: Array<{ mem: StructuredMemory; blobId: string }> = [];
-        try {
-          const client = await this.getClientForNamespace(targetNamespace);
-          const recallRes = await client.recall({
-            query: 'preference video visual style pacing duration captions audio model layout lyrics vocals soundtrack',
-            namespace: targetNamespace,
-            topK: 50,
-            limit: 50,
-          });
-          if (recallRes?.results) {
-            for (const item of recallRes.results) {
-              mems.push({ mem: decodeMemoryPayload(item.text, item.blob_id, item.created_at, targetNamespace), blobId: item.blob_id });
-            }
+    // Strict single vault: only `nue-{email}` is ever read.
+    const targetNamespace = getUserNamespace(filter?.userId);
+    try {
+      const client = await this.getClientForNamespace(targetNamespace);
+      const recallRes = await client.recall({
+        query: 'preference video visual style pacing duration captions audio model layout lyrics vocals soundtrack',
+        namespace: targetNamespace,
+        topK: 50,
+        limit: 50,
+      });
+      if (recallRes?.results) {
+        for (const item of recallRes.results) {
+          const mem = decodeMemoryPayload(item.text, item.blob_id, item.created_at, filter?.userId);
+          recalled.push(mem);
+          if (item.blob_id) {
+            this.blobToMemoryId.set(item.blob_id, mem.id);
           }
-        } catch (err) {
-          console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
-        }
-        return mems;
-      })
-    );
-    for (const mems of listResults) {
-      for (const { mem, blobId } of mems) {
-        recalled.push(mem);
-        if (blobId) {
-          this.blobToMemoryId.set(blobId, mem.id);
         }
       }
+    } catch (err) {
+      console.warn(`[WalrusStore] Notice recalling live memories from MemWal namespace ${targetNamespace}:`, err);
     }
     if (recalled.length > 0) {
       // Merge recalled blobs over the local cache, latest updatedAt per id wins,

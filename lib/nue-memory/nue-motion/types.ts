@@ -87,6 +87,8 @@ export interface MediaVersion {
   agentNotes: string;
   generationDurationSeconds: number;
   livepeerCapability?: string;
+  /** Determinism seed used for this take; revisions reuse it for continuity. */
+  seed?: number;
   characterAnchorUrl?: string;
   scenes?: StoryboardScene[];
 }
