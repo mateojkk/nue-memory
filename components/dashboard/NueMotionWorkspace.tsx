@@ -329,7 +329,7 @@ export function NueMotionWorkspace({
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if ((!inputText.trim() && !selectedImage) || isGenerating) return;
+    if (!inputText.trim() && !selectedImage) return;
     if (typeof window !== 'undefined' && window.innerWidth < 1024 && showHistory) {
       handleSetShowHistory(false);
     }
@@ -856,9 +856,9 @@ export function NueMotionWorkspace({
                 {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
 
-              <button
-                type="submit"
-                disabled={(!inputText.trim() && !selectedImage) || isGenerating}
+                <button
+                  type="submit"
+                  disabled={!inputText.trim() && !selectedImage}
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-white transition-all shrink-0 active:scale-95 shadow-xs ${
                   inputText.trim() || selectedImage
                     ? 'bg-[var(--fg)] text-[var(--bg)] cursor-pointer'
@@ -1304,12 +1304,11 @@ export function NueMotionWorkspace({
                   placeholder={
                     isGenerating
                       ? generationStage === 'cooking'
-                        ? 'cooking...'
-                        : 'thinking...'
+                        ? 'Cooking… you can still teach me taste'
+                        : 'Thinking…'
                       : 'Describe a video or direct a revision...'
                   }
                   rows={1}
-                  disabled={isGenerating}
                   className="flex-1 bg-transparent py-1 text-xs sm:text-sm text-[var(--fg)] placeholder-[var(--fg-muted)] focus:outline-none resize-none max-h-[180px] leading-relaxed"
                 />
 
@@ -1328,9 +1327,9 @@ export function NueMotionWorkspace({
 
                 <button
                   type="submit"
-                  disabled={(!inputText.trim() && !selectedImage) || isGenerating}
+                  disabled={!inputText.trim() && !selectedImage}
                   className="w-8 h-8 rounded-full bg-[var(--fg)] text-[var(--bg)] disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-90 transition-all shrink-0 active:scale-95 flex items-center justify-center"
-                  title={isGenerating ? (generationStage === 'cooking' ? 'cooking...' : 'thinking...') : 'Send'}
+                  title={isGenerating ? 'Send (taste notes + chat while cooking)' : 'Send'}
                 >
                   {isGenerating ? (
                     generationStage === 'cooking' ? (

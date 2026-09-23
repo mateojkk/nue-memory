@@ -36,6 +36,8 @@ export interface GenerationJob {
   syntheticPreferences?: any[];
   modelToUse?: string;
   expectedSla?: string;
+  /** Standing rules auto-learned from revision feedback (Mem0-style). */
+  learnedMemories?: any[];
   /** Determinism seed for this take; reused by revisions for continuity. */
   seed?: number;
   /** Livepeer-reported estimate at dispatch (USD). Used for the 402 gate. */

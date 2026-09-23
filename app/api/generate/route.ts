@@ -8,6 +8,7 @@ import { authenticateRequest } from '@/lib/auth/server';
 import { createJob, getJob, updateJob } from '@/lib/jobs/registry';
 import type { GenerationJob } from '@/lib/jobs/registry';
 import { savePendingRender, deletePendingRender, getPendingRender } from '@/lib/jobs/pending-renders';
+import { memWalService } from '@/lib/walrus-memwal/client';
 import { MotionPreference, MediaVersion } from '@/lib/types';
 import { stitchTimelineWithFfmpeg } from '@/lib/media/timeline-stitcher';
 
@@ -577,6 +578,11 @@ export async function GET(request: Request) {
       if (requestedDuration > actualDuration) {
         truthfulDirectorMessage += ` Note: this render landed at ${actualDuration}s on ${modelName}, because a single Livepeer take caps at ${MAX_TAKE_SECONDS}s.`;
       }
+      const learnedNote =
+        job?.learnedMemories && job.learnedMemories.length > 0
+          ? ` Also remembered: "${job.learnedMemories.map((m: any) => m.preference).join(', ')}".`
+          : '';
+      truthfulDirectorMessage += learnedNote;
 
       const mediaVersion = buildMediaVersion({
         versionNumber,
@@ -596,6 +602,7 @@ export async function GET(request: Request) {
         enrichedPrompt: directorBrief?.enrichedPrompt,
         appliedMemories: syntheticPreferences,
         directorMessage: truthfulDirectorMessage,
+        learnedMemories: job?.learnedMemories || [],
         summaryTokens: [directorBrief?.visualTheme || 'Cinematic', directorBrief?.pacing || 'cinematic', `${actualDuration}s`],
         retrievalCount: syntheticPreferences.length,
       };
@@ -659,6 +666,7 @@ export async function POST(request: Request) {
       userId,
       email,
       imageUrl,
+      chainedFrame,
       preflightOnly,
       approvedDirectorBrief,
       applyRecalledMemories,
@@ -734,19 +742,58 @@ export async function POST(request: Request) {
 
     // Step 5: Direct creative brief via Groq + MemWal (~5s synchronous) with full chat history.
     // If the user approved a preflight plan, reuse it verbatim so dispatch cannot reinterpret the prompt.
+    // A chained video frame is shown to the director ONLY on revision intent -
+    // for a fresh brief it would wrongly steer a new take toward old pixels.
+    // (Intent is known after this call; the dispatch path below gates on it.)
     const directorBrief = approvedDirectorBrief && typeof approvedDirectorBrief === 'object'
       ? approvedDirectorBrief
       : await directCreativeBrief(sanitizedBrief, {
           email: effectiveUserId,
           feedbackContext: sanitizedFeedback,
           projectTitle: sanitizedTitle,
-          imageUrl: validatedImageUrl,
+          imageUrl: !chainedFrame ? validatedImageUrl : undefined,
           chatHistory: Array.isArray(chatHistory) ? chatHistory : undefined,
           applyMemories: false,
         });
 
-    // Handle conversational messages immediately without requiring credits or dispatching media
+    // Server-split feedback: the client sends raw text only. Revisions carry
+    // the user's message as feedback; fresh briefs carry none. Approved
+    // re-POSTs arrive with feedback already split (pending.feedback).
+    const serverFeedback =
+      sanitizedFeedback ||
+      (!approvedDirectorBrief && directorBrief.userIntent === 'revision' ? sanitizedBrief : undefined) ||
+      undefined;
+
+    // Handle conversational + memory messages immediately: no credits, no dispatch.
+    // Memory intent auto-saves the distilled rule (explicit taste is
+    // self-confirming) and reports it for the UI to merge - no Remember click.
     if (!directorBrief.shouldGenerate) {
+      let savedMemory: any = null;
+      let saveError: string | null = null;
+      const candidate = (directorBrief as any).memoryCandidate;
+      if (candidate && typeof candidate.preference === 'string' && candidate.preference.trim().length > 3) {
+        try {
+          const now = new Date().toISOString();
+          const toSave = {
+            id: `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            type: 'media_preference' as const,
+            category: candidate.category || 'visual_style',
+            preference: candidate.preference.trim().slice(0, 240),
+            strength: 'high' as const,
+            scope: 'media' as const,
+            source: 'user_feedback' as const,
+            createdAt: now,
+            updatedAt: now,
+            isActive: true,
+            userId: effectiveUserId,
+            projectTitle: sanitizedTitle,
+          };
+          const stored = await memWalService.rememberPreference(toSave as any);
+          savedMemory = stored.preference;
+        } catch (e: any) {
+          saveError = e?.message || 'Memory storage unavailable.';
+        }
+      }
       return NextResponse.json({
         success: true,
         jobId: null,
@@ -754,7 +801,9 @@ export async function POST(request: Request) {
         result: {
           mediaVersion: null,
           directorMessage: directorBrief.agentMessage,
-          pendingMemory: directorBrief.memoryCandidate || null,
+          pendingMemory: savedMemory ? null : directorBrief.memoryCandidate || null,
+          savedMemory,
+          saveError,
           appliedMemories: [],
           summaryTokens: [],
           retrievalCount: 0,
@@ -776,7 +825,7 @@ export async function POST(request: Request) {
         plan: {
           duration: requestedDuration,
           sceneCount,
-          model: validatedImageUrl ? 'seedance-25-i2v' : 'seedance-25-t2v',
+          model: validatedImageUrl && (!chainedFrame || (directorBrief as any).userIntent === 'revision') ? 'seedance-25-i2v' : 'seedance-25-t2v',
           aspectRatio: directorBrief.aspectRatio || '16:9',
           audioEnabled: Boolean(directorBrief.audioEnabled),
           hasVocals: Boolean(directorBrief.hasVocals || directorBrief.lyricsPrompt),
@@ -787,6 +836,10 @@ export async function POST(request: Request) {
           scenePrompts: directorBrief.scenePrompts || [],
           timelineNote,
           recalledMemories: directorBrief.recalledMemories || [],
+          // Server-split dispatch inputs: the approved re-POST renders from
+          // these, never from reinterpreting the raw text.
+          brief: directorBrief.enrichedPrompt,
+          feedback: serverFeedback || undefined,
           agentMessage: ownKey
             ? `${directorBrief.agentMessage || ''} Rendering on your Livepeer key - billed to your account, $0 on our ledger.`.trim()
             : directorBrief.agentMessage,
@@ -854,8 +907,15 @@ export async function POST(request: Request) {
       ? ` Approved Nue Memory rules for this render: ${recalledPreferences.map((memory) => `[${memory.category}] ${memory.preference}`).join('; ')}. Apply these only when they do not conflict with explicit instructions in the current user prompt. If there is any conflict, the current prompt wins.`
       : '';
 
-    // Step 7: Dispatch media generation to Livepeer (<3s synchronous)
-    const isImageToVideo = Boolean(validatedImageUrl);
+    // Step 7: Dispatch media generation to Livepeer (<3s synchronous).
+    // A chained frame (previous take's last pixels) is honored ONLY on
+    // revision intent - for a fresh brief it would steer a new take toward
+    // old pixels, so it is dropped here (director never saw it either).
+    const effectiveImageUrl =
+      validatedImageUrl && (!chainedFrame || directorBrief.userIntent === 'revision')
+        ? validatedImageUrl
+        : undefined;
+    const isImageToVideo = Boolean(effectiveImageUrl);
     const modelToUse: string = isImageToVideo ? 'seedance-25-i2v' : 'seedance-25-t2v';
     const expectedSla = '~4 min';
 
@@ -865,6 +925,45 @@ export async function POST(request: Request) {
     // With the cap at a single take this is never true; it stays so the timeline branch below
     // activates by itself if the provider ever raises the per-call duration limit.
     const isMultiScene = !isImageToVideo && requestedDuration > MAX_TAKE_SECONDS;
+
+    // Revision background learning (approved renders only - this block sits
+    // past the preflight early-return, so planning never learns). A revision
+    // can smuggle a standing rule ("make it darker - I always want dark").
+    // Explicit high-confidence prefs are extracted and auto-saved; they ride
+    // the job record into the completion message. Failures stay silent.
+    let learnedMemories: any[] = [];
+    if (serverFeedback && directorBrief.userIntent === 'revision') {
+      try {
+        const { classifyFeedbackAuto } = await import('@/lib/nue-memory/extractor');
+        const cls = await classifyFeedbackAuto(serverFeedback, {
+          projectTitle: sanitizedTitle,
+          userId: effectiveUserId,
+          existingMemories: (directorBrief.recalledMemories || []).map((m: any) => ({
+            category: m.category,
+            preference: m.preference,
+          })),
+        });
+        const strong = (cls.extractedPreferences || []).filter((p: any) => p.strength === 'high').slice(0, 3);
+        for (const pref of strong) {
+          try {
+            const now = new Date().toISOString();
+            const saved = await memWalService.rememberPreference({
+              ...(pref as object),
+              id: `pref-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+              userId: effectiveUserId,
+              createdAt: (pref as any).createdAt || now,
+              updatedAt: now,
+              isActive: true,
+            } as any);
+            learnedMemories.push(saved.preference);
+          } catch (e) {
+            console.warn('[generate:learn] remember notice:', e instanceof Error ? e.message : e);
+          }
+        }
+      } catch (e) {
+        console.warn('[generate:learn] classify notice:', e instanceof Error ? e.message : e);
+      }
+    }
 
     // Step 6 (moved post-brief): gate on the honest pre-dispatch estimate for
     // this exact model + length. Livepeer reserves cost at dispatch, so the
@@ -907,9 +1006,18 @@ export async function POST(request: Request) {
     let audioEstimatedCostUsd: number | undefined;
     if (directorBrief.audioEnabled && directorBrief.audioStyle) {
       const isVocal = Boolean(directorBrief.hasVocals || directorBrief.lyricsPrompt);
+      // Approved recalled sound rules shape the MUSIC prompt, not the video
+      // prompt - a fade instruction in frame descriptions changes nothing.
+      const recalledAudioRules = recalledPreferences
+        .filter((m) => ['music', 'audio', 'voice'].includes(String(m.category || '').toLowerCase()))
+        .map((m) => m.preference)
+        .filter((p) => typeof p === 'string' && p.trim().length > 0);
+      const recalledAudioDirective = recalledAudioRules.length > 0
+        ? ` Honor these approved listener rules: ${recalledAudioRules.join('; ')}.`
+        : '';
       const audioPrompt = isVocal
-        ? `${directorBrief.audioStyle}, expressive melodic vocals. Sing the provided lyrics exactly once, from first line to last line, in order. Do not repeat the opening lines. Keep the pace energetic and clear so every word fits.`
-        : `${directorBrief.audioStyle} soundtrack, ${directorBrief.pacing === 'fast' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation`;
+        ? `${directorBrief.audioStyle}, expressive melodic vocals. Sing the provided lyrics exactly once, from first line to last line, in order. Do not repeat the opening lines. Keep the pace energetic and clear so every word fits.${recalledAudioDirective}`
+        : `${directorBrief.audioStyle} soundtrack, ${directorBrief.pacing === 'fast' ? 'upbeat driving tempo' : 'smooth ambient tempo'}, subtle synth and modern instrumentation.${recalledAudioDirective}`;
 
       const audioArgs: Record<string, any> = {
         action: 'music',
@@ -1120,7 +1228,7 @@ export async function POST(request: Request) {
     // is just a number to the provider, but garbage in means opaque out.
     const requestedSeed =
       Number.isInteger(seed) && (seed as number) >= 0 && (seed as number) <= 2147483647 ? (seed as number) : undefined;
-    const pinSeed = requestedSeed !== undefined && Boolean(feedbackContext) ? requestedSeed : undefined;
+    const pinSeed = requestedSeed !== undefined && Boolean(serverFeedback) ? requestedSeed : undefined;
 
     const dispatchArgs: Record<string, any> = {
       action: isImageToVideo ? 'animate' : 'generate',
@@ -1129,7 +1237,7 @@ export async function POST(request: Request) {
       duration: singleTakeDuration,
       async: true,
       ...(pinSeed !== undefined ? { seed: pinSeed } : {}),
-      ...(validatedImageUrl ? { source_url: validatedImageUrl } : {}),
+      ...(effectiveImageUrl ? { source_url: effectiveImageUrl } : {}),
     };
 
     let videoDispatch = await livepeerAgent.dispatchCreateMedia(dispatchArgs, requestBearer);
@@ -1229,6 +1337,7 @@ export async function POST(request: Request) {
         enrichedPrompt: directorBrief.enrichedPrompt,
         appliedMemories: syntheticPreferences,
         directorMessage: directorBrief.agentMessage || `Here is your ${effectiveSingleTakeDuration}-second video take!`,
+        learnedMemories,
         summaryTokens: [directorBrief.visualTheme || 'Cinematic', directorBrief.pacing || 'cinematic', `${effectiveSingleTakeDuration}s`],
         retrievalCount: syntheticPreferences.length,
       };
@@ -1291,6 +1400,7 @@ export async function POST(request: Request) {
       audioEstimatedCostUsd,
       seed: videoDispatch.seed ?? pinSeed,
       useOwnKey: ownKey || undefined,
+      learnedMemories,
       expectedSla,
     });
 

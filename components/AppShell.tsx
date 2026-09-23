@@ -88,6 +88,9 @@ interface PendingRenderPreflight {
     timelineNote?: string;
     recalledMemories?: Array<{ category: string; preference: string }>;
     agentMessage?: string;
+    /** Server-split dispatch inputs: approved re-POST renders from these. */
+    brief?: string;
+    feedback?: string;
   };
 }
 
@@ -142,22 +145,6 @@ function curateMemories(memories: MotionPreference[]): MotionPreference[] {
   return Array.from(byKey.values()).sort(
     (a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime()
   );
-}
-
-/**
- * True for standing-taste statements ("I like...", "next time...", "my videos
- * should...") that must save, not render. Imperative revision verbs take
- * precedence so "make it darker" still re-renders the current video.
- */
-function statesStandingTaste(text: string): boolean {
-  const cleanLower = text.trim().toLowerCase();
-  if (/\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(cleanLower)) {
-    return false;
-  }
-  if (/^(make|change|fix|adjust|tweak|redo|regenerate|edit|update|add|remove|try|give|speed up|slow down)\b/i.test(cleanLower)) {
-    return false;
-  }
-  return /\b(i like|i love|i prefer|i always|i never|from now on|going forward|remember (that|this)|please remember|save (that|this|it|as)|my standard|by default|in all (my |future )|for (all |future )|next time|my videos? (should|always|never)|keep (it|them|things|the ))/i.test(text);
 }
 
 export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
@@ -303,59 +290,6 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     }
   };
 
-  const proposeMemoriesFromFeedback = async (feedback: string, project: CreativeProject | null): Promise<number> => {
-    if (!feedback.trim()) return 0;
-    try {
-      const res = await fetch('/api/classify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feedback,
-          projectTitle: project?.title,
-          currentBrief:
-            project?.versions?.[project.currentVersionIndex]?.brief ||
-            project?.initialPrompt ||
-            '',
-          email: email || undefined,
-          userId: email || undefined,
-          // Mem0-style dedupe context: active rules so repeats aren't re-extracted.
-          existingMemories: activeMemories.map((m) => ({ category: m.category, preference: m.preference })),
-        }),
-      });
-      if (!res.ok) return 0;
-      const data = await res.json();
-      const extracted = data?.classification?.extractedPreferences;
-      if (!Array.isArray(extracted) || extracted.length === 0) return 0;
-
-      // Compute synchronously against the current snapshot (state updaters run
-      // async, so the count cannot be derived inside setPendingPreferences).
-      const existingKeys = new Set([
-        ...pendingPreferences.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
-        ...activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase()),
-      ]);
-      const next = extracted
-        .map((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
-          ...pref,
-          projectId: project?.id,
-          projectTitle: project?.title || pref.projectTitle,
-          userId: email || pref.userId,
-        }))
-        .filter((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
-          const key = `${pref.category}:${pref.preference}`.toLowerCase();
-          if (existingKeys.has(key)) return false;
-          existingKeys.add(key);
-          return true;
-        });
-      if (next.length > 0) {
-        setPendingPreferences((prev) => [...prev, ...next].slice(-6));
-      }
-      return next.length;
-    } catch (e) {
-      console.warn('Failed to classify feedback for memory:', e);
-      return 0;
-    }
-  };
-
   // Union-merge incoming memories into state by id (then category:text).
   // A blind overwrite would drop just-saved rules whenever the vector index
   // lags behind the write (Mem0 has the same async-indexing class: confirmed
@@ -377,89 +311,6 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
     return next;
   };
 
-  // Mem0-style auto-save: an explicit standing preference is self-confirming,
-  // so it persists immediately (toast + undo in the Memory tab) instead of
-  // waiting on a Remember click. Distinguishes extract / save failures so the
-  // user is never told "couldn't distill" when storage actually failed.
-  const rememberNow = async (
-    text: string,
-    project: CreativeProject | null
-  ): Promise<{ saved: string[]; error: 'extract' | 'save' | null }> => {
-    if (!text.trim()) return { saved: [], error: null };
-    setIsSavingMemory(true);
-    try {
-      const res = await fetch('/api/classify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          feedback: text,
-          projectTitle: project?.title,
-          currentBrief:
-            project?.versions?.[project.currentVersionIndex]?.brief ||
-            project?.initialPrompt ||
-            '',
-          email: email || undefined,
-          userId: email || undefined,
-          existingMemories: activeMemories.map((m) => ({ category: m.category, preference: m.preference })),
-        }),
-      });
-      if (!res.ok) return { saved: [], error: 'extract' };
-      const data = await res.json();
-      const extracted = data?.classification?.extractedPreferences;
-      if (!Array.isArray(extracted) || extracted.length === 0) return { saved: [], error: null };
-
-      const existingKeys = new Set(
-        activeMemories.map((p) => `${p.category}:${p.preference}`.toLowerCase())
-      );
-      const fresh = extracted
-        .map((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => ({
-          ...pref,
-          projectId: project?.id,
-          projectTitle: project?.title || pref.projectTitle,
-          userId: email || pref.userId,
-        }))
-        .filter((pref: Omit<MotionPreference, 'id' | 'createdAt' | 'updatedAt' | 'isActive'>) => {
-          const key = `${pref.category}:${pref.preference}`.toLowerCase();
-          if (existingKeys.has(key)) return false;
-          existingKeys.add(key);
-          return true;
-        });
-      if (fresh.length === 0) return { saved: [], error: null };
-
-      const saveRes = await fetch('/api/memwal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'remember',
-          preferences: fresh,
-          email: email || undefined,
-          userId: email || undefined,
-        }),
-      });
-      const saveData = await saveRes.json().catch(() => null);
-      if (!saveRes.ok || !saveData?.success) return { saved: [], error: 'save' };
-
-      const stored: MotionPreference[] = (saveData.storedPreferences || []).map((p: any, i: number) => ({
-        ...fresh[i],
-        ...p,
-        isActive: true,
-      }));
-      // Union, never overwrite: the vector index can lag the confirmed write,
-      // and a blind refetch would drop the rule you just watched save.
-      if (email) {
-        await fetchMemories(email);
-        setActiveMemories((prev) => mergeMemoriesIntoState(prev, stored));
-      } else {
-        setActiveMemories((prev) => mergeMemoriesIntoState(prev, stored));
-      }
-      return { saved: stored.map((p) => p.preference), error: null };
-    } catch (e) {
-      console.warn('Failed to auto-save memory:', e);
-      return { saved: [], error: 'save' };
-    } finally {
-      setIsSavingMemory(false);
-    }
-  };
   // Load memories directly from MemWal on Walrus for the current user's namespace
   useEffect(() => {
     if (email) {
@@ -679,6 +530,13 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       fetchMemories(email);
     }
 
+    // Revision background learning: merge rules the server auto-saved while
+    // rendering (union - the vector index may lag the confirmed write).
+    const learned = Array.isArray(data.learnedMemories) ? data.learnedMemories : [];
+    if (learned.length > 0) {
+      setActiveMemories((prev) => mergeMemoriesIntoState(prev, learned));
+    }
+
     const audioNotice = newVersion.audioStyle?.audioUrl
       ? `\n\n🎵 Soundtrack: ${newVersion.audioStyle.style}.`
       : '';
@@ -832,7 +690,9 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
         setPendingPreflight({
           promptText,
           versionNumber,
-          feedbackContext,
+          // Server-split feedback wins: the classifier decided what is brief
+          // vs revision. Falls back to the client-passed context if absent.
+          feedbackContext: data.plan.feedback ?? feedbackContext,
           overrideProjectIndex,
           overrideProjectTitle,
           imageUrl,
@@ -892,13 +752,42 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       if (data.success && data.mediaVersion) {
         applyCompletedMedia(data, targetIndex);
       } else if (data.success && data.directorMessage) {
-        // Conversational agent reply (greeting, clarification) without GPU render
+        // Conversational agent reply (greeting, clarification, memory saved)
+        // without GPU render.
         const agentMsg: ChatMessage = {
           id: `msg-${Date.now()}`,
           sender: 'agent',
-          content: data.directorMessage,
+          content:
+            data.directorMessage +
+            (data.savedMemory && typeof data.savedMemory.preference === 'string'
+              ? `\n\nRemembered: "${data.savedMemory.preference}" - applies to future renders. Undo anytime in the Memory tab.`
+              : data.saveError
+              ? `\n\nCouldn't store the rule just now - memory storage is busy. Say "remember that" again in a bit.`
+              : ''),
           timestamp: new Date().toISOString(),
         };
+
+        // Server auto-save: merge the stored rule straight into state (plus
+        // the legacy Remember-card path when the server only proposes).
+        const sm = data.savedMemory;
+        if (sm && typeof sm.preference === 'string' && sm.preference.trim().length > 0) {
+          const stored = {
+            type: 'media_preference' as const,
+            category: typeof sm.category === 'string' && sm.category ? sm.category : 'visual_style',
+            preference: sm.preference.trim(),
+            strength: 'high' as const,
+            scope: 'media' as const,
+            source: 'user_feedback' as const,
+            projectId: activeProject?.id,
+            projectTitle: activeProject?.title,
+            userId: email || undefined,
+            id: typeof sm.id === 'string' ? sm.id : `mem-${Date.now()}`,
+            createdAt: typeof sm.createdAt === 'string' ? sm.createdAt : new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isActive: true as const,
+          };
+          setActiveMemories((prev) => mergeMemoriesIntoState(prev, [stored]));
+        }
 
         // Server-side memory-intent backstop: the director distilled a standing
         // preference instead of rendering. Surface it in the same Remember UI.
@@ -1045,37 +934,8 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       setProjects([newProj]);
       setCurrentProjectIndex(0);
       persistProjectToDb(newProj);
-      // A standing preference as the very first message is still a memory, not
-      // a brief - auto-save it and stop instead of burning a render on it.
-      if (
-        !/\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(text.trim().toLowerCase()) &&
-        statesStandingTaste(text)
-      ) {
-        const { saved, error: saveError } = await rememberNow(text, newProj);
-        const note: ChatMessage = {
-          id: `msg-mem-${Date.now()}`,
-          sender: 'agent',
-          content:
-            saved.length > 0
-              ? `Remembered: "${saved.join(', ')}" - applies to future renders. Undo anytime in the Memory tab. No video rendered.`
-              : saveError === 'save'
-              ? `Couldn't store that just now - memory storage is busy. Your words are kept in this chat; say "remember that" again in a bit and I'll store it. No video rendered.`
-              : `I hear you, but I couldn't distill that into a lasting rule. Tell me a video idea whenever you're ready. No video rendered.`,
-          timestamp: new Date().toISOString(),
-        };
-        setProjects((prev) => {
-          const updated = [...prev];
-          if (updated[0]) {
-            const proj = { ...updated[0] };
-            proj.messages = [...(proj.messages || []), note];
-            updated[0] = proj;
-            persistProjectToDb(proj);
-          }
-          return updated;
-        });
-        setMessages((prev) => [...prev, note]);
-        return;
-      }
+      // Single path: the server classifier decides (brief, memory, chat).
+      // Memory intent auto-saves with no render; anything else preflights.
       await handleGenerate(text, 1, undefined, 0, newProj.title, imageUrl, [{ role: 'user', content: text }]);
       return;
     }
@@ -1101,8 +961,10 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       }));
     chatHistory.push({ role: 'user', content: text });
 
-    // Delegate ALL intent routing (inquiry, chat, generate, revision) to the server Groq classifier.
-    // Never pre-screen with client-side regex here.
+    // Delegate ALL intent routing (inquiry, chat, generate, revision, memory)
+    // to the server Groq classifier. Never pre-screen with client-side regex
+    // here. Safe while cooking too: nothing auto-dispatches (renders start
+    // only from explicit preflight approval), and billing holds bound cost.
 
     // If project has no versions yet, this is the first generation
     if (currentProj.versions.length === 0) {
@@ -1119,80 +981,31 @@ export function NueApp({ view, initialTab, initialProjectId }: NueAppProps) {
       return;
     }
 
-    // Otherwise, project already has versions.
-    // Determine if this is a minor revision tweak on the active version or a brand new prompt
+    // Single send path: the server classifier owns ALL intent routing (fresh
+    // brief, revision, memory, chat). The client only supplies raw materials:
+    // text, history, the active take's seed, and its last frame. The server
+    // uses seed and frame exclusively on revision intent, so fresh briefs can
+    // never inherit old pixels or rolls.
     const nextVersionNumber = currentProj.versions.length + 1;
-    const cleanLower = text.trim().toLowerCase();
-    const hasCreationIntent = /\b(create|generate|make a|produce|render|film|animate|video about|scene with|new video|show me|story about)\b/i.test(cleanLower);
-    const isCorrectionOrRevision =
-      !hasCreationIntent &&
-      (/^(make it|can you make it|change (the|it)|adjust|tweak|tune|speed up|slow down|slower|faster|darker|lighter|more (vibrant|energetic|cinematic)|less|remove (the|subtitles|captions)|add (subtitles|captions))\b/i.test(cleanLower) ||
-       /^(but|wait|i said|i asked for|you forgot|why did|how come|no,|actually|instead|make sure|where are the|the lyrics)\b/i.test(cleanLower) ||
-       (/\b(?:60\s*s|30\s*s|minute|lyrics?|full|complete)\b/i.test(cleanLower) && cleanLower.length < 90));
-
-    if (isCorrectionOrRevision) {
-      proposeMemoriesFromFeedback(text, currentProj);
-      const activeBrief = currentProj.versions[currentProj.currentVersionIndex]?.brief || currentProj.initialPrompt || text;
-      // Revision continuity, strongest first: (1) continue from v1's last frame
-      // via image-to-video, (2) pin v1's seed so the take varies instead of
-      // re-rolling. Frame wins when available - seed is skipped with a chained
-      // frame since i2v seed support is unconfirmed and loud on rejection.
-      const chainedFrame = imageUrl ? null : await captureActiveFrame();
-      const activeSeed = currentProj.versions[currentProj.currentVersionIndex]?.seed;
-      await handleGenerate(
-        activeBrief,
-        nextVersionNumber,
-        text,
-        targetIndex,
-        currentProj.title,
-        chainedFrame || imageUrl,
-        chatHistory,
-        chainedFrame || typeof activeSeed !== 'number' ? undefined : { seed: activeSeed }
-      );
-    } else if (
-      !hasCreationIntent &&
-      !isCorrectionOrRevision &&
-      statesStandingTaste(text)
-    ) {
-      // Standing taste statement, not a render request: auto-save it as memory
-      // (explicit preferences are self-confirming) and stop here. Never spend
-      // a GPU render on a preference sentence.
-      const { saved, error: saveError } = await rememberNow(text, currentProj);
-      const note: ChatMessage = {
-        id: `msg-mem-${Date.now()}`,
-        sender: 'agent',
-        content:
-          saved.length > 0
-            ? `Remembered: "${saved.join(', ')}" - applies to future renders. Undo anytime in the Memory tab. No video rendered.`
-            : saveError === 'save'
-            ? `Couldn't store that just now - memory storage is busy. Your words are kept in this chat; say "remember that" again in a bit and I'll store it. No video rendered.`
-            : `I hear you, but I couldn't distill that into a lasting rule${email ? '' : ' (sign in so I can persist it)'}. Phrase it as one (e.g. "always fade the music out over 2s") or tell me to apply it to this video and I'll re-render. No video rendered.`,
-        timestamp: new Date().toISOString(),
-      };
-      setProjects((prev) => {
-        const updated = [...prev];
-        if (updated[targetIndex]) {
-          const proj = { ...updated[targetIndex] };
-          proj.messages = [...(proj.messages || []), note];
-          updated[targetIndex] = proj;
-          persistProjectToDb(proj);
-        }
-        return updated;
-      });
-      setMessages((prev) => [...prev, note]);
-      return;
-    } else {
-      // Fresh creative prompt: always use the user's new prompt text
-      await handleGenerate(
-        text,
-        nextVersionNumber,
-        undefined,
-        targetIndex,
-        currentProj.title,
-        imageUrl,
-        chatHistory
-      );
-    }
+    const chainedFrame = imageUrl
+      ? null
+      : currentProj.versions.length > 0
+        ? await captureActiveFrame()
+        : null;
+    const activeSeed = currentProj.versions[currentProj.currentVersionIndex]?.seed;
+    await handleGenerate(
+      text,
+      nextVersionNumber,
+      undefined,
+      targetIndex,
+      currentProj.title,
+      chainedFrame || imageUrl,
+      chatHistory,
+      {
+        ...(typeof activeSeed === 'number' ? { seed: activeSeed } : {}),
+        ...(chainedFrame ? { chainedFrame: true } : {}),
+      }
+    );
   };
 
   // Confirm and persist remembered preferences to Walrus via MemWal
