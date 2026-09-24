@@ -471,7 +471,109 @@ export async function GET(request: Request) {
       }
     };
 
+    // Mid-render scanner kill: the take passed dispatch but died in flight.
+    // Re-roll ONCE (paraphraseRetried) with reworded scene text. The client
+    // keeps polling this same jobId throughout.
+    const rerolled: { current: { url: string; capability?: string; costUsd?: number } | null } = { current: null };
     if (pollResult.status === 'failed') {
+      // Mid-render scanner kill: the take passed dispatch but died in flight.
+      // Re-roll ONCE with reworded scene text under a fresh Livepeer job (the
+      // client keeps polling this same jobId). Never loops: paraphraseRetried.
+      if (isPolicyRejection(pollResult.error) && job && !job.paraphraseRetried && job.livepeerJobId) {
+        try {
+          const { paraphraseVideoPrompt } = await import('@/lib/ai/nue-director');
+          const sourcePrompt = job.directorBrief?.enrichedPrompt || '';
+          const paraphrased = await paraphraseVideoPrompt(sourcePrompt);
+          const retryModel = job.modelToUse || 'seedance-25-t2v';
+          const retryDuration = Math.max(5, Math.min(MAX_TAKE_SECONDS, job.singleTakeDuration || MAX_TAKE_SECONDS));
+          const retryCost = estimateTakeCostUsd(retryModel, retryDuration);
+          let mayReroll = job.useOwnKey === true;
+          if (!mayReroll && supabase && job.userId) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('credit_balance')
+              .eq('email', job.userId)
+              .maybeSingle();
+            mayReroll = Number(profile?.credit_balance ?? 0) >= retryCost;
+          }
+          if (paraphrased && mayReroll) {
+            console.warn('[generate:GET] Mid-render scanner kill. Re-rolling once with paraphrased scene text.');
+            await deletePendingRender(jobId);
+            await releaseHold();
+            const redispatch = await livepeerAgent.dispatchCreateMedia({
+              action: 'generate',
+              prompt: paraphrased,
+              model_override: retryModel,
+              duration: retryDuration,
+              async: true,
+              ...(typeof job.seed === 'number' ? { seed: job.seed } : {}),
+            }, jobBearer);
+            if (redispatch.status !== 'failed' && (redispatch.jobId || redispatch.url)) {
+              let heldCostUsd = 0;
+              if (!job.useOwnKey && job.userId) {
+                const held = await deductRenderCost(job.userId, retryCost);
+                if (held !== null) heldCostUsd = retryCost;
+              }
+              if (redispatch.url) {
+                // Re-roll finished synchronously: complete inline below.
+                rerolled.current = {
+                  url: redispatch.url,
+                  capability: redispatch.capability,
+                  costUsd: redispatch.costUsd,
+                };
+                updateJob(jobId, {
+                  status: 'rendering',
+                  progress: 90,
+                  stageDescription: 'Re-rolled take ready…',
+                  error: undefined,
+                  audioJobId: job.audioJobId,
+                  estimatedCostUsd: retryCost,
+                  heldCostUsd,
+                  paraphraseRetried: true,
+                });
+              } else {
+                updateJob(jobId, {
+                  status: 'rendering',
+                  progress: 25,
+                  stageDescription: 'Scanner flagged that take - re-rolled with reworded scene…',
+                  error: undefined,
+                  livepeerJobId: redispatch.jobId,
+                  audioJobId: job.audioJobId,
+                  audioUrl: undefined,
+                  estimatedCostUsd: retryCost,
+                  heldCostUsd,
+                  paraphraseRetried: true,
+                });
+                await savePendingRender({
+                jobId,
+                userId: job.userId,
+                projectTitle: job.projectTitle,
+                versionNumber: job.versionNumber || 1,
+                livepeerJobId: redispatch.jobId,
+                audioJobId: job.audioJobId,
+                model: retryModel,
+                singleTakeDuration: retryDuration,
+                directorBrief: job.directorBrief,
+                syntheticPreferences: job.syntheticPreferences || [],
+              });
+              return NextResponse.json({
+                success: true,
+                job: {
+                  id: jobId,
+                  status: 'rendering',
+                  progress: 25,
+                  model: retryModel,
+                  expectedSla: '~4 min',
+                  stageDescription: 'Scanner flagged that take - re-rolled with reworded scene…',
+                },
+              });
+            }
+          }
+          }
+        } catch (e) {
+          console.warn('[generate:GET] Paraphrase re-roll notice:', e instanceof Error ? e.message : e);
+        }
+      }
       const friendlyErr = humanizeUpstreamError(pollResult.error || 'Livepeer render failed.');
       updateJob(jobId, { status: 'failed', error: friendlyErr });
       await deletePendingRender(jobId);
@@ -515,9 +617,9 @@ export async function GET(request: Request) {
       });
     }
 
-    if (pollResult.status === 'completed' && pollResult.url) {
-      const videoUrl = pollResult.url;
-      const modelName = job?.modelToUse || pollResult.capability || 'seedance-25-t2v';
+    if (rerolled.current || (pollResult.status === 'completed' && pollResult.url)) {
+      const videoUrl = (rerolled.current?.url || pollResult.url)!;
+      const modelName = job?.modelToUse || rerolled.current?.capability || pollResult.capability || 'seedance-25-t2v';
       const directorBrief = job?.directorBrief;
       const syntheticPreferences = job?.syntheticPreferences || [];
       let finalAudioUrl = job?.audioUrl;
@@ -619,7 +721,7 @@ export async function GET(request: Request) {
       // to the video charge. Own-key renders skip our ledger entirely.
       // Completed jobs return from cache above, so repeat polls settle once.
       if (job?.userId && !job.useOwnKey && !job.billedCostUsd) {
-        const videoActual = pollResult.costUsd ?? job.estimatedCostUsd ?? estimateTakeCostUsd(modelName, actualDuration);
+        const videoActual = rerolled.current?.costUsd ?? pollResult.costUsd ?? job.estimatedCostUsd ?? estimateTakeCostUsd(modelName, actualDuration);
         const totalActual = Math.round((videoActual + audioActualCostUsd) * 100) / 100;
         const held = job.heldCostUsd ?? 0;
         const delta = Math.round((totalActual - held) * 100) / 100;

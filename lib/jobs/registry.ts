@@ -36,6 +36,8 @@ export interface GenerationJob {
   syntheticPreferences?: any[];
   modelToUse?: string;
   expectedSla?: string;
+  /** Set once a mid-render scanner false-flag already triggered a re-roll. */
+  paraphraseRetried?: boolean;
   /** Standing rules auto-learned from revision feedback (Mem0-style). */
   learnedMemories?: any[];
   /** Determinism seed for this take; reused by revisions for continuity. */
