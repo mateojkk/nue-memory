@@ -528,11 +528,11 @@ export async function directCreativeBrief(
     }
     fullMessage += `MANDATORY: Honor and incorporate the user's active decentralized creative memories into the visual style, pacing, and audio mood unless the user explicitly overrides them.\n\n`;
   } else if (activeUserMemories.length > 0) {
-    fullMessage += `=== AVAILABLE USER CREATIVE MEMORIES (AUTO-APPLIED TO THIS RENDER) ===\n`;
+    fullMessage += `=== AVAILABLE USER CREATIVE MEMORIES (APPLIED ONLY ON APPROVAL) ===\n`;
     for (const mem of activeUserMemories) {
       fullMessage += `- [${mem.category.toUpperCase()}]: ${mem.preference}\n`;
     }
-    fullMessage += `These rules auto-apply: blend each one directly into the matching output field (audio rules into audioStyle, visual rules into visualTheme, pacing rules into pacing). Describe the result as applied in agentMessage. NEVER park a recalled rule as "standby", "later", or "on request" - that contradicts the product. If the current prompt explicitly overrides a rule, the prompt wins for that field only.\n\n`;
+    fullMessage += `Compose the plan from the current prompt alone. Expose these memories as recalledMemories so the studio can apply them when the creator approves the render - describe them as ready to apply, never as parked, standby, or for later. If the current prompt explicitly overrides a rule, say so plainly.\n\n`;
   }
 
   if (context.chatHistory && context.chatHistory.length > 0) {

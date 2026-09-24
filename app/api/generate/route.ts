@@ -125,6 +125,25 @@ async function resolveCallerLivepeerKey(email: string): Promise<{ key: string | 
   return { key: null, ownKey: false };
 }
 
+/**
+ * Deterministic outro seconds from approved recalled rules. A fade rule only
+ * works if it is honored exactly (not interpreted by a music model), so the
+ * number is extracted here and the take ships unmuxed for player-side fading.
+ * Returns 0 when no fade rule was approved for this render.
+ */
+function fadeOutSecondsFromPrefs(prefs: Array<{ category?: unknown; preference?: unknown }>): number {
+  for (const pref of prefs) {
+    const category = String((pref as any)?.category || '').toLowerCase();
+    const text = String((pref as any)?.preference || '');
+    if (!['music', 'audio', 'voice'].includes(category)) continue;
+    if (!/fade\s*-?\s*out|fadeout/i.test(text)) continue;
+    const match = text.match(/(\d+)\s*(?:-|–)?\s*(?:seconds?|secs?|s)\b/i);
+    const secs = match ? Math.max(1, Math.min(10, parseInt(match[1], 10))) : 2;
+    return secs;
+  }
+  return 0;
+}
+
 function buildMediaVersion(params: {
   versionNumber: number;
   mediaUrl: string;
@@ -137,6 +156,7 @@ function buildMediaVersion(params: {
   agentNotes: string;
   scenes?: MediaVersion['scenes'];
   seed?: number;
+  fadeOutSeconds?: number;
 }): MediaVersion {
   const directorBrief = params.directorBrief;
   const hasVocals = Boolean(directorBrief?.hasVocals);
@@ -169,6 +189,7 @@ function buildMediaVersion(params: {
     generationDurationSeconds: params.durationSeconds,
     livepeerCapability: params.modelName + (params.wasMuxed ? ' + timeline-assembly' : ''),
     seed: params.seed,
+    fadeOutSeconds: params.fadeOutSeconds || undefined,
     characterAnchorUrl: directorBrief?.characterAnchorUrl,
     scenes: params.scenes,
   };
@@ -400,6 +421,7 @@ export async function GET(request: Request) {
         generationDurationSeconds: actualDuration,
         livepeerCapability: wasMuxed ? `${modelName} + timeline-assembly` : modelName,
         characterAnchorUrl: job.characterAnchorUrl,
+        fadeOutSeconds: fadeOutSecondsFromPrefs(syntheticPreferences) || undefined,
         scenes: scenesList.map((s, idx) => {
           const mediaUrl = s.url || s.mediaUrl || '';
           return {
@@ -637,10 +659,13 @@ export async function GET(request: Request) {
         audioActualCostUsd = job?.audioEstimatedCostUsd ?? 0;
       }
 
-      // Assemble timeline if audio is present
+      // Assemble timeline if audio is present - SKIPPED when a fade rule
+      // applies: muxing bakes the track in, making player-side fade-out
+      // impossible. Stems ship separately instead (existing fallback UI).
       let finalMediaUrl = videoUrl;
       let wasMuxed = false;
-      if (finalAudioUrl) {
+      const fadeOutSecs = fadeOutSecondsFromPrefs(syntheticPreferences);
+      if (finalAudioUrl && fadeOutSecs <= 0) {
         try {
           const assembled = await livepeerAgent.assembleTimeline({
             clips: [{ src: videoUrl }],
@@ -697,6 +722,7 @@ export async function GET(request: Request) {
         wasMuxed,
         agentNotes: `Livepeer Agent composed version ${versionNumber} via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
         seed: pollResult.seed ?? job?.seed,
+        fadeOutSeconds: fadeOutSecondsFromPrefs(syntheticPreferences),
       });
 
       const result = {
@@ -1416,7 +1442,9 @@ export async function POST(request: Request) {
         }
       }
 
-      if (finalAudioUrl) {
+      // Same rule as the polling path: a fade rule ships stems, never a mux.
+      const immediateFadeOutSecs = fadeOutSecondsFromPrefs(syntheticPreferences);
+      if (finalAudioUrl && immediateFadeOutSecs <= 0) {
         try {
           const assembled = await livepeerAgent.assembleTimeline({
             clips: [{ src: videoDispatch.url }],
@@ -1443,6 +1471,7 @@ export async function POST(request: Request) {
         wasMuxed,
         agentNotes: `Livepeer Agent returned an immediately completed ${effectiveSingleTakeDuration}s take via [${modelName}${wasMuxed ? ' + timeline-assembly' : ''}].`,
         seed: videoDispatch.seed ?? pinSeed,
+        fadeOutSeconds: fadeOutSecondsFromPrefs(syntheticPreferences),
       });
 
       const result = {

@@ -89,6 +89,13 @@ export interface MediaVersion {
   livepeerCapability?: string;
   /** Determinism seed used for this take; revisions reuse it for continuity. */
   seed?: number;
+  /**
+   * Deterministic outro: fade the separate soundtrack stem over this many
+   * seconds. Set only from an approved fade rule; the player applies it via
+   * WebAudio (muxed files can't be faded after the fact, so these takes ship
+   * unmuxed on purpose).
+   */
+  fadeOutSeconds?: number;
   characterAnchorUrl?: string;
   scenes?: StoryboardScene[];
 }

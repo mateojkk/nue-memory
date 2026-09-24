@@ -1124,7 +1124,7 @@ export function NueMotionWorkspace({
                       <Brain className="w-3.5 h-3.5 text-[var(--accent)]" />
                       <span>
                         {pendingPreflight.recalledMemories?.length
-                          ? 'Recalled memory rules - applied when you render'
+                          ? 'Recalled memory rules available - not applied unless you approve'
                           : 'No prior memory rules recalled for this render'}
                       </span>
                     </div>
@@ -1169,16 +1169,22 @@ export function NueMotionWorkspace({
                      </button>
                      <button
                        type="button"
-                       onClick={() => onConfirmPreflight?.(true)}
-                       className="px-4 py-1.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium flex items-center gap-1.5 shadow-sm transition"
+                       onClick={() => onConfirmPreflight?.(false)}
+                       className="px-3 py-1.5 rounded-md bg-[var(--surface-2)] hover:bg-[var(--surface-2)]/80 text-[var(--fg)] text-xs font-medium flex items-center gap-1.5 shadow-sm transition"
                      >
-                       <Brain className="w-3.5 h-3.5 stroke-[2.5]" />
-                       <span>
-                         {pendingPreflight.recalledMemories && pendingPreflight.recalledMemories.length > 0
-                           ? `Render with ${pendingPreflight.recalledMemories.length} memor${pendingPreflight.recalledMemories.length === 1 ? 'y' : 'ies'}`
-                           : 'Render'}
-                       </span>
+                       <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                       <span>Render prompt only</span>
                      </button>
+                     {pendingPreflight.recalledMemories && pendingPreflight.recalledMemories.length > 0 && (
+                       <button
+                         type="button"
+                         onClick={() => onConfirmPreflight?.(true)}
+                         className="px-4 py-1.5 rounded-md bg-[var(--accent-deep)] hover:bg-[var(--accent)] text-[#4a2c0e] text-xs font-medium flex items-center gap-1.5 shadow-sm transition"
+                       >
+                         <Brain className="w-3.5 h-3.5 stroke-[2.5]" />
+                         <span>Apply memory & render</span>
+                       </button>
+                     )}
                    </div>
                 </div>
               </div>

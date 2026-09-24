@@ -97,6 +97,52 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioGraphRef = useRef<{ ctx: AudioContext; gain: GainNode } | null>(null);
+
+  // Deterministic outro: when the version carries an approved fade rule and
+  // the stem ships separately (never muxed), fade it in the player. Muxed
+  // files bake audio in and cannot be faded after the fact.
+  const fadeOutSeconds =
+    version.fadeOutSeconds && version.fadeOutSeconds > 0 && !version.audioStyle?.isMuxed
+      ? Math.min(10, version.fadeOutSeconds)
+      : 0;
+
+  const ensureAudioGraph = (): GainNode | null => {
+    try {
+      const el = audioRef.current;
+      if (!el || typeof window === 'undefined') return null;
+      const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!Ctx) return null;
+      if (!audioGraphRef.current) {
+        const ctx: AudioContext = new Ctx();
+        const src = ctx.createMediaElementSource(el);
+        const gain = ctx.createGain();
+        src.connect(gain);
+        gain.connect(ctx.destination);
+        audioGraphRef.current = { ctx, gain };
+      }
+      return audioGraphRef.current.gain;
+    } catch {
+      return null;
+    }
+  };
+
+  const armFadeOut = () => {
+    if (!fadeOutSeconds || !audioRef.current) return;
+    const gain = ensureAudioGraph();
+    const dur = audioRef.current.duration;
+    if (!gain || !Number.isFinite(dur) || dur <= fadeOutSeconds) return;
+    try {
+      const ctx = audioGraphRef.current!.ctx;
+      if (ctx.state === 'suspended') void ctx.resume();
+      const t = ctx.currentTime;
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(1, t);
+      gain.gain.linearRampToValueAtTime(0.0001, t + Math.max(0, dur - audioRef.current.currentTime - fadeOutSeconds) + fadeOutSeconds);
+    } catch {
+      // Graph unavailable: plain playback without fade.
+    }
+  };
 
   const videoSrc = resolveMediaUrl(version.mediaUrl);
   // If the audio was muxed into the MP4 container by Livepeer assemble, do NOT play a separate audio element
@@ -156,7 +202,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
               const overallTime = hasMultipleScenes ? currentSceneIdx * 15 + (videoRef.current?.currentTime || 0) : (videoRef.current?.currentTime || 0);
               audioRef.current.currentTime = overallTime;
               audioRef.current.muted = isMuted;
-              audioRef.current.play().catch(() => {});
+              audioRef.current.play().then(() => armFadeOut()).catch(() => {});
             }
           })
           .catch((err) => {
@@ -224,6 +270,7 @@ export const InlineVideoCard: React.FC<InlineVideoCardProps> = ({
 
     if (audioRef.current) {
       audioRef.current.currentTime = seekTime;
+      if (isPlaying) armFadeOut();
     }
     setProgress(seekPercent * 100);
     setCurrentTime(seekTime);
