@@ -130,24 +130,6 @@ export function useAuth() {
     }
   };
 
-  const deductCredits = async (amount = 0.05) => {
-    if (!email) return;
-    try {
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, action: 'deduct', amount }),
-      });
-      const data = await res.json();
-      if (data.success && data.credit_balance !== undefined) {
-        setCreditBalance(Number(data.credit_balance));
-        return data.credit_balance;
-      }
-    } catch (e) {
-      console.warn('Failed to deduct credits:', e);
-    }
-  };
-
   const loginWithMagic = async (targetEmail: string) => {
     if (!magic) {
       // Offline / Keyless demo fallback
@@ -204,7 +186,6 @@ export function useAuth() {
     livepeerKey,
     saveLivepeerKey,
     removeLivepeerKey,
-    deductCredits,
     refreshCredits: () => email && loadProfile(email),
     loginWithMagic,
     logout,

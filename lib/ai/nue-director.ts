@@ -349,56 +349,6 @@ export function humanizeUpstreamError(raw: any): string {
 /**
  * Checks if the user message is a conversational query, greeting, or reaction.
  */
-export function isConversationalMessage(msg: string): boolean {
-  const clean = msg.toLowerCase().trim();
-
-  // 1. Explicit capability or informational questions:
-  // e.g. "can you generate 60 seconds videos?", "can you make a video?", "how do you generate 60s?", "are you able to render?"
-  const capabilityQuestion = /^(can you|could you|are you able to|do you|how do you|how can (?:i|we)|is it possible to|can it|does it|will it)\s+(?:create|make|generate|render|film|produce|do|support|handle|stitch|assemble)\b/i;
-  if (capabilityQuestion.test(clean)) {
-    const hasDetailedSubject = /\b(?:about|showing|featuring|with a|depicting|story of|scene where|prompt:)\b/i.test(clean);
-    if (!hasDetailedSubject) {
-      return true;
-    }
-  }
-
-  // 2. Explicit questions, reactions, and studio inquiries
-  const conversationalPatterns = [
-    /\b(funny part|did you know|by the way|btw|honestly|wait a sec|hang on)\b/i,
-    /\b(cant i|can i|could i|how do i|how can i)\s+(open|start|create|have)?\s*(a\s+)?(new chat|new conversation)\b/i,
-    /\b(why did|why is|why does|how come)\b/i,
-    /\b(did you forget|you forgot|what happened|is groq|are you sure)\b/i,
-    /\b(who are you|what are you|what can you do|what is this|tell me about yourself|help)\b/i,
-    /\b(what video did you|what did you (just )?(make|do|generate))\b/i,
-    /\b(how does|how do|does|do|can|could|would|will|is|are|which)\s+[a-z0-9\s_\-']+\s+(work|do|offer|have|support|compare|use|run|theirs)\b/i,
-    /\b(audit|deep audit|status check|system audit)\b/i,
-    /\b(?:60\s*s(?:econds?)?|30\s*s(?:econds?)?|videos?)\s*\??$/i,
-    /\?$/, // Any message ending in question mark without explicit creative prompt
-    /^(hi|hello|hey|yo|sup|hiya|howdy|hola|greetings)\b/i,
-    /^(good morning|good afternoon|good evening|good day|good night)\b/i,
-    /^(how are you|how is it going|hows it going|whats up|what is up|whats new)\b/i,
-    /^(thanks|thank you|thx|cool|awesome|great|ok|okay|nice|sounds good|got it|bye|goodbye|haha|lol)\b/i,
-    /^(test|testing|ping|check)\b/i,
-  ];
-
-  if (conversationalPatterns.some((pattern) => pattern.test(clean))) {
-    return true;
-  }
-
-  // 3. If message contains explicit video creation verbs with media nouns
-  const creationCommands = /\b(create|make|generate|render|film|produce)\s+(a|an|the|me)?\s*(video|clip|scene|take|animation|footage)\b/i;
-  if (creationCommands.test(clean)) {
-    return false;
-  }
-
-  // Short messages (<35 chars) without creation verbs
-  const stripped = clean.replace(/['"!?.,]/g, '');
-  if (stripped.length < 35 && !/\b(make|create|render|generate|build|animate|video|clip|scene)\b/i.test(stripped)) {
-    return true;
-  }
-
-  return false;
-}
 
 /**
  * Extracts verbatim user-provided lyrics from text or prompt.

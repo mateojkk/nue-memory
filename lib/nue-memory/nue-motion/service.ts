@@ -159,25 +159,6 @@ export class MemWalService {
   }
 
   /**
-   * Updates an existing preference. Lifecycle changes are persisted back to
-   * Walrus (see WalrusMemWalStore.update); the promise resolves once the
-   * marker blob is confirmed so callers can await durability.
-   */
-  public async updatePreference(pref: MotionPreference): Promise<void> {
-    this.memoryCache.set(pref.id, pref);
-    try {
-      await this.store.update(pref.id, {
-        isActive: pref.isActive,
-        supersedesId: pref.supersedesId,
-        updatedAt: pref.updatedAt,
-      });
-    } catch (err) {
-      console.warn('[MemWalService] Update notice:', err);
-      throw err;
-    }
-  }
-
-  /**
    * Clears stored memory cache. Durable version: tombstones every cached id
    * in Walrus first so a later recall cannot resurrect cleared memories.
    */
